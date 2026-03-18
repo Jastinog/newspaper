@@ -57,10 +57,9 @@ def _split_into_sentences(text: str) -> list[str]:
 def chunk_text(title: str, content: str) -> list[str]:
     """Split article into chunks by sentences with ~1000 char limit.
 
-    Split article into chunks by sentences with ~1000 char limit.
+    Content is expected to be clean text (no HTML).
     """
-    clean_content = strip_html(content)
-    full_text = f"{title}\n\n{clean_content}"
+    full_text = f"{title}\n\n{content}"
 
     sentences = _split_into_sentences(full_text)
 
