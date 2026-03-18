@@ -16,4 +16,6 @@ dependencies = [
     "geoip2>=4.8",
     "user-agents>=2.2",
     "numpy>=1.26",
+    "channels>=4.3.2",
+    "daphne>=4.2.1",
 ]

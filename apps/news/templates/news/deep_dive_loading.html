@@ -1,0 +1,153 @@
+{% extends "news/base.html" %}
+
+{% block extra_css %}
+<style>
+    .loading-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 60vh;
+        text-align: center;
+    }
+
+    .loading-label {
+        font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+        font-size: 0.85rem;
+        color: var(--fg-muted);
+        letter-spacing: 0.05em;
+        margin-top: 1.5rem;
+    }
+
+    .loading-topic {
+        font-family: "Libre Baskerville", Georgia, serif;
+        font-size: 1.3rem;
+        font-weight: 700;
+        margin-bottom: 2rem;
+        line-height: 1.35;
+    }
+
+    .loading-error {
+        display: none;
+        color: var(--fg-muted);
+        font-size: 0.9rem;
+        margin-top: 1rem;
+    }
+
+    .loading-error a {
+        color: var(--link);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="loading-container">
+    <div class="loading-topic">{{ item.topic }}</div>
+    <canvas id="orbitCanvas" width="300" height="300"></canvas>
+    <div class="loading-label" id="loadingLabel">Збираємо інформацію з джерел...</div>
+    <div class="loading-error" id="loadingError">
+        Помилка генерації. <a href="{% url 'index' %}">Назад до дайджесту</a>
+    </div>
+</div>
+
+<script>
+(function() {
+    var canvas = document.getElementById('orbitCanvas');
+    var ctx = canvas.getContext('2d');
+    var DPR = window.devicePixelRatio || 1;
+
+    var style = getComputedStyle(document.documentElement);
+    var accent = style.getPropertyValue('--accent').trim() || '#6b1520';
+
+    function hexRgb(hex) {
+        hex = hex.replace('#','');
+        if (hex.length === 3) hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+        return [parseInt(hex.slice(0,2),16), parseInt(hex.slice(2,4),16), parseInt(hex.slice(4,6),16)];
+    }
+    var accentRGB = hexRgb(accent);
+    var NUM = 8, CENTER_R = 5;
+
+    function createSrc(i) {
+        var orbit = 50 + Math.random() * 80;
+        return {
+            orbit: orbit, origOrbit: orbit,
+            angle: (Math.PI*2/NUM)*i + Math.random()*0.5,
+            speed: (0.003+Math.random()*0.006) * (Math.random()>0.3?1:-1),
+            r: 2+Math.random()*2, drift: 0.04+Math.random()*0.06,
+            minOrbit: 16+Math.random()*12, alpha: 0, phase: Math.random()*Math.PI*2
+        };
+    }
+    var srcs = []; for (var i=0;i<NUM;i++) srcs.push(createSrc(i));
+    var particles = [];
+
+    function resize() {
+        var size = Math.min(window.innerWidth * 0.6, 300);
+        canvas.style.width = size+'px'; canvas.style.height = size+'px';
+        canvas.width = size*DPR; canvas.height = size*DPR;
+        ctx.setTransform(DPR,0,0,DPR,0,0);
+    }
+    resize();
+
+    var tick = 0;
+    function draw() {
+        tick++;
+        var W=canvas.width/DPR, H=canvas.height/DPR, cx=W/2, cy=H/2;
+        ctx.clearRect(0,0,W,H);
+        var pulse = 1+0.15*Math.sin(tick*0.03);
+        var grad = ctx.createRadialGradient(cx,cy,0,cx,cy,CENTER_R*4*pulse);
+        grad.addColorStop(0,'rgba('+accentRGB+',0.35)');
+        grad.addColorStop(1,'rgba('+accentRGB+',0)');
+        ctx.beginPath(); ctx.arc(cx,cy,CENTER_R*4*pulse,0,Math.PI*2); ctx.fillStyle=grad; ctx.fill();
+        ctx.beginPath(); ctx.arc(cx,cy,CENTER_R*pulse,0,Math.PI*2); ctx.fillStyle=accent; ctx.fill();
+
+        for (var i=0;i<srcs.length;i++) {
+            var s=srcs[i]; s.angle+=s.speed; s.orbit-=s.drift;
+            if (s.orbit<=s.minOrbit) { s.orbit=s.origOrbit; s.alpha=0;
+                var sx=cx+Math.cos(s.angle)*s.minOrbit, sy=cy+Math.sin(s.angle)*s.minOrbit;
+                particles.push({x:sx,y:sy,vx:0,vy:0,life:1,r:1+Math.random()*1.5});
+            }
+            if (s.alpha<1) s.alpha=Math.min(1,s.alpha+0.015);
+            var x=cx+Math.cos(s.angle)*s.orbit, y=cy+Math.sin(s.angle)*s.orbit;
+            ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(x,y);
+            ctx.strokeStyle='rgba('+accentRGB+','+(0.08+0.12*(1-s.orbit/s.origOrbit))*s.alpha+')';
+            ctx.lineWidth=0.5; ctx.stroke();
+            ctx.beginPath(); ctx.arc(x,y,s.r,0,Math.PI*2);
+            ctx.fillStyle='rgba('+accentRGB+','+(s.alpha*(0.7+0.3*Math.sin(tick*0.05+s.phase))).toFixed(2)+')';
+            ctx.fill();
+        }
+
+        for (var j=particles.length-1;j>=0;j--) {
+            var p=particles[j], dx=cx-p.x, dy=cy-p.y, dist=Math.sqrt(dx*dx+dy*dy);
+            if (dist<3){particles.splice(j,1);continue;}
+            p.vx+=(dx/dist)*0.15; p.vy+=(dy/dist)*0.15; p.vx*=0.96; p.vy*=0.96;
+            p.x+=p.vx; p.y+=p.vy; p.life=Math.min(dist/60,1);
+            ctx.beginPath(); ctx.arc(p.x,p.y,p.r*p.life,0,Math.PI*2);
+            ctx.fillStyle='rgba('+accentRGB+','+(0.8*p.life).toFixed(2)+')'; ctx.fill();
+        }
+        requestAnimationFrame(draw);
+    }
+    draw();
+    window.addEventListener('resize', resize);
+
+    /* WebSocket */
+    var itemId = {{ item.id }};
+    var proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    var ws = new WebSocket(proto + '//' + location.host + '/ws/deep-dive/' + itemId + '/');
+
+    ws.onmessage = function(evt) {
+        var msg = JSON.parse(evt.data);
+        if (msg.status === 'ready') {
+            window.location.href = msg.url;
+        } else if (msg.status === 'error') {
+            document.getElementById('loadingLabel').style.display = 'none';
+            document.getElementById('loadingError').style.display = 'block';
+        }
+    };
+
+    ws.onerror = function() {
+        document.getElementById('loadingLabel').style.display = 'none';
+        document.getElementById('loadingError').style.display = 'block';
+    };
+})();
+</script>
+{% endblock %}

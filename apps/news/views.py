@@ -93,8 +93,7 @@ def deep_dive(request, item_id):
 
     dive = DeepDive.objects.filter(item=item).first()
     if not dive:
-        from .services.deep_dive import DeepDiveService
-        dive = DeepDiveService().generate(item)
+        return render(request, "news/deep_dive_loading.html", {"item": item})
 
     sources = dive.sources.select_related("article__feed").order_by("order")
 

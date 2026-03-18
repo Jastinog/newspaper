@@ -173,7 +173,9 @@
         display: none;
         position: fixed;
         inset: 0;
-        background: rgba(0, 0, 0, 0.65);
+        background: rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
         z-index: 9998;
         justify-content: center;
         align-items: center;
@@ -561,8 +563,29 @@
         });
 
         document.querySelectorAll('.deep-dive-link').forEach(function(link) {
-            link.addEventListener('click', function() {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                var href = this.getAttribute('href');
+                var itemId = href.match(/deep-dive\/(\d+)/)[1];
                 startAnim();
+
+                var proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+                var ws = new WebSocket(proto + '//' + location.host + '/ws/deep-dive/' + itemId + '/');
+
+                ws.onmessage = function(evt) {
+                    var msg = JSON.parse(evt.data);
+                    if (msg.status === 'ready') {
+                        window.location.href = msg.url;
+                    } else if (msg.status === 'error') {
+                        stopAnim();
+                        alert('Помилка генерації: ' + msg.message);
+                    }
+                };
+
+                ws.onerror = function() {
+                    /* WebSocket failed — fall back to direct navigation */
+                    window.location.href = href;
+                };
             });
         });
     })();
