@@ -112,9 +112,11 @@ def _fetch_and_extract(article_id: int, url: str) -> tuple[int, str, str | None,
         resp = requests.get(url, timeout=TIMEOUT, headers=HEADERS)
         resp.raise_for_status()
 
-        html = _clean_for_xml(resp.text)
+        html = _clean_for_xml(resp.text).strip()
+        if not html:
+            return article_id, "", ERR_TOO_SHORT, "Empty response body"
         doc = Document(html)
-        html_content = doc.summary()
+        html_content = doc.summary(html_partial=True)
         clean_text = _strip_html(html_content)
 
         if len(clean_text) < 50:
