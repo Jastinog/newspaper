@@ -15,8 +15,10 @@ uv run python manage.py migrate
 echo '>> Collecting static files...'
 uv run python manage.py collectstatic --no-input --clear > /dev/null
 
-echo '>> Restarting daphne...'
-systemctl restart newspaper
+echo '>> Restarting services...'
+systemctl restart newspaper-gunicorn
+systemctl restart newspaper-daphne
 
 echo '>> Done!'
-systemctl status newspaper --no-pager | head -5
+systemctl status newspaper-gunicorn --no-pager | head -3
+systemctl status newspaper-daphne --no-pager | head -3
