@@ -42,6 +42,7 @@ class Article(models.Model):
     slug = models.SlugField(max_length=300, blank=True, default="")
     url = models.URLField(max_length=2000, unique=True)
     content = models.TextField(blank=True, default="")
+    content_fetched = models.BooleanField(default=False, db_index=True)
     published = models.DateTimeField(null=True, blank=True, db_index=True)
     read = models.BooleanField(default=False, db_index=True)
     starred = models.BooleanField(default=False, db_index=True)

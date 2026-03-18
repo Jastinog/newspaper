@@ -73,12 +73,12 @@ class ContentExtractor:
             self.stdout.write(msg)
 
     def extract_new(self) -> tuple[int, int, list[str]]:
-        """Extract content for articles with empty content.
+        """Extract content for articles not yet fetched.
 
         Returns (total, extracted, errors).
         """
         articles = list(
-            Article.objects.filter(content="")
+            Article.objects.filter(content_fetched=False)
             .exclude(url="")
             .values_list("id", "url")
         )
@@ -105,9 +105,14 @@ class ContentExtractor:
 
                 if error:
                     errors.append(error)
+                    # Mark as fetched even on failure — don't retry
+                    Article.objects.filter(id=article_id).update(
+                        content_fetched=True
+                    )
                 else:
                     Article.objects.filter(id=article_id).update(
-                        content=clean_text
+                        content=clean_text,
+                        content_fetched=True,
                     )
                     extracted += 1
 
