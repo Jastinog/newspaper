@@ -129,16 +129,20 @@
     draw();
     window.addEventListener('resize', resize);
 
-    /* WebSocket */
+    /* WebSocket — connect to digest channel, request generation */
     var itemId = {{ item.id }};
     var proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    var ws = new WebSocket(proto + '//' + location.host + '/ws/deep-dive/' + itemId + '/');
+    var ws = new WebSocket(proto + '//' + location.host + '/ws/digest/');
+
+    ws.onopen = function() {
+        ws.send(JSON.stringify({ action: 'generate', item_id: itemId }));
+    };
 
     ws.onmessage = function(evt) {
         var msg = JSON.parse(evt.data);
-        if (msg.status === 'ready') {
+        if (msg.type === 'ready' && msg.item_id === itemId) {
             window.location.href = msg.url;
-        } else if (msg.status === 'error') {
+        } else if (msg.type === 'error' && msg.item_id === itemId) {
             document.getElementById('loadingLabel').style.display = 'none';
             document.getElementById('loadingError').style.display = 'block';
         }

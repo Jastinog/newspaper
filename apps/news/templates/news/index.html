@@ -162,6 +162,18 @@
         text-underline-offset: 2px;
     }
 
+    .deep-dive-icon {
+        display: none;
+        font-size: 0.65em;
+        vertical-align: middle;
+        margin-left: 0.2em;
+        opacity: 0.5;
+    }
+
+    .deep-dive-ready .deep-dive-icon {
+        display: inline;
+    }
+
     .digest-section .summary li a.item-link:hover strong {
         text-decoration-style: solid;
         text-decoration-color: var(--accent);
@@ -372,8 +384,8 @@
                 <ul>
                 {% for item in section.items.all %}
                     <li>
-                        <a href="{% url 'deep_dive' item.id %}" class="item-link deep-dive-link">
-                            <strong>{{ item.topic }}</strong></a> &mdash; {{ item.summary }}
+                        <a href="{% url 'deep_dive' item.id %}" class="item-link deep-dive-link" data-item-id="{{ item.id }}">
+                            <strong>{{ item.topic }}</strong><span class="deep-dive-icon" title="Deep dive ready">&#x2192;</span></a> &mdash; {{ item.summary }}
                     </li>
                 {% endfor %}
                 </ul>
@@ -562,30 +574,64 @@
             if (overlay.classList.contains('active')) resize();
         });
 
+        /* --- WebSocket: single connection for the page --- */
+        var pendingItemId = null;
+        var proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+        var ws = new WebSocket(proto + '//' + location.host + '/ws/digest/');
+
+        function markReady(itemId) {
+            var link = document.querySelector('.deep-dive-link[data-item-id="' + itemId + '"]');
+            if (link) link.closest('li').classList.add('deep-dive-ready');
+        }
+
+        ws.onmessage = function(evt) {
+            var msg = JSON.parse(evt.data);
+
+            if (msg.type === 'init') {
+                (msg.ready_ids || []).forEach(markReady);
+                return;
+            }
+
+            if (msg.type === 'ready') {
+                markReady(msg.item_id);
+                if (msg.item_id === pendingItemId) {
+                    pendingItemId = null;
+                    window.location.href = msg.url;
+                }
+                return;
+            }
+
+            if (msg.type === 'error' && msg.item_id === pendingItemId) {
+                pendingItemId = null;
+                stopAnim();
+                alert('Помилка генерації: ' + msg.message);
+            }
+        };
+
+        ws.onerror = function() {
+            /* WS failed — deep dive links fall back to normal navigation */
+        };
+
         document.querySelectorAll('.deep-dive-link').forEach(function(link) {
             link.addEventListener('click', function(e) {
                 e.preventDefault();
-                var href = this.getAttribute('href');
-                var itemId = href.match(/deep-dive\/(\d+)/)[1];
+                var itemId = parseInt(this.dataset.itemId);
+
+                /* Already generated — navigate directly */
+                if (this.closest('li').classList.contains('deep-dive-ready')) {
+                    window.location.href = this.getAttribute('href');
+                    return;
+                }
+
+                /* WS not open — fallback to direct navigation */
+                if (!ws || ws.readyState !== WebSocket.OPEN) {
+                    window.location.href = this.getAttribute('href');
+                    return;
+                }
+
+                pendingItemId = itemId;
                 startAnim();
-
-                var proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-                var ws = new WebSocket(proto + '//' + location.host + '/ws/deep-dive/' + itemId + '/');
-
-                ws.onmessage = function(evt) {
-                    var msg = JSON.parse(evt.data);
-                    if (msg.status === 'ready') {
-                        window.location.href = msg.url;
-                    } else if (msg.status === 'error') {
-                        stopAnim();
-                        alert('Помилка генерації: ' + msg.message);
-                    }
-                };
-
-                ws.onerror = function() {
-                    /* WebSocket failed — fall back to direct navigation */
-                    window.location.href = href;
-                };
+                ws.send(JSON.stringify({ action: 'generate', item_id: itemId }));
             });
         });
     })();
