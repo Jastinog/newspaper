@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "apps.news",
+    "apps.analytics",
 ]
 
 MIDDLEWARE = [
@@ -38,6 +39,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "apps.analytics.middleware.AnalyticsMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -80,6 +82,9 @@ STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Analytics — path to MaxMind GeoLite2-City.mmdb (optional)
+GEOIP_DATABASE_PATH = os.environ.get("GEOIP_DATABASE_PATH", str(BASE_DIR / "data" / "GeoLite2-City.mmdb"))
 
 REST_FRAMEWORK = {
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",

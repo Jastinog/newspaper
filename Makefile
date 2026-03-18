@@ -58,6 +58,10 @@ add:
 add-dev:
 	uv add --dev $(p)
 
+# Clean old analytics data
+analytics-cleanup:
+	uv run python manage.py analytics_cleanup
+
 # Activate virtual environment
 shell:
 	. .venv/bin/activate && exec $$SHELL

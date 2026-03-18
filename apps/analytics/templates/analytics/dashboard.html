@@ -1,0 +1,430 @@
+{% extends "news/base.html" %}
+
+{% block extra_css %}
+<style>
+    .analytics-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid var(--border);
+    }
+    .analytics-header h1 {
+        font-family: "Libre Baskerville", serif;
+        font-size: 1.8rem;
+        margin: 0;
+    }
+    .period-toggle {
+        display: flex;
+        gap: 0;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    .period-toggle button {
+        background: transparent;
+        border: none;
+        padding: 0.4rem 1rem;
+        font-family: inherit;
+        font-size: 0.85rem;
+        cursor: pointer;
+        color: var(--fg);
+        border-right: 1px solid var(--border);
+        transition: background 0.2s;
+    }
+    .period-toggle button:last-child { border-right: none; }
+    .period-toggle button.active {
+        background: var(--accent);
+        color: #fff;
+    }
+    .period-toggle button:hover:not(.active) { background: var(--bg-card, rgba(0,0,0,0.05)); }
+
+    .summary-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    .summary-card {
+        border: 1px solid var(--border);
+        padding: 1rem 1.2rem;
+        text-align: center;
+    }
+    .summary-card .value {
+        font-size: 2rem;
+        font-weight: 700;
+        font-family: "Libre Baskerville", serif;
+        color: var(--accent);
+    }
+    .summary-card .label {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-top: 0.3rem;
+        opacity: 0.7;
+    }
+
+    .chart-section {
+        margin-bottom: 2rem;
+    }
+    .chart-section h2 {
+        font-family: "Libre Baskerville", serif;
+        font-size: 1.2rem;
+        margin: 0 0 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid var(--border);
+    }
+    .chart-container {
+        position: relative;
+        width: 100%;
+        max-height: 350px;
+    }
+
+    .grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+    }
+    @media (max-width: 768px) {
+        .grid-2 { grid-template-columns: 1fr; }
+    }
+
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9rem;
+    }
+    .data-table th,
+    .data-table td {
+        padding: 0.5rem 0.75rem;
+        text-align: left;
+        border-bottom: 1px solid var(--border);
+    }
+    .data-table th {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        opacity: 0.7;
+    }
+    .data-table td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+    .data-table tr:hover { background: rgba(0,0,0,0.02); }
+
+    .loading { text-align: center; padding: 2rem; opacity: 0.5; font-style: italic; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="analytics-header">
+    <h1>Analytics</h1>
+    <div class="period-toggle">
+        <button data-days="7" onclick="setPeriod(7)">7 days</button>
+        <button data-days="30" class="active" onclick="setPeriod(30)">30 days</button>
+        <button data-days="90" onclick="setPeriod(90)">90 days</button>
+    </div>
+</div>
+
+<div class="summary-cards">
+    <div class="summary-card">
+        <div class="value" id="total-views">&mdash;</div>
+        <div class="label">Page Views</div>
+    </div>
+    <div class="summary-card">
+        <div class="value" id="total-visitors">&mdash;</div>
+        <div class="label">Unique Visitors</div>
+    </div>
+    <div class="summary-card">
+        <div class="value" id="total-articles">&mdash;</div>
+        <div class="label">Articles Viewed</div>
+    </div>
+    <div class="summary-card">
+        <div class="value" id="top-country">&mdash;</div>
+        <div class="label">Top Country</div>
+    </div>
+</div>
+
+<!-- Views over time -->
+<div class="chart-section">
+    <h2>Views Over Time</h2>
+    <div class="chart-container">
+        <canvas id="chart-views"></canvas>
+    </div>
+</div>
+
+<div class="grid-2">
+    <!-- Top articles -->
+    <div class="chart-section">
+        <h2>Top Articles</h2>
+        <div id="table-articles"><div class="loading">Loading...</div></div>
+    </div>
+    <!-- Top referrers -->
+    <div class="chart-section">
+        <h2>Top Referrers</h2>
+        <div id="table-referrers"><div class="loading">Loading...</div></div>
+    </div>
+</div>
+
+<div class="grid-2">
+    <!-- Devices -->
+    <div class="chart-section">
+        <h2>Devices</h2>
+        <div class="chart-container">
+            <canvas id="chart-devices"></canvas>
+        </div>
+    </div>
+    <!-- Browsers -->
+    <div class="chart-section">
+        <h2>Browsers</h2>
+        <div class="chart-container">
+            <canvas id="chart-browsers"></canvas>
+        </div>
+    </div>
+</div>
+
+<div class="grid-2">
+    <!-- Countries -->
+    <div class="chart-section">
+        <h2>Countries</h2>
+        <div class="chart-container">
+            <canvas id="chart-geo"></canvas>
+        </div>
+    </div>
+    <!-- Categories -->
+    <div class="chart-section">
+        <h2>Categories</h2>
+        <div class="chart-container">
+            <canvas id="chart-categories"></canvas>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script>
+(function() {
+    var ACCENT = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#6b1520';
+    var FG = getComputedStyle(document.documentElement).getPropertyValue('--fg').trim() || '#161210';
+    var BORDER_C = getComputedStyle(document.documentElement).getPropertyValue('--border').trim() || '#c4baa8';
+
+    var PALETTE = [
+        ACCENT, '#2d6a4f', '#457b9d', '#e76f51', '#264653',
+        '#f4a261', '#2a9d8f', '#e63946', '#a8dadc', '#6d597a',
+        '#b56576', '#355070', '#eaac8b', '#1d3557', '#606c38'
+    ];
+
+    var currentDays = 30;
+    var charts = {};
+
+    function api(endpoint) {
+        return fetch('/analytics/api/' + endpoint + '?days=' + currentDays)
+            .then(function(r) { return r.json(); });
+    }
+
+    function destroyChart(key) {
+        if (charts[key]) { charts[key].destroy(); delete charts[key]; }
+    }
+
+    function formatNum(n) {
+        if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+        if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+        return n.toString();
+    }
+
+    function clearChildren(el) {
+        while (el.firstChild) el.removeChild(el.firstChild);
+    }
+
+    function createEl(tag, attrs, textContent) {
+        var el = document.createElement(tag);
+        if (attrs) {
+            Object.keys(attrs).forEach(function(k) { el.setAttribute(k, attrs[k]); });
+        }
+        if (textContent !== undefined) el.textContent = textContent;
+        return el;
+    }
+
+    function loadSummary(viewsData) {
+        var totalViews = 0, totalVisitors = 0;
+        viewsData.forEach(function(d) { totalViews += d.views; totalVisitors += d.visitors; });
+        document.getElementById('total-views').textContent = formatNum(totalViews);
+        document.getElementById('total-visitors').textContent = formatNum(totalVisitors);
+    }
+
+    function loadViewsChart(data) {
+        destroyChart('views');
+        var ctx = document.getElementById('chart-views').getContext('2d');
+        charts['views'] = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.map(function(d) { return d.date; }),
+                datasets: [
+                    {
+                        label: 'Views',
+                        data: data.map(function(d) { return d.views; }),
+                        borderColor: ACCENT,
+                        backgroundColor: ACCENT + '22',
+                        fill: true,
+                        tension: 0.3,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: 'Visitors',
+                        data: data.map(function(d) { return d.visitors; }),
+                        borderColor: '#2d6a4f',
+                        borderDash: [5, 5],
+                        fill: false,
+                        tension: 0.3,
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                scales: {
+                    y: { position: 'left', beginAtZero: true, grid: { color: BORDER_C + '44' } },
+                    y1: { position: 'right', beginAtZero: true, grid: { drawOnChartArea: false } },
+                    x: { grid: { display: false } }
+                },
+                plugins: { legend: { labels: { color: FG } } }
+            }
+        });
+    }
+
+    function buildTable(headers, rows) {
+        var table = createEl('table', {'class': 'data-table'});
+        var thead = createEl('thead');
+        var headRow = createEl('tr');
+        headers.forEach(function(h) { headRow.appendChild(createEl('th', null, h)); });
+        thead.appendChild(headRow);
+        table.appendChild(thead);
+
+        var tbody = createEl('tbody');
+        rows.forEach(function(cells) {
+            var tr = createEl('tr');
+            cells.forEach(function(cell) {
+                var td = createEl('td');
+                if (cell.href) {
+                    var a = createEl('a', {'href': cell.href}, cell.text);
+                    td.appendChild(a);
+                } else {
+                    td.textContent = cell.text;
+                }
+                tr.appendChild(td);
+            });
+            tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+        return table;
+    }
+
+    function loadArticlesTable(data) {
+        var el = document.getElementById('table-articles');
+        clearChildren(el);
+        if (!data.length) { el.appendChild(createEl('div', {'class': 'loading'}, 'No data')); return; }
+        document.getElementById('total-articles').textContent = formatNum(data.length);
+        var rows = data.slice(0, 10).map(function(r) {
+            var title = r.title.length > 60 ? r.title.substring(0, 60) + '...' : r.title;
+            return [{href: '/article/' + r.id + '/', text: title}, {text: formatNum(r.views)}];
+        });
+        el.appendChild(buildTable(['Article', 'Views'], rows));
+    }
+
+    function loadReferrersTable(data) {
+        var el = document.getElementById('table-referrers');
+        clearChildren(el);
+        if (!data.length) { el.appendChild(createEl('div', {'class': 'loading'}, 'No data')); return; }
+        var rows = data.slice(0, 10).map(function(r) {
+            return [{text: r.referrer_domain}, {text: formatNum(r.views)}];
+        });
+        el.appendChild(buildTable(['Domain', 'Views'], rows));
+    }
+
+    function makeDoughnut(canvasId, labels, values, key) {
+        destroyChart(key);
+        var ctx = document.getElementById(canvasId).getContext('2d');
+        charts[key] = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{ data: values, backgroundColor: PALETTE.slice(0, labels.length) }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'right', labels: { color: FG, font: { size: 11 } } } }
+            }
+        });
+    }
+
+    function makeBar(canvasId, labels, values, key) {
+        destroyChart(key);
+        var ctx = document.getElementById(canvasId).getContext('2d');
+        charts[key] = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{ data: values, backgroundColor: PALETTE.slice(0, labels.length) }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { beginAtZero: true, grid: { color: BORDER_C + '44' } },
+                    y: { grid: { display: false }, ticks: { color: FG } }
+                }
+            }
+        });
+    }
+
+    function loadAll() {
+        api('views-over-time/').then(function(r) {
+            loadSummary(r.data);
+            loadViewsChart(r.data);
+        });
+
+        api('top-articles/').then(function(r) { loadArticlesTable(r.data); });
+        api('top-referrers/').then(function(r) { loadReferrersTable(r.data); });
+
+        api('devices/').then(function(r) {
+            var devLabels = r.devices.map(function(d) { return d.device_type || 'unknown'; });
+            var devValues = r.devices.map(function(d) { return d.count; });
+            makeDoughnut('chart-devices', devLabels, devValues, 'devices');
+
+            var brLabels = r.browsers.map(function(d) { return d.browser; });
+            var brValues = r.browsers.map(function(d) { return d.count; });
+            makeDoughnut('chart-browsers', brLabels, brValues, 'browsers');
+        });
+
+        api('geo/').then(function(r) {
+            var labels = r.data.map(function(d) { return d.country_name || d.country; });
+            var values = r.data.map(function(d) { return d.views; });
+            makeBar('chart-geo', labels.slice(0, 10), values.slice(0, 10), 'geo');
+            if (r.data.length > 0) {
+                document.getElementById('top-country').textContent = r.data[0].country_name || r.data[0].country || '\u2014';
+            }
+        });
+
+        api('categories/').then(function(r) {
+            var labels = r.data.map(function(d) { return d.name; });
+            var values = r.data.map(function(d) { return d.views; });
+            makeBar('chart-categories', labels.slice(0, 10), values.slice(0, 10), 'categories');
+        });
+    }
+
+    window.setPeriod = function(days) {
+        currentDays = days;
+        document.querySelectorAll('.period-toggle button').forEach(function(btn) {
+            btn.classList.toggle('active', parseInt(btn.dataset.days) === days);
+        });
+        loadAll();
+    };
+
+    loadAll();
+})();
+</script>
+{% endblock %}

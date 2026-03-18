@@ -4,3 +4,4 @@ __pycache__/
 *.pyc
 staticfiles/
 .env
+data/*.mmdb
