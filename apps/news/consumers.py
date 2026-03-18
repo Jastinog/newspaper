@@ -7,90 +7,107 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 
 logger = logging.getLogger(__name__)
 
-# Track in-progress generations: item_id -> {event, url, error}
+# In-progress deep dive generations: item_id -> {event, url, error}
 _generations = {}
 
 
-class DigestConsumer(AsyncWebsocketConsumer):
-    """Single WebSocket per user on the digest page.
+class SiteConsumer(AsyncWebsocketConsumer):
+    """Main WebSocket endpoint for the site.
 
-    Protocol:
-        Server -> Client on connect:
-            {"type": "init", "ready_ids": [item_id, ...]}
+    Single connection at /ws/ handles all real-time features via actions.
 
-        Client -> Server:
-            {"action": "generate", "item_id": 123}
+    Protocol
+    --------
+    Client -> Server:
+        {"action": "deep_dive.generate", "item_id": 123}
 
-        Server -> Client:
-            {"type": "generating", "item_id": 123}
-            {"type": "ready", "item_id": 123, "url": "/deep-dive/123/"}
-            {"type": "error", "item_id": 123, "message": "..."}
+    Server -> Client:
+        {"type": "init", "deep_dives": {"ready": [1,2], "generating": [3]}}
+        {"type": "deep_dive.generating", "item_id": 123}
+        {"type": "deep_dive.ready",      "item_id": 123, "url": "/deep-dive/123/"}
+        {"type": "deep_dive.error",      "item_id": 123, "message": "..."}
     """
+
+    ACTIONS = {
+        "deep_dive.generate": "_on_deep_dive_generate",
+    }
+
+    # ── Lifecycle ──────────────────────────────────────
 
     async def connect(self):
         await self.accept()
-        ready_ids = await self._get_ready_ids()
-        await self.send(json.dumps({"type": "init", "ready_ids": ready_ids}))
+        await self.send(json.dumps({
+            "type": "init",
+            "deep_dives": await self._deep_dive_state(),
+        }))
 
-    async def receive(self, text_data):
+    async def receive(self, text_data=None, bytes_data=None):
+        if not text_data:
+            return
         try:
             data = json.loads(text_data)
-        except json.JSONDecodeError:
+        except (json.JSONDecodeError, TypeError):
             return
 
-        if data.get("action") != "generate":
-            return
+        handler_name = self.ACTIONS.get(data.get("action"))
+        if handler_name:
+            await getattr(self, handler_name)(data)
 
+    # ── Deep Dive actions ──────────────────────────────
+
+    async def _on_deep_dive_generate(self, data):
         item_id = data.get("item_id")
         if not item_id:
             return
 
-        # Already generated?
-        url = await self._get_deep_dive_url(item_id)
+        # Already exists — instant response
+        url = await self._deep_dive_url(item_id)
         if url:
-            await self.send(json.dumps({"type": "ready", "item_id": item_id, "url": url}))
+            await self.send(json.dumps({
+                "type": "deep_dive.ready",
+                "item_id": item_id,
+                "url": url,
+            }))
             return
 
-        await self.send(json.dumps({"type": "generating", "item_id": item_id}))
+        await self.send(json.dumps({
+            "type": "deep_dive.generating",
+            "item_id": item_id,
+        }))
 
-        # Start generation if not already running
+        # Start generation if nobody else is doing it
         if item_id not in _generations:
             _generations[item_id] = {
                 "event": asyncio.Event(),
                 "url": None,
                 "error": None,
             }
-            asyncio.create_task(self._run_generation(item_id))
+            asyncio.create_task(self._run_deep_dive(item_id))
 
-        # Wait for result in background (doesn't block receive)
-        asyncio.create_task(self._wait_and_notify(item_id))
+        # Wait for result in a non-blocking task
+        asyncio.create_task(self._await_deep_dive(item_id))
 
-    async def _run_generation(self, item_id):
-        """Run deep dive generation in a thread, then signal waiters."""
+    async def _run_deep_dive(self, item_id):
         gen = _generations[item_id]
         try:
-            url = await self._do_generate(item_id)
-            gen["url"] = url
+            gen["url"] = await self._do_deep_dive_generate(item_id)
         except Exception as e:
-            logger.exception("Deep dive generation failed for item %s", item_id)
+            logger.exception("Deep dive failed for item %s", item_id)
             gen["error"] = str(e)
         finally:
             gen["event"].set()
-            # Clean up after waiters have had time to read the result
-            await asyncio.sleep(5)
+            await asyncio.sleep(5)  # let waiters read the result
             _generations.pop(item_id, None)
 
-    async def _wait_and_notify(self, item_id):
-        """Wait for generation to finish and send result to this consumer."""
+    async def _await_deep_dive(self, item_id):
         gen = _generations.get(item_id)
         if not gen:
             return
-
         try:
             await asyncio.wait_for(gen["event"].wait(), timeout=300)
         except asyncio.TimeoutError:
             await self.send(json.dumps({
-                "type": "error",
+                "type": "deep_dive.error",
                 "item_id": item_id,
                 "message": "Generation timed out",
             }))
@@ -98,36 +115,41 @@ class DigestConsumer(AsyncWebsocketConsumer):
 
         if gen["url"]:
             await self.send(json.dumps({
-                "type": "ready",
+                "type": "deep_dive.ready",
                 "item_id": item_id,
                 "url": gen["url"],
             }))
         else:
             await self.send(json.dumps({
-                "type": "error",
+                "type": "deep_dive.error",
                 "item_id": item_id,
                 "message": gen.get("error", "Unknown error"),
             }))
 
-    # ── DB helpers ──────────────────────────────────────────
+    # ── DB helpers ─────────────────────────────────────
 
     @database_sync_to_async
-    def _get_ready_ids(self):
+    def _deep_dive_state(self):
         from apps.news.models import DeepDive, Digest
 
         digest = Digest.objects.order_by("-date").first()
         if not digest:
-            return []
-        item_ids = list(
+            return {"ready": [], "generating": []}
+
+        item_ids = set(
             digest.sections.values_list("items__id", flat=True)
         )
-        return list(
+        ready = list(
             DeepDive.objects.filter(item_id__in=item_ids)
             .values_list("item_id", flat=True)
         )
+        generating = [
+            iid for iid in _generations if iid in item_ids
+        ]
+        return {"ready": ready, "generating": generating}
 
     @database_sync_to_async
-    def _get_deep_dive_url(self, item_id):
+    def _deep_dive_url(self, item_id):
         from apps.news.models import DeepDive
 
         if DeepDive.objects.filter(item_id=item_id).exists():
@@ -135,11 +157,10 @@ class DigestConsumer(AsyncWebsocketConsumer):
         return None
 
     @database_sync_to_async
-    def _do_generate(self, item_id):
+    def _do_deep_dive_generate(self, item_id):
         from apps.news.models import DeepDive, DigestItem
         from apps.news.services.deep_dive import DeepDiveService
 
-        # Double-check: may have been created while queued
         if DeepDive.objects.filter(item_id=item_id).exists():
             return f"/deep-dive/{item_id}/"
 
