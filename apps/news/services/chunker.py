@@ -1,7 +1,16 @@
-MAX_CHUNK_CHARS = 1000
-MIN_CHUNK_CHARS = 100
-# Hard limit — text-embedding-3-small accepts max 8192 tokens (~24k chars)
-HARD_MAX_CHARS = 6000
+"""Recursive text chunker for embedding.
+
+Splits text using a hierarchy of separators (paragraphs → lines → sentences → words),
+targeting ~512 tokens (~2000 chars) per chunk with 10% overlap.
+"""
+
+TARGET_CHARS = 2000
+MAX_CHARS = 2500
+MIN_CHARS = 200
+OVERLAP_CHARS = 200
+
+# Separators in priority order: paragraphs, lines, sentences, words
+SEPARATORS = ["\n\n", "\n", ". ", "! ", "? ", "; ", ", ", " "]
 
 
 def strip_html(text: str) -> str:
@@ -29,38 +38,76 @@ def strip_html(text: str) -> str:
     return "".join(result)
 
 
-def _split_into_sentences(text: str) -> list[str]:
-    """Split text into sentences, preserving punctuation.
+def _recursive_split(text: str, separators: list[str]) -> list[str]:
+    """Split text recursively using separator hierarchy.
 
-    Splits on [.!?] followed by space/newline.
+    Tries the first separator. Pieces that fit within TARGET_CHARS are kept.
+    Pieces that are too large are split recursively with the next separator.
     """
-    sentences = []
-    current = []
-    chars = list(text)
+    if len(text) <= TARGET_CHARS:
+        return [text]
 
-    for i, ch in enumerate(chars):
-        current.append(ch)
+    if not separators:
+        # Last resort: hard split at word boundary
+        return _hard_split(text, TARGET_CHARS)
 
-        if ch in (".", "!", "?"):
-            next_ch = chars[i + 1] if i + 1 < len(chars) else None
-            if next_ch in (" ", "\n"):
-                trimmed = "".join(current).strip()
-                if trimmed:
-                    sentences.append(trimmed)
-                current = []
+    sep = separators[0]
+    rest = separators[1:]
 
-    trimmed = "".join(current).strip()
-    if trimmed:
-        sentences.append(trimmed)
+    parts = text.split(sep)
 
-    return sentences
+    # If this separator didn't split anything, try next
+    if len(parts) == 1:
+        return _recursive_split(text, rest)
+
+    # Re-attach separator to each piece (except last) for natural reading
+    # For sentence-ending separators (". ", "! ", "? "), append to the piece
+    # For structural separators (\n\n, \n), don't append
+    is_sentence_sep = sep in (". ", "! ", "? ", "; ", ", ")
+
+    pieces = []
+    for i, part in enumerate(parts):
+        if is_sentence_sep and i < len(parts) - 1:
+            pieces.append(part + sep.rstrip())
+        else:
+            pieces.append(part)
+
+    # Merge small consecutive pieces into chunks of ~TARGET_CHARS
+    chunks = []
+    current = ""
+
+    for piece in pieces:
+        piece = piece.strip()
+        if not piece:
+            continue
+
+        # If a single piece is too large, recurse with finer separator
+        if len(piece) > TARGET_CHARS:
+            if current:
+                chunks.append(current)
+                current = ""
+            chunks.extend(_recursive_split(piece, rest))
+            continue
+
+        joiner = sep if not is_sentence_sep else " "
+        if not current:
+            current = piece
+        elif len(current) + len(joiner) + len(piece) <= TARGET_CHARS:
+            current += joiner + piece
+        else:
+            chunks.append(current)
+            current = piece
+
+    if current:
+        chunks.append(current)
+
+    return chunks
 
 
 def _hard_split(text: str, max_chars: int) -> list[str]:
     """Split text into pieces of max_chars, breaking at word boundaries."""
     pieces = []
     while len(text) > max_chars:
-        # Find last space before limit
         split_at = text.rfind(" ", 0, max_chars)
         if split_at == -1:
             split_at = max_chars
@@ -71,58 +118,86 @@ def _hard_split(text: str, max_chars: int) -> list[str]:
     return pieces
 
 
-def chunk_text(title: str, content: str) -> list[str]:
-    """Split article into chunks by sentences with ~1000 char limit.
+def _merge_small(chunks: list[str]) -> list[str]:
+    """Merge chunks smaller than MIN_CHARS with neighbors."""
+    if len(chunks) <= 1:
+        return chunks
 
-    Content is expected to be clean text (no HTML).
-    Enforces a hard max of HARD_MAX_CHARS per chunk for API limits.
-    """
-    full_text = f"{title}\n\n{content}"
-
-    sentences = _split_into_sentences(full_text)
-
-    if not sentences:
-        return _hard_split(full_text, MAX_CHUNK_CHARS)
-
-    chunks: list[str] = []
-    current_chunk = ""
-
-    for sentence in sentences:
-        # If a single sentence exceeds the soft limit, hard-split it
-        if len(sentence) > MAX_CHUNK_CHARS:
-            if current_chunk:
-                chunks.append(current_chunk)
-                current_chunk = ""
-            chunks.extend(_hard_split(sentence, MAX_CHUNK_CHARS))
-            continue
-
-        if current_chunk and len(current_chunk) + 1 + len(sentence) > MAX_CHUNK_CHARS:
-            chunks.append(current_chunk)
-            current_chunk = sentence
+    merged = [chunks[0]]
+    for chunk in chunks[1:]:
+        if len(merged[-1]) < MIN_CHARS:
+            merged[-1] += "\n" + chunk
+        elif len(chunk) < MIN_CHARS:
+            merged[-1] += "\n" + chunk
         else:
-            if current_chunk:
-                current_chunk += " " + sentence
-            else:
-                current_chunk = sentence
+            merged.append(chunk)
 
-    if current_chunk:
-        if len(current_chunk) < MIN_CHUNK_CHARS:
-            if chunks:
-                chunks[-1] += " " + current_chunk
-            else:
-                chunks.append(current_chunk)
+    return merged
+
+
+def _add_overlap(chunks: list[str]) -> list[str]:
+    """Add overlap from the end of previous chunk to start of next."""
+    if len(chunks) <= 1 or OVERLAP_CHARS <= 0:
+        return chunks
+
+    result = [chunks[0]]
+    for i in range(1, len(chunks)):
+        prev = chunks[i - 1]
+        curr = chunks[i]
+
+        # Take last ~OVERLAP_CHARS from previous chunk, at word boundary
+        if len(prev) <= OVERLAP_CHARS:
+            overlap = prev
         else:
-            chunks.append(current_chunk)
+            cut = prev[-(OVERLAP_CHARS):]
+            word_start = cut.find(" ")
+            if word_start != -1:
+                overlap = cut[word_start + 1:]
+            else:
+                overlap = cut
 
-    if not chunks:
-        chunks.append(full_text)
+        result.append(f"...{overlap}\n\n{curr}")
 
-    # Final safety: hard-split any chunk that's still too large
+    return result
+
+
+def _enforce_hard_max(chunks: list[str]) -> list[str]:
+    """Safety net: hard-split any chunk still exceeding MAX_CHARS."""
     final = []
     for chunk in chunks:
-        if len(chunk) > HARD_MAX_CHARS:
-            final.extend(_hard_split(chunk, MAX_CHUNK_CHARS))
+        if len(chunk) > MAX_CHARS:
+            final.extend(_hard_split(chunk, TARGET_CHARS))
         else:
             final.append(chunk)
-
     return final
+
+
+def chunk_text(title: str, content: str) -> list[str]:
+    """Split article into chunks for embedding.
+
+    Uses recursive splitting (paragraphs → lines → sentences → words),
+    targeting ~2000 chars per chunk with ~200 char overlap.
+    Title is prepended to the first chunk only.
+    Content is expected to be clean text (no HTML).
+    """
+    if not content.strip():
+        return [title] if title else []
+
+    full_text = f"{title}\n\n{content}" if title else content
+
+    # Step 1: Recursive split by separator hierarchy
+    chunks = _recursive_split(full_text, SEPARATORS)
+
+    # Step 2: Merge undersized chunks
+    chunks = _merge_small(chunks)
+
+    # Step 3: Add overlap between chunks
+    chunks = _add_overlap(chunks)
+
+    # Step 4: Safety — enforce hard max
+    chunks = _enforce_hard_max(chunks)
+
+    # Filter empty
+    chunks = [c.strip() for c in chunks if c.strip()]
+
+    return chunks if chunks else [full_text[:MAX_CHARS]]
