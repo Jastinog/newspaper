@@ -150,34 +150,29 @@
         color: var(--fg-faint);
     }
 
-    .digest-section .summary li a.item-link {
-        color: inherit;
+    .digest-section .summary li strong {
+        font-weight: 700;
+    }
+
+    .deep-dive-hint {
+        font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+        font-size: 0.75em;
+        color: var(--fg-faint);
         text-decoration: none;
+        white-space: nowrap;
     }
 
-    .digest-section .summary li a.item-link strong {
-        text-decoration-line: underline;
-        text-decoration-style: dotted;
-        text-decoration-color: var(--border);
-        text-underline-offset: 2px;
-    }
-
-    .deep-dive-icon {
-        display: none;
-        font-size: 0.65em;
-        vertical-align: middle;
-        margin-left: 0.2em;
-        opacity: 0.5;
-    }
-
-    .deep-dive-ready .deep-dive-icon {
-        display: inline;
-    }
-
-    .digest-section .summary li a.item-link:hover strong {
-        text-decoration-style: solid;
-        text-decoration-color: var(--accent);
+    .deep-dive-hint:hover {
         color: var(--accent);
+    }
+
+    .deep-dive-ready .deep-dive-hint {
+        color: var(--accent);
+        opacity: 0.7;
+    }
+
+    .deep-dive-ready .deep-dive-hint:hover {
+        opacity: 1;
     }
 
     /* Loading overlay */
@@ -384,8 +379,8 @@
                 <ul>
                 {% for item in section.items.all %}
                     <li>
-                        <a href="{% url 'deep_dive' item.id %}" class="item-link deep-dive-link" data-item-id="{{ item.id }}">
-                            <strong>{{ item.topic }}</strong><span class="deep-dive-icon" title="Deep dive ready">&#x2192;</span></a> &mdash; {{ item.summary }}
+                        <strong>{{ item.topic }}</strong> &mdash; {{ item.summary }}
+                        <a href="{% url 'deep_dive' item.id %}" class="deep-dive-hint deep-dive-link" data-item-id="{{ item.id }}">детальніше &rarr;</a>
                     </li>
                 {% endfor %}
                 </ul>
