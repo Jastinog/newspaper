@@ -1,6 +1,5 @@
 import logging
 import os
-import struct
 import time
 
 import requests
@@ -64,13 +63,3 @@ class EmbeddingClient:
 
         raise EmbeddingError(f"{last_err} (after 3 attempts)")
 
-    @staticmethod
-    def embedding_to_bytes(emb: list[float]) -> bytes:
-        """Pack embedding as f32 little-endian bytes."""
-        return struct.pack(f"<{len(emb)}f", *emb)
-
-    @staticmethod
-    def bytes_to_embedding(data: bytes) -> list[float]:
-        """Unpack f32 little-endian bytes to embedding."""
-        count = len(data) // 4
-        return list(struct.unpack(f"<{count}f", data))

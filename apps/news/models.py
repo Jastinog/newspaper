@@ -1,6 +1,7 @@
 from django.db import models
 from django.urls import reverse
 from django.utils.text import slugify
+from pgvector.django import HnswIndex, VectorField
 
 
 class Category(models.Model):
@@ -75,12 +76,21 @@ class ArticleChunk(models.Model):
     article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name="chunks")
     chunk_index = models.PositiveIntegerField()
     chunk_text = models.TextField()
-    embedding = models.BinaryField()
+    embedding = VectorField(dimensions=1536)
     model = models.CharField(max_length=100)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        indexes = [models.Index(fields=["article"])]
+        indexes = [
+            models.Index(fields=["article"]),
+            HnswIndex(
+                name="chunk_embedding_hnsw",
+                fields=["embedding"],
+                m=16,
+                ef_construction=64,
+                opclasses=["vector_cosine_ops"],
+            ),
+        ]
         unique_together = [("article", "chunk_index")]
 
     def __str__(self):

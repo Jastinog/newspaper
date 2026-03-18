@@ -1,99 +1,40 @@
 import logging
 from datetime import datetime, timedelta, timezone
 
-import numpy as np
+from pgvector.django import CosineDistance
 
 from apps.news.models import ArticleChunk
-from apps.news.services.embeddings import EmbeddingClient
 
 logger = logging.getLogger(__name__)
 
 
 class SimilaritySearch:
-    """Cosine similarity search over ArticleChunk embeddings using numpy."""
+    """Cosine similarity search over ArticleChunk embeddings using pgvector."""
 
     def __init__(self, days=30):
         self.days = days
-        self._matrix = None  # (N, 1536) normalized
-        self._chunk_ids = []  # parallel list of chunk PKs
-        self._chunk_meta = []  # parallel list of (article_id, chunk_index)
 
-    def _load_chunks(self):
-        """Load chunk embeddings from the last N days into a normalized numpy matrix."""
-        if self._matrix is not None:
-            return
-
+    def _base_qs(self):
         cutoff = datetime.now(timezone.utc) - timedelta(days=self.days)
-        chunks = (
-            ArticleChunk.objects
-            .filter(created_at__gte=cutoff)
-            .values_list("id", "article_id", "chunk_index", "embedding")
-        )
-
-        ids = []
-        meta = []
-        vectors = []
-
-        for chunk_id, article_id, chunk_index, emb_bytes in chunks:
-            emb = EmbeddingClient.bytes_to_embedding(emb_bytes)
-            vectors.append(emb)
-            ids.append(chunk_id)
-            meta.append((article_id, chunk_index))
-
-        if not vectors:
-            self._matrix = np.empty((0, 1536), dtype=np.float32)
-            self._chunk_ids = []
-            self._chunk_meta = []
-            return
-
-        self._matrix = np.array(vectors, dtype=np.float32)
-        # Normalize all vectors once for cosine similarity via dot product
-        norms = np.linalg.norm(self._matrix, axis=1, keepdims=True)
-        norms[norms == 0] = 1.0
-        self._matrix = self._matrix / norms
-        self._chunk_ids = ids
-        self._chunk_meta = meta
-
-        logger.info("Loaded %d chunk embeddings for similarity search", len(ids))
+        return ArticleChunk.objects.filter(created_at__gte=cutoff)
 
     def search(self, query_embedding: list[float], top_k: int = 15, threshold: float = 0.25):
         """Return top-k (chunk_id, article_id, chunk_index, score) tuples by cosine similarity."""
-        self._load_chunks()
+        # pgvector CosineDistance = 1 - cosine_similarity
+        max_distance = 1.0 - threshold
 
-        if self._matrix.shape[0] == 0:
-            return []
+        results = (
+            self._base_qs()
+            .annotate(distance=CosineDistance("embedding", query_embedding))
+            .filter(distance__lte=max_distance)
+            .order_by("distance")
+            .values_list("id", "article_id", "chunk_index", "distance")[:top_k]
+        )
 
-        query = np.array(query_embedding, dtype=np.float32)
-        query = query / (np.linalg.norm(query) or 1.0)
-
-        scores = self._matrix @ query  # dot product = cosine similarity (both normalized)
-
-        # Filter by threshold
-        mask = scores >= threshold
-        if not mask.any():
-            return []
-
-        indices = np.where(mask)[0]
-        filtered_scores = scores[indices]
-
-        # Get top-k
-        if len(indices) > top_k:
-            top_indices = np.argpartition(filtered_scores, -top_k)[-top_k:]
-            top_indices = top_indices[np.argsort(filtered_scores[top_indices])[::-1]]
-        else:
-            top_indices = np.argsort(filtered_scores)[::-1]
-
-        results = []
-        for idx in top_indices:
-            orig_idx = indices[idx]
-            results.append((
-                self._chunk_ids[orig_idx],
-                self._chunk_meta[orig_idx][0],  # article_id
-                self._chunk_meta[orig_idx][1],  # chunk_index
-                float(filtered_scores[idx]),
-            ))
-
-        return results
+        return [
+            (chunk_id, article_id, chunk_index, 1.0 - distance)
+            for chunk_id, article_id, chunk_index, distance in results
+        ]
 
     def multi_query_search(
         self,
@@ -114,7 +55,6 @@ class SimilaritySearch:
         # Sort by score descending and take top
         sorted_results = sorted(best.items(), key=lambda x: x[1][1], reverse=True)[:final_top_k]
 
-        # Return (chunk_id, article_id, chunk_index, score)
         return [
             (chunk_id, article_id, chunk_index, score)
             for (article_id, chunk_index), (chunk_id, score) in sorted_results

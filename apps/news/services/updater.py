@@ -93,7 +93,7 @@ class ArticleEmbedder:
                     article_id=article_id,
                     chunk_index=idx,
                     chunk_text=text,
-                    embedding=EmbeddingClient.embedding_to_bytes(emb),
+                    embedding=emb,
                     model=MODEL,
                 )
                 for idx, (text, emb) in enumerate(zip(chunks, all_embeddings))
