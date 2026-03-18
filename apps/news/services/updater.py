@@ -145,33 +145,38 @@ class ArticleEmbedder:
             self._write("No articles to embed.\n")
             return 0, 0, 0
 
-        # Build all chunks with their article references
-        all_chunks = []  # [(article_id, chunk_index, chunk_text)]
+        # Group chunks by article so we can mark each article done individually
+        article_chunks = {}  # {article_id: [(chunk_index, chunk_text)]}
         for article_id, title, content in articles:
             chunks = chunk_text(title, content)
-            for idx, text in enumerate(chunks):
-                all_chunks.append((article_id, idx, text))
+            article_chunks[article_id] = [
+                (idx, text) for idx, text in enumerate(chunks)
+            ]
 
+        total_chunk_count = sum(len(v) for v in article_chunks.values())
         self._write(
-            f"Embedding {len(articles)} articles ({len(all_chunks)} chunks)...\n"
+            f"Embedding {len(articles)} articles ({total_chunk_count} chunks)...\n"
         )
 
         total_tokens = 0
-        chunk_objects = []
-        num_batches = (len(all_chunks) + BATCH_SIZE - 1) // BATCH_SIZE
+        total_chunks_saved = 0
+        articles_done = 0
 
-        for batch_num in range(num_batches):
-            start = batch_num * BATCH_SIZE
-            end = start + BATCH_SIZE
-            batch = all_chunks[start:end]
-            texts = [c[2] for c in batch]
+        # Process one article at a time — save chunks and mark embedded immediately
+        for article_id, chunks in article_chunks.items():
+            texts = [text for _, text in chunks]
 
-            self._write(f"  Batch {batch_num + 1}/{num_batches}... ")
-            embeddings, tokens = client.embed_batch(texts)
-            total_tokens += tokens
-            self._write("done\n")
+            # Embed all chunks for this article (may need multiple batches)
+            all_embeddings = []
+            for i in range(0, len(texts), BATCH_SIZE):
+                batch_texts = texts[i:i + BATCH_SIZE]
+                embeddings, tokens = client.embed_batch(batch_texts)
+                all_embeddings.extend(embeddings)
+                total_tokens += tokens
 
-            for (article_id, chunk_index, text), emb in zip(batch, embeddings):
+            # Save chunks to DB
+            chunk_objects = []
+            for (chunk_index, text), emb in zip(chunks, all_embeddings):
                 chunk_objects.append(
                     ArticleChunk(
                         article_id=article_id,
@@ -181,16 +186,24 @@ class ArticleEmbedder:
                         model=MODEL,
                     )
                 )
+            ArticleChunk.objects.bulk_create(chunk_objects, ignore_conflicts=True)
 
-        ArticleChunk.objects.bulk_create(chunk_objects, ignore_conflicts=True)
+            # Mark this article as embedded right away
+            Article.objects.filter(id=article_id).update(embedded=True)
 
-        article_ids = [a[0] for a in articles]
-        Article.objects.filter(id__in=article_ids).update(embedded=True)
+            articles_done += 1
+            total_chunks_saved += len(chunk_objects)
+
+            if articles_done % 50 == 0 or articles_done == len(articles):
+                self._write(
+                    f"  {articles_done}/{len(articles)} articles embedded\n"
+                )
 
         self._write(
-            f"Done: {len(articles)} articles embedded, {total_tokens} tokens\n"
+            f"Done: {articles_done} articles, "
+            f"{total_chunks_saved} chunks, {total_tokens} tokens\n"
         )
-        return len(articles), len(chunk_objects), total_tokens
+        return articles_done, total_chunks_saved, total_tokens
 
 
 class UpdateService:
