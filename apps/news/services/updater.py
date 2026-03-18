@@ -117,9 +117,9 @@ class UpdateService:
       3. ArticleEmbedder  — chunk text, get embeddings, save
     """
 
-    def __init__(self, workers: int = MAX_WORKERS, api_key=None, stdout=None):
+    def __init__(self, workers: int = MAX_WORKERS, days: int = 30, api_key=None, stdout=None):
         self.fetcher = FeedFetcher(workers=workers, stdout=stdout)
-        self.extractor = ContentExtractor(workers=workers, stdout=stdout)
+        self.extractor = ContentExtractor(workers=workers, days=days, stdout=stdout)
         self.embedder = ArticleEmbedder(api_key=api_key, stdout=stdout)
         self.stdout = stdout
 

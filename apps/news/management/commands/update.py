@@ -19,10 +19,15 @@ class Command(BaseCommand):
             "--workers", type=int, default=20,
             help="Number of concurrent threads",
         )
+        parser.add_argument(
+            "--days", type=int, default=30,
+            help="Only extract articles from the last N days (default: 30)",
+        )
 
     def handle(self, *args, **options):
         service = UpdateService(
             workers=options["workers"],
+            days=options["days"],
             stdout=self.stdout,
         )
         result = service.run(
@@ -46,4 +51,7 @@ class Command(BaseCommand):
                 self.style.WARNING(
                     f"{len(result.extract_errors)} extraction errors"
                 )
+            )
+            self.stderr.write(
+                "Run 'manage.py debug_extract --errors' for details"
             )

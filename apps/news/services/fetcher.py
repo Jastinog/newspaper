@@ -1,6 +1,6 @@
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import feedparser
 import requests
@@ -11,17 +11,24 @@ from apps.news.models import Article, Feed
 logger = logging.getLogger(__name__)
 
 TIMEOUT = 15
-USER_AGENT = "Mozilla/5.0 (compatible; Newspaper/0.1)"
 MAX_WORKERS = 20
+
+
+def _strip_html_basic(text: str) -> str:
+    """Strip HTML tags and decode entities from RSS content."""
+    import re
+    from html import unescape
+
+    text = re.sub(r"<[^>]+>", "", text)
+    text = unescape(text)
+    text = re.sub(r"\s+", " ", text)
+    return text.strip()
 
 
 def _fetch_single_feed(feed_id, url, title):
     """Fetch and parse a single RSS feed. Runs in a thread."""
     try:
-        resp = requests.get(
-            url, timeout=TIMEOUT,
-            headers={"User-Agent": USER_AGENT},
-        )
+        resp = requests.get(url, timeout=TIMEOUT)
         resp.raise_for_status()
         parsed = feedparser.parse(resp.content)
         return feed_id, parsed.entries, None
@@ -87,12 +94,28 @@ class FeedFetcher:
                                 pass
                             break
 
+                    # Grab RSS description/summary as fallback content
+                    rss_content = ""
+                    for field in ("summary", "description", "content"):
+                        val = getattr(entry, field, None)
+                        if isinstance(val, list):
+                            # feedparser content is a list of dicts
+                            val = val[0].get("value", "") if val else ""
+                        if val:
+                            rss_content = _strip_html_basic(str(val)).strip()
+                            break
+
+                    # Skip articles older than 30 days
+                    if published and published < datetime.now(timezone.utc) - timedelta(days=30):
+                        continue
+
                     try:
                         Article.objects.create(
                             feed_id=feed_id,
                             title=title[:1000],
                             url=link[:2000],
                             published=published,
+                            rss_content=rss_content,
                         )
                         new_count += 1
                     except IntegrityError:
