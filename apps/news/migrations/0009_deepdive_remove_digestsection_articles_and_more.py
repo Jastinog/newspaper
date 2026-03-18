@@ -28,19 +28,13 @@ class Migration(migrations.Migration):
                 'verbose_name_plural': 'Deep Dives',
             },
         ),
-        # These columns/tables were already dropped manually, so use SeparateDatabaseAndState
-        migrations.SeparateDatabaseAndState(
-            state_operations=[
-                migrations.RemoveField(
-                    model_name='digestsection',
-                    name='articles',
-                ),
-                migrations.RemoveField(
-                    model_name='digestsection',
-                    name='summary',
-                ),
-            ],
-            database_operations=[],
+        migrations.RemoveField(
+            model_name='digestsection',
+            name='articles',
+        ),
+        migrations.RemoveField(
+            model_name='digestsection',
+            name='summary',
         ),
         migrations.CreateModel(
             name='DigestItem',
