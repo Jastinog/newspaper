@@ -58,17 +58,24 @@ class ArticleEmbedder:
         total_chunks_saved = 0
         articles_done = 0
 
+        skipped = 0
         for article_id, title, content in articles:
             chunks = chunk_text(title, content)
-            texts = [text for text in chunks]
 
-            # Embed all chunks for this article
-            all_embeddings = []
-            for i in range(0, len(texts), BATCH_SIZE):
-                batch_texts = texts[i:i + BATCH_SIZE]
-                embeddings, tokens = client.embed_batch(batch_texts)
-                all_embeddings.extend(embeddings)
-                total_tokens += tokens
+            try:
+                # Embed all chunks for this article
+                all_embeddings = []
+                for i in range(0, len(chunks), BATCH_SIZE):
+                    batch_texts = chunks[i:i + BATCH_SIZE]
+                    embeddings, tokens = client.embed_batch(batch_texts)
+                    all_embeddings.extend(embeddings)
+                    total_tokens += tokens
+            except Exception as e:
+                logger.warning("Embed failed for article %s: %s", article_id, e)
+                skipped += 1
+                # Mark embedded to avoid retrying broken articles
+                Article.objects.filter(id=article_id).update(embedded=True)
+                continue
 
             # Save chunks to DB
             chunk_objects = [
@@ -79,7 +86,7 @@ class ArticleEmbedder:
                     embedding=EmbeddingClient.embedding_to_bytes(emb),
                     model=MODEL,
                 )
-                for idx, (text, emb) in enumerate(zip(texts, all_embeddings))
+                for idx, (text, emb) in enumerate(zip(chunks, all_embeddings))
             ]
             ArticleChunk.objects.bulk_create(chunk_objects, ignore_conflicts=True)
 
@@ -94,10 +101,10 @@ class ArticleEmbedder:
                     f"  {articles_done}/{len(articles)} articles embedded\n"
                 )
 
-        self._write(
-            f"Done: {articles_done} articles, "
-            f"{total_chunks_saved} chunks, {total_tokens} tokens\n"
-        )
+        msg = f"Done: {articles_done} articles, {total_chunks_saved} chunks, {total_tokens} tokens"
+        if skipped:
+            msg += f" ({skipped} skipped)"
+        self._write(msg + "\n")
         return articles_done, total_chunks_saved, total_tokens
 
 
