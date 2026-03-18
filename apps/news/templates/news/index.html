@@ -173,36 +173,25 @@
         display: none;
         position: fixed;
         inset: 0;
-        background: rgba(0, 0, 0, 0.55);
+        background: rgba(0, 0, 0, 0.65);
         z-index: 9998;
         justify-content: center;
         align-items: center;
+        flex-direction: column;
     }
     .loading-overlay.active {
         display: flex;
     }
-    .loading-box {
-        background: var(--bg);
-        border: 1px solid var(--border);
-        padding: 2rem 2.5rem;
-        text-align: center;
-        max-width: 340px;
+    .loading-overlay canvas {
+        display: block;
     }
-    .loading-box .spinner {
-        width: 28px;
-        height: 28px;
-        border: 3px solid var(--border);
-        border-top-color: var(--accent);
-        border-radius: 50%;
-        animation: spin 0.8s linear infinite;
-        margin: 0 auto 1rem;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .loading-box p {
+    .loading-overlay .loading-label {
         font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
         font-size: 0.8rem;
-        color: var(--fg-dim);
-        letter-spacing: 0.03em;
+        color: rgba(255,255,255,0.6);
+        letter-spacing: 0.05em;
+        margin-top: 1.5rem;
+        text-align: center;
     }
 
     .empty {
@@ -392,18 +381,191 @@
     </div>
 
     <div class="loading-overlay" id="loadingOverlay">
-        <div class="loading-box">
-            <div class="spinner"></div>
-            <p>Генерація аналізу...</p>
-        </div>
+        <canvas id="orbitCanvas"></canvas>
+        <div class="loading-label">Збираємо інформацію з джерел…</div>
     </div>
 
     <script>
-    document.querySelectorAll('.deep-dive-link').forEach(function(link) {
-        link.addEventListener('click', function() {
-            document.getElementById('loadingOverlay').classList.add('active');
+    (function() {
+        var overlay = document.getElementById('loadingOverlay');
+        var canvas = document.getElementById('orbitCanvas');
+        var ctx = canvas.getContext('2d');
+        var animId = null;
+        var DPR = window.devicePixelRatio || 1;
+
+        /* --- palette from CSS vars --- */
+        var style = getComputedStyle(document.documentElement);
+        var accent = style.getPropertyValue('--accent').trim() || '#6b1520';
+
+        /* parse hex to rgb */
+        function hexRgb(hex) {
+            hex = hex.replace('#','');
+            if (hex.length === 3) hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+            return [parseInt(hex.slice(0,2),16), parseInt(hex.slice(2,4),16), parseInt(hex.slice(4,6),16)];
+        }
+        var accentRGB = hexRgb(accent);
+
+        /* --- config --- */
+        var NUM_SOURCES = 10;
+        var CENTER_R = 6;
+        var SOURCE_R_MIN = 2;
+        var SOURCE_R_MAX = 4;
+
+        /* --- source particles --- */
+        function createSource(i) {
+            var orbit = 60 + Math.random() * 100;              /* orbit radius */
+            var angle = (Math.PI * 2 / NUM_SOURCES) * i + Math.random() * 0.5;
+            var speed = 0.003 + Math.random() * 0.006;         /* rad/frame */
+            var dir   = Math.random() > 0.3 ? 1 : -1;
+            var r     = SOURCE_R_MIN + Math.random() * (SOURCE_R_MAX - SOURCE_R_MIN);
+            var drift = 0.04 + Math.random() * 0.06;           /* inward px/frame */
+            var minOrbit = 18 + Math.random() * 14;
+            return { orbit: orbit, origOrbit: orbit, angle: angle, speed: speed * dir, r: r, drift: drift, minOrbit: minOrbit, alpha: 0, phase: Math.random() * Math.PI * 2 };
+        }
+
+        var sources = [];
+        for (var i = 0; i < NUM_SOURCES; i++) sources.push(createSource(i));
+
+        /* --- particles flying to center --- */
+        var particles = [];
+        function spawnParticle(x, y) {
+            particles.push({ x: x, y: y, vx: 0, vy: 0, life: 1, r: 1 + Math.random() * 1.5 });
+        }
+
+        /* --- resize --- */
+        function resize() {
+            var size = Math.min(window.innerWidth, window.innerHeight, 420);
+            canvas.style.width  = size + 'px';
+            canvas.style.height = size + 'px';
+            canvas.width  = size * DPR;
+            canvas.height = size * DPR;
+            ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+        }
+
+        /* --- easing for pulse --- */
+        var tick = 0;
+
+        /* --- draw frame --- */
+        function draw() {
+            tick++;
+            var W = canvas.width / DPR;
+            var H = canvas.height / DPR;
+            var cx = W / 2;
+            var cy = H / 2;
+
+            ctx.clearRect(0, 0, W, H);
+
+            /* center glow */
+            var pulse = 1 + 0.15 * Math.sin(tick * 0.03);
+            var grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, CENTER_R * 4 * pulse);
+            grad.addColorStop(0, 'rgba('+accentRGB.join(',')+',0.35)');
+            grad.addColorStop(1, 'rgba('+accentRGB.join(',')+',0)');
+            ctx.beginPath();
+            ctx.arc(cx, cy, CENTER_R * 4 * pulse, 0, Math.PI * 2);
+            ctx.fillStyle = grad;
+            ctx.fill();
+
+            /* center dot */
+            ctx.beginPath();
+            ctx.arc(cx, cy, CENTER_R * pulse, 0, Math.PI * 2);
+            ctx.fillStyle = accent;
+            ctx.fill();
+
+            /* sources */
+            for (var i = 0; i < sources.length; i++) {
+                var s = sources[i];
+                s.angle += s.speed;
+
+                /* spiral inward */
+                s.orbit -= s.drift;
+                if (s.orbit <= s.minOrbit) {
+                    /* respawn at outer edge */
+                    s.orbit = s.origOrbit;
+                    s.alpha = 0;
+                    /* spawn a "data" particle flying to center */
+                    var sx = cx + Math.cos(s.angle) * s.minOrbit;
+                    var sy = cy + Math.sin(s.angle) * s.minOrbit;
+                    spawnParticle(sx, sy);
+                }
+
+                /* fade in */
+                if (s.alpha < 1) s.alpha = Math.min(1, s.alpha + 0.015);
+
+                var x = cx + Math.cos(s.angle) * s.orbit;
+                var y = cy + Math.sin(s.angle) * s.orbit;
+
+                /* line to center */
+                var lineAlpha = (0.08 + 0.12 * (1 - s.orbit / s.origOrbit)) * s.alpha;
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                ctx.lineTo(x, y);
+                ctx.strokeStyle = 'rgba('+accentRGB.join(',')+','+lineAlpha+')';
+                ctx.lineWidth = 0.5;
+                ctx.stroke();
+
+                /* source dot */
+                var flicker = 0.7 + 0.3 * Math.sin(tick * 0.05 + s.phase);
+                ctx.beginPath();
+                ctx.arc(x, y, s.r, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba('+accentRGB.join(',')+','+(s.alpha * flicker).toFixed(2)+')';
+                ctx.fill();
+
+                /* tiny glow */
+                var sg = ctx.createRadialGradient(x, y, 0, x, y, s.r * 3);
+                sg.addColorStop(0, 'rgba('+accentRGB.join(',')+','+(0.15 * s.alpha).toFixed(2)+')');
+                sg.addColorStop(1, 'rgba('+accentRGB.join(',')+',0)');
+                ctx.beginPath();
+                ctx.arc(x, y, s.r * 3, 0, Math.PI * 2);
+                ctx.fillStyle = sg;
+                ctx.fill();
+            }
+
+            /* data particles flying to center */
+            for (var j = particles.length - 1; j >= 0; j--) {
+                var p = particles[j];
+                var dx = cx - p.x;
+                var dy = cy - p.y;
+                var dist = Math.sqrt(dx*dx + dy*dy);
+                if (dist < 3) { particles.splice(j, 1); continue; }
+                var accel = 0.15;
+                p.vx += (dx / dist) * accel;
+                p.vy += (dy / dist) * accel;
+                p.vx *= 0.96;
+                p.vy *= 0.96;
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life = Math.min(dist / 60, 1);
+
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.r * p.life, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba('+accentRGB.join(',')+','+(0.8 * p.life).toFixed(2)+')';
+                ctx.fill();
+            }
+
+            animId = requestAnimationFrame(draw);
+        }
+
+        function startAnim() {
+            overlay.classList.add('active');
+            resize();
+            if (!animId) draw();
+        }
+
+        function stopAnim() {
+            overlay.classList.remove('active');
+            if (animId) { cancelAnimationFrame(animId); animId = null; }
+        }
+
+        window.addEventListener('resize', function() {
+            if (overlay.classList.contains('active')) resize();
         });
-    });
+
+        document.querySelectorAll('.deep-dive-link').forEach(function(link) {
+            link.addEventListener('click', function() {
+                startAnim();
+            });
+        });
+    })();
     </script>
 {% else %}
     <div class="empty">
