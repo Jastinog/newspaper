@@ -150,13 +150,21 @@
     }
 
     .deep-dive-sources li {
-        padding: 0.4rem 0;
+        display: flex;
+        align-items: baseline;
+        gap: 0.6rem;
+        padding: 0.5rem 0;
         border-bottom: 1px solid var(--border-faint);
         font-size: 0.9rem;
     }
 
     .deep-dive-sources li:last-child {
         border-bottom: none;
+    }
+
+    .source-text {
+        flex: 1;
+        min-width: 0;
     }
 
     .deep-dive-sources li a {
@@ -174,29 +182,28 @@
     }
 
     .source-relevance {
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
         font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
-        font-size: 0.65rem;
+        font-size: 0.7rem;
         font-weight: 600;
+        font-variant-numeric: tabular-nums;
         color: var(--fg-muted);
-        margin-left: 0.4rem;
+        min-width: 7rem;
+        justify-content: flex-end;
     }
 
     .relevance-bar {
-        display: inline-block;
-        width: 3rem;
+        width: 5rem;
         height: 4px;
-        background: var(--border);
         border-radius: 2px;
-        vertical-align: middle;
-        margin-left: 0.3rem;
-        overflow: hidden;
-    }
-
-    .relevance-bar-fill {
-        display: block;
-        height: 100%;
-        border-radius: 2px;
-        background: var(--accent);
+        background: linear-gradient(
+            to right,
+            var(--accent) var(--fill),
+            var(--border) var(--fill)
+        );
     }
 
     .deep-dive-back {
@@ -253,10 +260,13 @@
         <ul>
         {% for source in sources %}
             <li>
-                <a href="{{ source.article.get_absolute_url }}">{{ source.article.title }}</a>
-                <span class="source-feed">&mdash; {{ source.article.feed.title }}</span>
-                <span class="source-relevance">{{ source.relevance_pct }}%
-                    <span class="relevance-bar"><span class="relevance-bar-fill" style="width:{{ source.relevance_pct }}%"></span></span>
+                <span class="source-text">
+                    <a href="{{ source.article.get_absolute_url }}">{{ source.article.title }}</a>
+                    <span class="source-feed">&mdash; {{ source.article.feed.title }}</span>
+                </span>
+                <span class="source-relevance">
+                    <span class="relevance-bar" style="--fill:{{ source.relevance_pct }}%"></span>
+                    {{ source.relevance_pct }}%
                 </span>
             </li>
         {% endfor %}
