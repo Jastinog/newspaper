@@ -24,7 +24,7 @@ TOPICS = [
 class ArticleCollector:
     """Collects recent articles for digest generation."""
 
-    def __init__(self, limit=60, hours=72):
+    def __init__(self, limit=150, hours=72):
         self.limit = limit
         self.hours = hours
 
@@ -77,7 +77,7 @@ class DigestGenerator:
             "You are a world news analyst. Based on the provided recent news articles, "
             "create detailed thematic news tiles summarizing what is happening right now.\n\n"
             "Rules:\n"
-            "- Each tile has 5-8 items. Each item covers one key development.\n"
+            "- Each tile MUST have EXACTLY 8 items. Each item covers one key development.\n"
             "- For each item provide:\n"
             '  - "topic": short name/event label (2-5 words, like a headline tag)\n'
             '  - "summary": detailed explanation of what happened, the context, '
@@ -104,7 +104,7 @@ class DigestGenerator:
         content, usage = self.client.chat(
             system=system,
             user=user,
-            max_tokens=10000,
+            max_tokens=16000,
             temperature=0.3,
         )
 
