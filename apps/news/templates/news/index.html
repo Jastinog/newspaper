@@ -1,0 +1,348 @@
+{% extends "news/base.html" %}
+{% load markdown_extras %}
+
+{% block extra_css %}
+<style>
+    .digest-date {
+        font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+        font-size: 0.75rem;
+        color: var(--fg-muted);
+        text-align: center;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        margin-bottom: 0.5rem;
+    }
+
+    .digest-headline {
+        font-family: "Libre Baskerville", Georgia, serif;
+        font-size: clamp(1.2rem, 3vw, 1.8rem);
+        font-style: italic;
+        text-align: center;
+        margin-bottom: 1.5rem;
+        line-height: 1.35;
+        color: var(--fg-secondary);
+    }
+
+    .digest-headline-rule {
+        border-top: 3px solid var(--border-heavy);
+        margin-bottom: 1.5rem;
+    }
+
+    /* === 4-COLUMN GRID === */
+    .digest-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        row-gap: 1.5rem;
+    }
+
+    .digest-grid .digest-section {
+        padding: 0 1.2rem;
+    }
+
+    .digest-grid .digest-section:nth-child(4n+1) {
+        padding-left: 0;
+    }
+
+    .digest-grid .digest-section:nth-child(4n) {
+        padding-right: 0;
+    }
+
+    .digest-grid .digest-section:not(:nth-child(4n+1)) {
+        border-left: 1px solid var(--border);
+    }
+
+    /* Row separator on sections starting a new row (except first row) */
+    .digest-grid .digest-section:nth-child(n+5) {
+        border-top: 1px solid var(--border-light);
+        padding-top: 1.5rem;
+    }
+
+    /* === SECTION STYLES === */
+    .digest-section h3 {
+        font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--accent);
+        margin-bottom: 0.6rem;
+    }
+
+    .digest-section .summary {
+        font-family: "Source Serif 4", Georgia, serif;
+        font-size: 0.9rem;
+        line-height: 1.65;
+        color: var(--fg-secondary);
+    }
+
+    /* Summary markdown: no bullet markers, border-bottom between items */
+    .digest-section .summary ul,
+    .digest-section .summary ol {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+
+    .digest-section .summary li {
+        padding: 0.4rem 0;
+        border-bottom: 1px solid var(--border-faint);
+    }
+
+    .digest-section .summary li:last-child {
+        border-bottom: none;
+    }
+
+    .digest-section .summary p {
+        margin-bottom: 0.5rem;
+    }
+
+    .digest-section .summary strong {
+        font-weight: 700;
+    }
+
+    .digest-section .summary code {
+        background: var(--code-bg);
+        padding: 0.1rem 0.3rem;
+        border-radius: 3px;
+        font-size: 0.9em;
+    }
+
+    /* === SOURCES === */
+    .digest-section .section-articles {
+        margin-top: 0.8rem;
+        padding-top: 0.5rem;
+        border-top: 1px solid var(--border-faint);
+    }
+
+    .digest-section .section-articles h4 {
+        font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+        font-size: 0.65rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--fg-faint);
+        margin-bottom: 0.3rem;
+    }
+
+    .digest-section .section-articles ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+
+    .digest-section .section-articles li {
+        padding: 0.2rem 0;
+        font-size: 0.8rem;
+        border-bottom: none;
+    }
+
+    .digest-section .section-articles li a {
+        color: var(--link);
+        text-decoration: none;
+    }
+
+    .digest-section .section-articles li a:hover {
+        text-decoration: underline;
+    }
+
+    .digest-section .section-articles .source {
+        font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+        font-size: 0.65rem;
+        color: var(--fg-faint);
+    }
+
+    .empty {
+        text-align: center;
+        padding: 3rem;
+        color: var(--fg-muted);
+    }
+
+    /* === RESPONSIVE === */
+
+    /* Mobile: single column */
+    @media (max-width: 599px) {
+        .digest-headline-rule {
+            margin-bottom: 1rem;
+        }
+
+        .digest-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        .digest-grid .digest-section {
+            padding: 0;
+            border-left: none !important;
+            margin-bottom: 0;
+            padding-bottom: 1.2rem;
+            border-bottom: 1px solid var(--border-light);
+            padding-top: 1.2rem;
+        }
+
+        .digest-grid .digest-section:first-child {
+            padding-top: 0;
+        }
+
+        .digest-grid .digest-section:last-child {
+            border-bottom: none;
+        }
+
+        .digest-grid .digest-section:nth-child(n+5) {
+            border-top: none;
+            padding-top: 1.2rem;
+        }
+
+        .digest-section h3 {
+            font-size: 0.65rem;
+        }
+
+        .digest-section .summary {
+            font-size: 0.85rem;
+        }
+
+        .digest-section .section-articles li {
+            padding: 0.35rem 0;
+        }
+    }
+
+    /* Tablet portrait: 2 columns */
+    @media (min-width: 600px) and (max-width: 899px) {
+        .digest-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .digest-grid .digest-section {
+            padding: 0 1rem;
+        }
+
+        .digest-grid .digest-section:nth-child(4n+1) {
+            padding-left: 0;
+        }
+
+        .digest-grid .digest-section:nth-child(4n) {
+            padding-right: 0;
+        }
+
+        /* Reset 4-col borders; apply 2-col borders */
+        .digest-grid .digest-section:not(:nth-child(4n+1)) {
+            border-left: none;
+        }
+
+        .digest-grid .digest-section:nth-child(2n+1) {
+            padding-left: 0;
+        }
+
+        .digest-grid .digest-section:nth-child(2n) {
+            padding-right: 0;
+        }
+
+        .digest-grid .digest-section:nth-child(2n) {
+            border-left: 1px solid var(--border);
+        }
+
+        /* Row separator after first 2 */
+        .digest-grid .digest-section:nth-child(n+5) {
+            border-top: none;
+            padding-top: 0;
+        }
+
+        .digest-grid .digest-section:nth-child(n+3) {
+            border-top: 1px solid var(--border-light);
+            padding-top: 1.5rem;
+        }
+    }
+
+    /* Tablet landscape / small laptop: 3 columns */
+    @media (min-width: 900px) and (max-width: 1199px) {
+        .digest-grid {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        .digest-grid .digest-section {
+            padding: 0 1rem;
+        }
+
+        /* Reset 4-col specific rules */
+        .digest-grid .digest-section:nth-child(4n+1) {
+            padding-left: 1rem;
+        }
+
+        .digest-grid .digest-section:nth-child(4n) {
+            padding-right: 1rem;
+        }
+
+        .digest-grid .digest-section:not(:nth-child(4n+1)) {
+            border-left: none;
+        }
+
+        /* Apply 3-col rules */
+        .digest-grid .digest-section:nth-child(3n+1) {
+            padding-left: 0;
+        }
+
+        .digest-grid .digest-section:nth-child(3n) {
+            padding-right: 0;
+        }
+
+        .digest-grid .digest-section:not(:nth-child(3n+1)) {
+            border-left: 1px solid var(--border);
+        }
+
+        .digest-grid .digest-section:nth-child(n+5) {
+            border-top: none;
+            padding-top: 0;
+        }
+
+        .digest-grid .digest-section:nth-child(n+4) {
+            border-top: 1px solid var(--border-light);
+            padding-top: 1.5rem;
+        }
+    }
+
+    /* Large desktop: wider container */
+    @media (min-width: 1440px) {
+        .digest-grid .digest-section {
+            padding: 0 1.5rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% if digest %}
+    <div class="digest-date">{{ digest.date|date:"F j, Y" }}</div>
+
+    {% if digest.headline %}
+        <div class="digest-headline">{{ digest.headline }}</div>
+    {% endif %}
+
+    <div class="digest-headline-rule"></div>
+
+    <div class="digest-grid">
+    {% for section in digest.sections.all %}
+        <div class="digest-section">
+            <h3>{{ section.title }}</h3>
+            <div class="summary">{{ section.summary|markdown }}</div>
+
+            {% if section.articles.exists %}
+            <div class="section-articles">
+                <h4>Sources</h4>
+                <ul>
+                {% for article in section.articles.all %}
+                    <li>
+                        <a href="{% url 'article_detail' article.pk %}">{{ article.title }}</a>
+                        <span class="source">&mdash; {{ article.feed.title }}</span>
+                    </li>
+                {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+    {% endfor %}
+    </div>
+{% else %}
+    <div class="empty">
+        <p>No digest yet. Run <code>python manage.py digest</code> to generate one.</p>
+    </div>
+{% endif %}
+{% endblock %}

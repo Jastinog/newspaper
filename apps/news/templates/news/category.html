@@ -1,0 +1,89 @@
+{% extends "news/base.html" %}
+
+{% block extra_css %}
+<style>
+    .category-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .category-header h1 {
+        font-family: "Libre Baskerville", Georgia, serif;
+        font-size: clamp(1.6rem, 4vw, 2.2rem);
+        font-weight: 700;
+        margin-bottom: 0.3rem;
+    }
+
+    .category-header p {
+        color: var(--fg-muted);
+        font-size: 0.85rem;
+    }
+
+    .article-list {
+        max-width: 700px;
+        margin: 0 auto;
+        list-style: none;
+    }
+
+    .article-list li {
+        padding: 0.8rem 0;
+        border-bottom: 1px solid var(--border-faint);
+    }
+
+    .article-list li:last-child {
+        border-bottom: none;
+    }
+
+    .article-list a {
+        font-family: "Source Serif 4", Georgia, serif;
+        font-size: clamp(0.95rem, 2vw, 1.05rem);
+        color: var(--link);
+        text-decoration: none;
+        display: inline-block;
+        padding: 0.1rem 0;
+    }
+
+    .article-list a:hover {
+        text-decoration: underline;
+    }
+
+    .article-list .meta {
+        font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+        font-size: 0.75rem;
+        color: var(--fg-muted);
+        margin-top: 0.2rem;
+    }
+
+    /* === RESPONSIVE === */
+    @media (max-width: 480px) {
+        .category-header {
+            margin-bottom: 1.2rem;
+        }
+
+        .article-list li {
+            padding: 0.7rem 0;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="category-header">
+    <h1>{{ category.name }}</h1>
+    <p>{{ articles|length }} latest articles</p>
+</div>
+
+<ul class="article-list">
+{% for article in articles %}
+    <li>
+        <a href="{{ article.get_absolute_url }}">{{ article.title }}</a>
+        <div class="meta">
+            {{ article.feed.title }}
+            {% if article.published %} &middot; {{ article.published|timesince }} ago{% endif %}
+        </div>
+    </li>
+{% empty %}
+    <li style="text-align:center; color: var(--fg-muted);">No articles yet.</li>
+{% endfor %}
+</ul>
+{% endblock %}
