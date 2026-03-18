@@ -29,6 +29,13 @@ def _strip_html(text: str) -> str:
     return text.strip()
 
 
+def _clean_for_xml(text: str) -> str:
+    """Remove NULL bytes and XML-incompatible control characters."""
+    import re
+    # Remove NULL bytes and control chars except \t \n \r
+    return re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", text)
+
+
 def _fetch_and_extract(article_id: int, url: str) -> tuple[int, str, str | None]:
     """Download page and extract main content. Runs in a thread.
 
@@ -41,7 +48,8 @@ def _fetch_and_extract(article_id: int, url: str) -> tuple[int, str, str | None]
         )
         resp.raise_for_status()
 
-        doc = Document(resp.text)
+        html = _clean_for_xml(resp.text)
+        doc = Document(html)
         html_content = doc.summary()
         clean_text = _strip_html(html_content)
 
