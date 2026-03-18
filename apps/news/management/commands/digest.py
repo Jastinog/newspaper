@@ -58,5 +58,4 @@ class Command(BaseCommand):
         ))
         self.stdout.write(f"  Headline: {digest.headline[:120]}...")
         for s in sections:
-            bullets = s.summary.count("- **")
-            self.stdout.write(f"  [{s.order}] {s.title} ({bullets} items)")
+            self.stdout.write(f"  [{s.order}] {s.title} ({s.items.count()} items)")

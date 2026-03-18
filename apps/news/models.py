@@ -66,7 +66,9 @@ class Article(models.Model):
         super().save(*args, **kwargs)
 
     def get_absolute_url(self):
-        return reverse("article_detail", kwargs={"pk": self.pk, "slug": self.slug})
+        if self.slug:
+            return reverse("article_detail", kwargs={"pk": self.pk, "slug": self.slug})
+        return reverse("article_detail_redirect", kwargs={"pk": self.pk})
 
 
 class ArticleChunk(models.Model):
@@ -100,12 +102,91 @@ class Digest(models.Model):
 class DigestSection(models.Model):
     digest = models.ForeignKey(Digest, on_delete=models.CASCADE, related_name="sections")
     title = models.CharField(max_length=300)
-    summary = models.TextField(blank=True, default="")
     order = models.PositiveIntegerField(default=0)
-    articles = models.ManyToManyField(Article, blank=True, related_name="digest_sections")
 
     class Meta:
         ordering = ["order"]
 
     def __str__(self):
         return f"{self.digest.date} — {self.title}"
+
+
+class DigestItem(models.Model):
+    section = models.ForeignKey(DigestSection, on_delete=models.CASCADE, related_name="items")
+    topic = models.CharField(max_length=500)
+    summary = models.TextField()
+    order = models.PositiveIntegerField(default=0)
+    articles = models.ManyToManyField(Article, blank=True, related_name="digest_items")
+
+    class Meta:
+        ordering = ["order"]
+
+    def __str__(self):
+        return self.topic
+
+
+class DeepDive(models.Model):
+    item = models.ForeignKey(DigestItem, on_delete=models.CASCADE, related_name="deep_dives")
+    title = models.CharField(max_length=500)
+    subtitle = models.TextField(blank=True, default="")
+    content = models.TextField()  # markdown
+    search_queries = models.JSONField(default=list)
+    chunks_used = models.PositiveIntegerField(default=0)
+    generation_time_ms = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Deep Dive"
+        verbose_name_plural = "Deep Dives"
+
+    def __str__(self):
+        return f"Deep Dive: {self.title[:80]}"
+
+
+class APIUsage(models.Model):
+    class Service(models.TextChoices):
+        DIGEST = "digest", "Digest Generation"
+        DEEP_DIVE = "deep_dive", "Deep Dive"
+        EMBEDDING = "embedding", "Article Embedding"
+
+    class APIType(models.TextChoices):
+        CHAT = "chat", "Chat Completion"
+        EMBEDDING = "embedding", "Embedding"
+
+    service = models.CharField(max_length=20, choices=Service.choices)
+    api_type = models.CharField(max_length=20, choices=APIType.choices)
+    model = models.CharField(max_length=100)
+    prompt_tokens = models.PositiveIntegerField(default=0)
+    completion_tokens = models.PositiveIntegerField(default=0)
+    total_tokens = models.PositiveIntegerField(default=0)
+    cost_usd = models.DecimalField(max_digits=10, decimal_places=6, default=0)
+    digest = models.ForeignKey(
+        "Digest", on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="api_usages",
+    )
+    deep_dive = models.ForeignKey(
+        "DeepDive", on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="api_usages",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "API Usage"
+        verbose_name_plural = "API Usage"
+
+    def __str__(self):
+        return f"{self.service}/{self.api_type} — {self.total_tokens} tokens (${self.cost_usd})"
+
+
+class DeepDiveSource(models.Model):
+    deep_dive = models.ForeignKey(DeepDive, on_delete=models.CASCADE, related_name="sources")
+    article = models.ForeignKey(Article, on_delete=models.CASCADE)
+    relevance = models.FloatField()
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["order"]
+
+    def __str__(self):
+        return f"Source {self.order}: {self.article.title[:60]}"

@@ -1,10 +1,11 @@
 import logging
 from dataclasses import dataclass, field
 
-from apps.news.models import Article, ArticleChunk
+from apps.news.models import APIUsage, Article, ArticleChunk
 
 from .chunker import chunk_text
 from .embeddings import BATCH_SIZE, MODEL, EmbeddingClient
+from .openai_client import EMBEDDING_MODEL, calculate_cost
 from .extractor import ContentExtractor
 from .fetcher import FeedFetcher
 
@@ -70,6 +71,15 @@ class ArticleEmbedder:
                     embeddings, tokens = client.embed_batch(batch_texts)
                     all_embeddings.extend(embeddings)
                     total_tokens += tokens
+                    APIUsage.objects.create(
+                        service=APIUsage.Service.EMBEDDING,
+                        api_type=APIUsage.APIType.EMBEDDING,
+                        model=EMBEDDING_MODEL,
+                        prompt_tokens=tokens,
+                        completion_tokens=0,
+                        total_tokens=tokens,
+                        cost_usd=calculate_cost(EMBEDDING_MODEL, tokens),
+                    )
             except Exception as e:
                 logger.warning("Embed failed for article %s: %s", article_id, e)
                 skipped += 1

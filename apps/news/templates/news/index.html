@@ -150,6 +150,61 @@
         color: var(--fg-faint);
     }
 
+    .digest-section .summary li a.item-link {
+        color: inherit;
+        text-decoration: none;
+    }
+
+    .digest-section .summary li a.item-link strong {
+        text-decoration-line: underline;
+        text-decoration-style: dotted;
+        text-decoration-color: var(--border);
+        text-underline-offset: 2px;
+    }
+
+    .digest-section .summary li a.item-link:hover strong {
+        text-decoration-style: solid;
+        text-decoration-color: var(--accent);
+        color: var(--accent);
+    }
+
+    /* Loading overlay */
+    .loading-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.55);
+        z-index: 9998;
+        justify-content: center;
+        align-items: center;
+    }
+    .loading-overlay.active {
+        display: flex;
+    }
+    .loading-box {
+        background: var(--bg);
+        border: 1px solid var(--border);
+        padding: 2rem 2.5rem;
+        text-align: center;
+        max-width: 340px;
+    }
+    .loading-box .spinner {
+        width: 28px;
+        height: 28px;
+        border: 3px solid var(--border);
+        border-top-color: var(--accent);
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        margin: 0 auto 1rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-box p {
+        font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+        font-size: 0.8rem;
+        color: var(--fg-dim);
+        letter-spacing: 0.03em;
+    }
+
     .empty {
         text-align: center;
         padding: 3rem;
@@ -322,24 +377,34 @@
     {% for section in digest.sections.all %}
         <div class="digest-section">
             <h3>{{ section.title }}</h3>
-            <div class="summary">{{ section.summary|markdown }}</div>
-
-            {% if section.articles.exists %}
-            <div class="section-articles">
-                <h4>Sources</h4>
+            <div class="summary">
                 <ul>
-                {% for article in section.articles.all %}
+                {% for item in section.items.all %}
                     <li>
-                        <a href="{% url 'article_detail' article.pk %}">{{ article.title }}</a>
-                        <span class="source">&mdash; {{ article.feed.title }}</span>
+                        <a href="{% url 'deep_dive' item.id %}" class="item-link deep-dive-link">
+                            <strong>{{ item.topic }}</strong></a> &mdash; {{ item.summary }}
                     </li>
                 {% endfor %}
                 </ul>
             </div>
-            {% endif %}
         </div>
     {% endfor %}
     </div>
+
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-box">
+            <div class="spinner"></div>
+            <p>Генерація аналізу...</p>
+        </div>
+    </div>
+
+    <script>
+    document.querySelectorAll('.deep-dive-link').forEach(function(link) {
+        link.addEventListener('click', function() {
+            document.getElementById('loadingOverlay').classList.add('active');
+        });
+    });
+    </script>
 {% else %}
     <div class="empty">
         <p>No digest yet. Run <code>python manage.py digest</code> to generate one.</p>

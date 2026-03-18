@@ -9,10 +9,21 @@ import requests
 logger = logging.getLogger(__name__)
 
 MODEL_MINI = "gpt-4.1-mini"
+EMBEDDING_MODEL = "text-embedding-3-small"
 
 # Pricing per 1M tokens (USD)
 GPT41_MINI_INPUT_PRICE = 0.40
 GPT41_MINI_OUTPUT_PRICE = 1.60
+EMBEDDING_PRICE = 0.02
+
+
+def calculate_cost(model, prompt_tokens, completion_tokens=0):
+    """Calculate cost in USD based on model and token counts."""
+    if model == MODEL_MINI:
+        return (prompt_tokens * GPT41_MINI_INPUT_PRICE + completion_tokens * GPT41_MINI_OUTPUT_PRICE) / 1_000_000
+    if model == EMBEDDING_MODEL:
+        return (prompt_tokens + completion_tokens) * EMBEDDING_PRICE / 1_000_000
+    return 0
 
 
 class OpenAIError(Exception):

@@ -3,9 +3,9 @@ import logging
 import re
 from datetime import date, datetime, timedelta, timezone
 
-from apps.news.models import Article, Digest, DigestSection
+from apps.news.models import APIUsage, Article, Digest, DigestItem, DigestSection
 
-from .openai_client import OpenAIClient, OpenAIError, fix_truncated_json
+from .openai_client import MODEL_MINI, OpenAIClient, OpenAIError, calculate_cost, fix_truncated_json
 
 logger = logging.getLogger(__name__)
 
@@ -61,13 +61,14 @@ class DigestGenerator:
     def _build_article_list(self, articles: list[dict]) -> str:
         lines = []
         for a in articles:
+            aid = a["id"]
             title = _sanitize(a["title"])
             feed = _sanitize(a["feed"])
             pub = a["published"]
             snippet = _sanitize(a["snippet"][:400])
             date_part = f", {pub}" if pub else ""
             snippet_part = f" -- {snippet}" if snippet else ""
-            lines.append(f'- "{title}" ({feed}{date_part}){snippet_part}')
+            lines.append(f'- [ID:{aid}] "{title}" ({feed}{date_part}){snippet_part}')
         return "\n".join(lines)
 
     def _build_system_prompt(self) -> str:
@@ -76,25 +77,23 @@ class DigestGenerator:
             "You are a world news analyst. Based on the provided recent news articles, "
             "create detailed thematic news tiles summarizing what is happening right now.\n\n"
             "Rules:\n"
-            "- CRITICAL: each summary MUST be formatted as a bullet list. "
-            "Each bullet is a separate key development:\n"
-            "  - **Name/event** — detailed explanation of what happened, the context, "
-            "key players involved, and why it matters (2-3 sentences per bullet)\n"
-            "  Use 5-8 bullet points per tile. Start each bullet with `- **topic** — `. "
-            "Be thorough and informative — each bullet should give the reader a complete picture "
-            "without needing to read the original article. "
-            "Do NOT write walls of text. Do NOT reference article IDs in the summary text.\n"
+            "- Each tile has 5-8 items. Each item covers one key development.\n"
+            "- For each item provide:\n"
+            '  - "topic": short name/event label (2-5 words, like a headline tag)\n'
+            '  - "summary": detailed explanation of what happened, the context, '
+            "key players involved, and why it matters (2-3 sentences)\n"
+            '  - "article_ids": array of [ID:N] numbers from the input articles '
+            "that this item is based on. Include ALL relevant article IDs.\n"
             "- CRITICAL: each news event or story MUST appear in ONLY ONE tile — the most relevant one. "
-            "Do NOT repeat the same news, event, or development across different tiles, "
-            "even if it touches multiple topics. "
-            "If a story spans multiple themes (e.g. an AI regulation law), "
-            "pick the single best-fitting tile and mention it only there.\n"
-            "- ALWAYS respond in Ukrainian\n"
+            "Do NOT repeat the same news across different tiles.\n"
+            "- Do NOT reference article IDs in the topic or summary text — only in the article_ids array.\n"
+            "- ALWAYS respond in Ukrainian (topic and summary must be in Ukrainian)\n"
             "- Output ONLY valid JSON, no markdown fences\n\n"
             f"Create EXACTLY {len(self.topics)} tiles on these topics: {topics_str}\n"
             'Also provide a "headline" field: 2-3 sentences summarizing the overall news picture.\n\n'
             "JSON format:\n"
-            '{"headline": "...", "sections": [{"title": "...", "summary": "- **X** — ...\\n- **Y** — ..."}, ...]}'
+            '{"headline": "...", "sections": [{"title": "...", "items": ['
+            '{"topic": "...", "summary": "...", "article_ids": [1, 2]}, ...]}, ...]}'
         )
 
     def generate(self, articles: list[dict]) -> dict:
@@ -105,7 +104,7 @@ class DigestGenerator:
         content, usage = self.client.chat(
             system=system,
             user=user,
-            max_tokens=8000,
+            max_tokens=10000,
             temperature=0.3,
         )
 
@@ -125,8 +124,10 @@ class DigestGenerator:
 class DigestSaver:
     """Persists a generated digest to the database."""
 
-    def save(self, digest_date: date, data: dict) -> Digest:
+    def save(self, digest_date: date, data: dict, valid_article_ids: set = None) -> Digest:
         """Create or replace a Digest for the given date."""
+        valid_article_ids = valid_article_ids or set()
+
         # Delete existing digest for this date (regeneration)
         Digest.objects.filter(date=digest_date).delete()
 
@@ -136,13 +137,26 @@ class DigestSaver:
         )
 
         sections = data.get("sections", [])
-        for i, section in enumerate(sections):
-            DigestSection.objects.create(
+        for i, section_data in enumerate(sections):
+            section = DigestSection.objects.create(
                 digest=digest,
-                title=section.get("title", ""),
-                summary=section.get("summary", ""),
+                title=section_data.get("title", ""),
                 order=i,
             )
+
+            items = section_data.get("items", [])
+            for j, item_data in enumerate(items):
+                item = DigestItem.objects.create(
+                    section=section,
+                    topic=item_data.get("topic", ""),
+                    summary=item_data.get("summary", ""),
+                    order=j,
+                )
+                # Link source articles via M2M
+                raw_ids = item_data.get("article_ids", [])
+                linked_ids = [aid for aid in raw_ids if aid in valid_article_ids]
+                if linked_ids:
+                    item.articles.set(linked_ids)
 
         return digest
 
@@ -162,6 +176,8 @@ class DigestService:
         if not articles:
             raise RuntimeError("No recent articles found. Run fetch_feeds first.")
 
+        valid_article_ids = {a["id"] for a in articles}
+
         logger.info("Generating digest for %s with %d articles...", digest_date, len(articles))
         data = self.generator.generate(articles)
 
@@ -173,7 +189,21 @@ class DigestService:
             total_tokens,
         )
 
-        digest = self.saver.save(digest_date, data)
+        digest = self.saver.save(digest_date, data, valid_article_ids)
+
+        prompt_tokens = usage.get("prompt_tokens", 0)
+        completion_tokens = usage.get("completion_tokens", 0)
+        APIUsage.objects.create(
+            service=APIUsage.Service.DIGEST,
+            api_type=APIUsage.APIType.CHAT,
+            model=MODEL_MINI,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            total_tokens=total_tokens,
+            cost_usd=calculate_cost(MODEL_MINI, prompt_tokens, completion_tokens),
+            digest=digest,
+        )
+
         logger.info("Digest saved: %s", digest)
         return digest
 

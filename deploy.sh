@@ -1,6 +1,7 @@
 #!/bin/bash
 set -e
 
+export PATH=/root/.local/bin:$PATH
 cd /root/Projects/newspaper
 echo '>> Pulling latest...'
 git pull origin master

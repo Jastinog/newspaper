@@ -5,7 +5,7 @@ from rest_framework import generics
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from .models import Article, Category, Digest, Feed
+from .models import Article, Category, DeepDive, Digest, DigestItem, Feed
 from .serializers import (
     ArticleDetailSerializer,
     ArticleListSerializer,
@@ -23,7 +23,7 @@ SITE_DESCRIPTION = "Daily AI-curated news digest from 100+ RSS sources worldwide
 def index(request):
     digest = (
         Digest.objects
-        .prefetch_related("sections__articles__feed__category")
+        .prefetch_related("sections__items__articles__feed")
         .order_by("-date")
         .first()
     )
@@ -82,6 +82,33 @@ def category_detail(request, slug):
     return render(request, "news/category.html", {
         "category": category,
         "articles": articles,
+        "seo": seo,
+    })
+
+
+def deep_dive(request, item_id):
+    item = get_object_or_404(
+        DigestItem.objects.select_related("section__digest"), pk=item_id,
+    )
+
+    dive = DeepDive.objects.filter(item=item).first()
+    if not dive:
+        from .services.deep_dive import DeepDiveService
+        dive = DeepDiveService().generate(item)
+
+    sources = dive.sources.select_related("article__feed").order_by("order")
+
+    seo = {
+        "title": f"{dive.title} — {SITE_NAME}",
+        "description": dive.subtitle or dive.title,
+        "canonical": request.build_absolute_uri(request.get_full_path()),
+        "og_type": "article",
+    }
+
+    return render(request, "news/deep_dive.html", {
+        "dive": dive,
+        "section": item.section,
+        "sources": sources,
         "seo": seo,
     })
 

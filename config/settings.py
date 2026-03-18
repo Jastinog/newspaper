@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Load .env from the repo root
-_env_file = BASE_DIR.parent / ".env"
+_env_file = BASE_DIR / ".env"
 if _env_file.exists():
     load_dotenv(_env_file)
 
