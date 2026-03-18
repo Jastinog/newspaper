@@ -200,3 +200,7 @@ class DeepDiveSource(models.Model):
 
     def __str__(self):
         return f"Source {self.order}: {self.article.title[:60]}"
+
+    @property
+    def relevance_pct(self):
+        return round(self.relevance * 100)

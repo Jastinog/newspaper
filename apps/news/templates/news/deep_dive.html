@@ -173,6 +173,32 @@
         color: var(--fg-faint);
     }
 
+    .source-relevance {
+        font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+        font-size: 0.65rem;
+        font-weight: 600;
+        color: var(--fg-muted);
+        margin-left: 0.4rem;
+    }
+
+    .relevance-bar {
+        display: inline-block;
+        width: 3rem;
+        height: 4px;
+        background: var(--border);
+        border-radius: 2px;
+        vertical-align: middle;
+        margin-left: 0.3rem;
+        overflow: hidden;
+    }
+
+    .relevance-bar-fill {
+        display: block;
+        height: 100%;
+        border-radius: 2px;
+        background: var(--accent);
+    }
+
     .deep-dive-back {
         max-width: 680px;
         margin: 2rem auto 0;
@@ -229,6 +255,9 @@
             <li>
                 <a href="{{ source.article.get_absolute_url }}">{{ source.article.title }}</a>
                 <span class="source-feed">&mdash; {{ source.article.feed.title }}</span>
+                <span class="source-relevance">{{ source.relevance_pct }}%
+                    <span class="relevance-bar"><span class="relevance-bar-fill" style="width:{{ source.relevance_pct }}%"></span></span>
+                </span>
             </li>
         {% endfor %}
         </ul>
