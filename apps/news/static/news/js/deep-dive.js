@@ -23,7 +23,22 @@
 
     WS.on('init', function (msg) {
         var dives = msg.deep_dives || {};
-        (dives.ready || []).forEach(markReady);
+        var readyIds = dives.ready || [];
+        readyIds.forEach(markReady);
+
+        /* Reconnect recovery: if we have a pending request, handle it */
+        if (pendingItemId === null) return;
+
+        if (readyIds.indexOf(pendingItemId) !== -1) {
+            /* Generated while we were disconnected — redirect */
+            var readyId = pendingItemId;
+            pendingItemId = null;
+            window.location.href = '/deep-dive/' + readyId + '/';
+            return;
+        }
+
+        /* Not ready yet — re-send the generate request */
+        WS.send('deep_dive.generate', { item_id: pendingItemId });
     });
 
     WS.on('deep_dive.ready', function (msg) {
