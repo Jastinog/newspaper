@@ -1,0 +1,112 @@
+{% extends 'admin/index.html' %}
+{% load i18n unfold %}
+
+{% block content %}
+
+{# --- KPI Cards --- #}
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    {% component "unfold/components/card.html" with title="Total Spent" %}
+        <span class="text-3xl font-bold text-primary-700 dark:text-primary-400">{{ total_cost }}</span>
+    {% endcomponent %}
+
+    {% component "unfold/components/card.html" with title="Today Spent" %}
+        <span class="text-3xl font-bold text-primary-700 dark:text-primary-400">{{ today_cost }}</span>
+    {% endcomponent %}
+
+    {% component "unfold/components/card.html" with title="Total Tokens" %}
+        <span class="text-3xl font-bold">{{ total_tokens }}</span>
+    {% endcomponent %}
+
+    {% component "unfold/components/card.html" with title="Today Tokens" %}
+        <span class="text-3xl font-bold">{{ today_tokens }}</span>
+    {% endcomponent %}
+</div>
+
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    {% component "unfold/components/card.html" with title="Articles" %}
+        <span class="text-3xl font-bold">{{ total_articles }}</span>
+    {% endcomponent %}
+
+    {% component "unfold/components/card.html" with title="Active Feeds" %}
+        <span class="text-3xl font-bold">{{ total_feeds }}</span>
+    {% endcomponent %}
+
+    {% component "unfold/components/card.html" with title="Digests" %}
+        <span class="text-3xl font-bold">{{ total_digests }}</span>
+    {% endcomponent %}
+
+    {% component "unfold/components/card.html" with title="Deep Dives" %}
+        <span class="text-3xl font-bold">{{ total_deep_dives }}</span>
+    {% endcomponent %}
+</div>
+
+{# --- Charts --- #}
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
+    {% component "unfold/components/card.html" with title="Daily Cost (30 days)" %}
+        {% component "unfold/components/chart/bar.html" with data=cost_chart height=280 %}{% endcomponent %}
+    {% endcomponent %}
+
+    {% component "unfold/components/card.html" with title="Daily Tokens (30 days)" %}
+        {% component "unfold/components/chart/line.html" with data=token_chart height=280 %}{% endcomponent %}
+    {% endcomponent %}
+</div>
+
+<div class="grid grid-cols-1 mb-8">
+    {% component "unfold/components/card.html" with title="Daily Cost by Service (30 days)" %}
+        {% component "unfold/components/chart/bar.html" with data=service_chart height=280 %}{% endcomponent %}
+    {% endcomponent %}
+</div>
+
+{# --- Service breakdown table --- #}
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
+    {% component "unfold/components/card.html" with title="Cost by Service (All Time)" %}
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-gray-200 dark:border-gray-700">
+                    <th class="text-left py-2 font-medium">Service</th>
+                    <th class="text-right py-2 font-medium">Calls</th>
+                    <th class="text-right py-2 font-medium">Tokens</th>
+                    <th class="text-right py-2 font-medium">Cost</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in service_stats %}
+                <tr class="border-b border-gray-100 dark:border-gray-800">
+                    <td class="py-2">{{ row.service }}</td>
+                    <td class="text-right py-2">{{ row.calls }}</td>
+                    <td class="text-right py-2">{{ row.tokens }}</td>
+                    <td class="text-right py-2 font-medium">{{ row.cost }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endcomponent %}
+
+    {% component "unfold/components/card.html" with title="Recent API Calls" %}
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-gray-200 dark:border-gray-700">
+                    <th class="text-left py-2 font-medium">Date</th>
+                    <th class="text-left py-2 font-medium">Service</th>
+                    <th class="text-left py-2 font-medium">Model</th>
+                    <th class="text-right py-2 font-medium">Tokens</th>
+                    <th class="text-right py-2 font-medium">Cost</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in recent_table %}
+                <tr class="border-b border-gray-100 dark:border-gray-800">
+                    <td class="py-2 text-gray-500">{{ row.date }}</td>
+                    <td class="py-2">{{ row.service }}</td>
+                    <td class="py-2 text-gray-500">{{ row.model }}</td>
+                    <td class="text-right py-2">{{ row.tokens }}</td>
+                    <td class="text-right py-2 font-medium">{{ row.cost }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endcomponent %}
+</div>
+
+{{ block.super }}
+{% endblock %}
