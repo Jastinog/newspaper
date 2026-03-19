@@ -107,17 +107,7 @@
     .digest-section .summary li {
         padding: 0.5rem 0;
         border-bottom: 1px solid var(--border-faint);
-        border-left: 2px solid transparent;
-        padding-left: 0.5rem;
         margin-bottom: 0.4rem;
-    }
-
-    .digest-section .summary li.importance-high {
-        border-left-color: #d32f2f;
-    }
-
-    .digest-section .summary li.importance-medium {
-        border-left-color: #e67e22;
     }
 
     .digest-section .summary li:last-child {
@@ -201,10 +191,29 @@
         color: var(--fg-faint);
     }
 
+    /* Importance bar */
+    .importance-bar {
+        display: inline-block;
+        width: 28px;
+        height: 4px;
+        border-radius: 2px;
+        vertical-align: middle;
+        margin-right: 0.4rem;
+    }
+    .importance-bar.high {
+        background: #d32f2f;
+        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3);
+    }
+    .importance-bar.medium {
+        background: #e67e22;
+        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+    }
+
     .deep-dive-hint-wrap {
-        display: block;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
         margin-top: 0.3rem;
-        text-align: right;
     }
     .deep-dive-hint {
         font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
@@ -446,10 +455,10 @@
             <div class="summary">
                 <ul>
                 {% for item in section.items.all %}
-                    <li{% if item.importance >= 7 %} class="importance-high"{% elif item.importance >= 4 %} class="importance-medium"{% endif %}>
+                    <li>
                         <a href="{% url 'deep_dive' item.id %}" class="item-topic deep-dive-link" data-item-id="{{ item.id }}">{{ item.topic }}</a>
                         <span class="item-summary">{{ item.summary }}</span>
-                        <span class="deep-dive-hint-wrap"><a href="{% url 'deep_dive' item.id %}" class="deep-dive-hint deep-dive-link" data-item-id="{{ item.id }}">{% trans "details" %} &rarr;</a></span>
+                        <span class="deep-dive-hint-wrap">{% if item.importance >= 7 %}<span class="importance-bar high"></span>{% elif item.importance >= 4 %}<span class="importance-bar medium"></span>{% endif %}<a href="{% url 'deep_dive' item.id %}" class="deep-dive-hint deep-dive-link" data-item-id="{{ item.id }}">{% trans "details" %} &rarr;</a></span>
                     </li>
                 {% endfor %}
                 </ul>
