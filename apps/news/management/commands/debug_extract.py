@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 from apps.news.models import Article
-from apps.news.services.extractor import _fetch_and_extract
+from apps.news.services.ingest.extractor import _fetch_and_extract
 
 
 class Command(BaseCommand):

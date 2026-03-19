@@ -4,10 +4,12 @@ import re
 import time
 
 from apps.news.models import APIUsage, ArticleChunk, DeepDive, DeepDiveSource, DigestItem
-from apps.news.services.embeddings import MODEL as EMBEDDING_MODEL
-from apps.news.services.embeddings import EmbeddingClient
-from apps.news.services.openai_client import MODEL_MINI, OpenAIClient, calculate_cost, fix_truncated_json
-from apps.news.services.search import SimilaritySearch
+from apps.news.services.ai import (
+    EMBEDDING_MODEL, EmbeddingClient,
+    MODEL_MINI, OpenAIClient, calculate_cost, fix_truncated_json,
+)
+
+from .search import SimilaritySearch
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +23,6 @@ class QueryGenerator:
     def _extract_entities(self, summary: str) -> list[str]:
         """Extract **bold phrases** from markdown summary as entity queries."""
         matches = re.findall(r'\*\*(.+?)\*\*', summary)
-        # Take up to 3 unique entities
         seen = set()
         entities = []
         for m in matches:
@@ -34,10 +35,7 @@ class QueryGenerator:
         return entities
 
     def _generate_llm_queries(self, topic: str, summary: str) -> tuple[list[str], dict]:
-        """Use LLM to generate diverse search queries focused on a specific topic.
-
-        Returns (queries, usage_dict).
-        """
+        """Use LLM to generate diverse search queries focused on a specific topic."""
         system = (
             "You generate search queries for a semantic search over a news article database. "
             "Given a specific news topic and its context, produce 4-6 diverse search queries that cover:\n"
@@ -68,19 +66,12 @@ class QueryGenerator:
         return [], usage
 
     def generate(self, topic: str, section_title: str, summary: str) -> tuple[list[str], dict]:
-        """Generate 6-9 diverse search queries from a specific topic + section context.
-
-        Returns (queries, chat_usage_dict).
-        """
-        # The topic itself is always the first query
+        """Generate 6-9 diverse search queries from a specific topic + section context."""
         all_queries = [topic]
-        # Extract entities from summary for extra context
         entities = self._extract_entities(summary)
         all_queries.extend(entities)
-        # LLM generates diverse queries focused on the specific topic
         llm_queries, chat_usage = self._generate_llm_queries(topic, summary)
         all_queries.extend(llm_queries)
-        # Deduplicate while preserving order
         seen = set()
         unique = []
         for q in all_queries:
@@ -152,18 +143,7 @@ class ArticleSynthesizer:
     }
 
     def synthesize(self, topic: str, section_title: str, chunks_by_article: dict, language: str = "uk") -> dict:
-        """Generate an analytical article about a specific topic from relevant chunks.
-
-        Args:
-            topic: The specific news topic (bold phrase from bullet)
-            section_title: Parent section title for context
-            chunks_by_article: {article_title: [chunk_texts]}
-            language: Target language code (en, ru, uk)
-
-        Returns:
-            {"title": str, "subtitle": str, "content": str}  (content is markdown)
-        """
-        # Build context from chunks
+        """Generate an analytical article about a specific topic from relevant chunks."""
         context_parts = []
         for article_title, chunks in chunks_by_article.items():
             text = "\n".join(chunks)
@@ -172,7 +152,6 @@ class ArticleSynthesizer:
         context = "\n\n---\n\n".join(context_parts)
 
         system = self.SYSTEM_PROMPTS.get(language, self.SYSTEM_PROMPTS["en"])
-
         user_template = self.USER_TEMPLATES.get(language, self.USER_TEMPLATES["en"])
         user = user_template.format(topic=topic, section_title=section_title, context=context[:12000])
 
@@ -194,7 +173,6 @@ class ArticleSynthesizer:
             }
         except json.JSONDecodeError:
             logger.error("Failed to parse synthesized article: %s", content[:300])
-            # Fallback: use raw content as markdown
             return {
                 "title": topic,
                 "subtitle": "",
@@ -216,7 +194,7 @@ class DeepDiveService:
         """Generate a deep dive for a DigestItem."""
         start = time.time()
 
-        # 1. Generate search queries from item's topic and summary
+        # 1. Generate search queries
         queries, query_gen_usage = self.query_gen.generate(item.topic, item.section.title, item.summary)
         logger.info("Generated %d search queries for '%s'", len(queries), item.topic)
 
@@ -286,7 +264,7 @@ class DeepDiveService:
             ))
         DeepDiveSource.objects.bulk_create(sources)
 
-        # 8. Log API usage for all 3 calls
+        # 8. Log API usage
         synthesis_usage = result.get("usage", {})
 
         def _log_chat_usage(usage):

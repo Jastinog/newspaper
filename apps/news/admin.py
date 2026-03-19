@@ -3,7 +3,7 @@ from unfold.admin import ModelAdmin, TabularInline
 
 from .models import (
     APIUsage, Article, ArticleChunk, Category, DeepDive, DeepDiveSource,
-    Digest, DigestItem, DigestSection, Feed, TopicEmbedding,
+    Digest, DigestItem, DigestSection, DigestTopic, Feed, TopicEmbedding,
 )
 
 
@@ -89,14 +89,53 @@ class DeepDiveAdmin(ModelAdmin):
         return obj.title[:80] if obj.title else ""
 
 
-@admin.register(TopicEmbedding)
-class TopicEmbeddingAdmin(ModelAdmin):
-    list_display = ("topic_index", "description_short", "created_at")
-    list_filter = ("topic_index",)
+class TopicEmbeddingInline(TabularInline):
+    model = TopicEmbedding
+    extra = 1
+    fields = ("description", "has_embedding")
+    readonly_fields = ("has_embedding",)
 
-    @admin.display(description="Description")
-    def description_short(self, obj):
-        return obj.description[:80] if obj.description else ""
+    @admin.display(description="Embedding", boolean=True)
+    def has_embedding(self, obj):
+        return obj.embedding is not None
+
+
+@admin.action(description="Generate embeddings for selected topics")
+def generate_embeddings(modeladmin, request, queryset):
+    from .services.ai import EmbeddingClient
+    client = EmbeddingClient()
+    total = 0
+    for topic in queryset:
+        pending = list(topic.embeddings.filter(embedding__isnull=True))
+        if not pending:
+            continue
+        descriptions = [e.description for e in pending]
+        vectors, _ = client.embed_batch(descriptions)
+        for emb_obj, vector in zip(pending, vectors):
+            emb_obj.embedding = vector
+            emb_obj.save(update_fields=["embedding"])
+        total += len(pending)
+    modeladmin.message_user(request, f"Generated {total} embeddings.")
+
+
+@admin.register(DigestTopic)
+class DigestTopicAdmin(ModelAdmin):
+    list_display = ("name_en", "order", "enabled", "embedding_count")
+    list_editable = ("order", "enabled")
+    inlines = [TopicEmbeddingInline]
+    actions = [generate_embeddings]
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).prefetch_related("embeddings")
+
+    @admin.display(description="Embeddings")
+    def embedding_count(self, obj):
+        embeddings = obj.embeddings.all()
+        total = len(embeddings)
+        ready = sum(1 for e in embeddings if e.embedding is not None)
+        if total == ready:
+            return str(total)
+        return f"{ready}/{total}"
 
 
 @admin.register(APIUsage)

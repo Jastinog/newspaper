@@ -2,10 +2,10 @@ import logging
 from dataclasses import dataclass, field
 
 from apps.news.models import APIUsage, Article, ArticleChunk
+from apps.news.services.ai import EMBEDDING_MODEL, EmbeddingClient, calculate_cost
+from apps.news.services.ai.embeddings import BATCH_SIZE
 
 from .chunker import chunk_text
-from .embeddings import BATCH_SIZE, MODEL, EmbeddingClient
-from .openai_client import EMBEDDING_MODEL, calculate_cost
 from .extractor import ContentExtractor
 from .fetcher import FeedFetcher
 
@@ -27,10 +27,7 @@ class UpdateResult:
 
 
 class ArticleEmbedder:
-    """Embed unembedded articles: chunk -> embed -> save.
-
-    Processes one article at a time, saving progress immediately.
-    """
+    """Embed unembedded articles: chunk -> embed -> save."""
 
     def __init__(self, api_key=None, stdout=None):
         self.api_key = api_key
@@ -64,7 +61,6 @@ class ArticleEmbedder:
             chunks = chunk_text(title, content)
 
             try:
-                # Embed all chunks for this article
                 all_embeddings = []
                 for i in range(0, len(chunks), BATCH_SIZE):
                     batch_texts = chunks[i:i + BATCH_SIZE]
@@ -83,24 +79,21 @@ class ArticleEmbedder:
             except Exception as e:
                 logger.warning("Embed failed for article %s: %s", article_id, e)
                 skipped += 1
-                # Mark embedded to avoid retrying broken articles
                 Article.objects.filter(id=article_id).update(embedded=True)
                 continue
 
-            # Save chunks to DB
             chunk_objects = [
                 ArticleChunk(
                     article_id=article_id,
                     chunk_index=idx,
                     chunk_text=text,
                     embedding=emb,
-                    model=MODEL,
+                    model=EMBEDDING_MODEL,
                 )
                 for idx, (text, emb) in enumerate(zip(chunks, all_embeddings))
             ]
             ArticleChunk.objects.bulk_create(chunk_objects, ignore_conflicts=True)
 
-            # Mark embedded immediately
             Article.objects.filter(id=article_id).update(embedded=True)
 
             articles_done += 1
@@ -119,13 +112,7 @@ class ArticleEmbedder:
 
 
 class UpdateService:
-    """Orchestrator: fetch RSS -> extract content -> embed.
-
-    Pipeline:
-      1. FeedFetcher     — download RSS, create Article records
-      2. ContentExtractor — fetch full text from URLs via readability
-      3. ArticleEmbedder  — chunk text, get embeddings, save
-    """
+    """Orchestrator: fetch RSS -> extract content -> embed."""
 
     def __init__(self, workers: int = MAX_WORKERS, days: int = 30, api_key=None, stdout=None):
         self.fetcher = FeedFetcher(workers=workers, stdout=stdout)

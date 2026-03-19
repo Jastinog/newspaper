@@ -115,10 +115,9 @@ class DigestSection(models.Model):
     digest = models.ForeignKey(Digest, on_delete=models.CASCADE, related_name="sections")
     title = models.CharField(max_length=300)
     order = models.PositiveIntegerField(default=0)
-    freshness = models.FloatField(default=0, db_index=True)
 
     class Meta:
-        ordering = ["-freshness", "order"]
+        ordering = ["order"]
 
     def __str__(self):
         return f"{self.digest.date} — {self.title}"
@@ -130,27 +129,46 @@ class DigestItem(models.Model):
     summary = models.TextField()
     order = models.PositiveIntegerField(default=0)
     importance = models.PositiveSmallIntegerField(default=0)
+    freshness = models.FloatField(default=0, db_index=True)
     articles = models.ManyToManyField(Article, blank=True, related_name="digest_items")
 
     class Meta:
-        ordering = ["order"]
+        ordering = ["-freshness", "order"]
 
     def __str__(self):
         return self.topic
 
 
+class DigestTopic(models.Model):
+    """Configurable digest topic/rubric — managed via admin."""
+    name_en = models.CharField(max_length=200)
+    name_ru = models.CharField(max_length=200, blank=True, default="")
+    name_uk = models.CharField(max_length=200, blank=True, default="")
+    order = models.PositiveIntegerField(default=0)
+    enabled = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["order"]
+
+    def __str__(self):
+        return self.name_en
+
+    def get_name(self, lang: str) -> str:
+        return getattr(self, f"name_{lang}", None) or self.name_en
+
+
 class TopicEmbedding(models.Model):
-    """Pre-computed embeddings for digest topic matching (multiple per topic)."""
-    topic_index = models.PositiveIntegerField(db_index=True)
-    description = models.TextField()
-    embedding = VectorField(dimensions=1536)
+    """Search embeddings for a digest topic (multiple per topic for different angles)."""
+    topic = models.ForeignKey(DigestTopic, on_delete=models.CASCADE, related_name="embeddings")
+    description = models.TextField(help_text="Search query describing this angle of the topic")
+    embedding = VectorField(dimensions=1536, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ["topic_index"]
+        ordering = ["topic__order"]
 
     def __str__(self):
-        return f"Topic {self.topic_index}: {self.description[:60]}"
+        return f"{self.topic.name_en}: {self.description[:60]}"
 
 
 class DeepDive(models.Model):

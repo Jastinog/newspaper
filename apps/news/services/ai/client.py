@@ -6,10 +6,11 @@ import time
 
 import requests
 
+from .embeddings import MODEL as EMBEDDING_MODEL
+
 logger = logging.getLogger(__name__)
 
 MODEL_MINI = "gpt-4.1-mini"
-EMBEDDING_MODEL = "text-embedding-3-small"
 
 # Pricing per 1M tokens (USD)
 GPT41_MINI_INPUT_PRICE = 0.40

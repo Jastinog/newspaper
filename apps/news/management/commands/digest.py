@@ -1,12 +1,9 @@
-import logging
 from datetime import date, datetime
 
 from django.core.management.base import BaseCommand
 
+from apps.news.services.ai import OpenAIError
 from apps.news.services.digest import DigestService
-from apps.news.services.openai_client import OpenAIError
-
-logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
@@ -64,7 +61,7 @@ class Command(BaseCommand):
             return
 
         for digest in digests:
-            sections = digest.sections.all()
+            sections = list(digest.sections.prefetch_related("items"))
             total_items = sum(s.items.count() for s in sections)
             self.stdout.write(self.style.SUCCESS(
                 f"Done: {digest.date} [{digest.language}] — {len(sections)} sections, {total_items} items"

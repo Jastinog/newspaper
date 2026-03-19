@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 @shared_task(name="news.update")
 def update_news():
     """Fetch RSS feeds, extract content, and embed articles."""
-    from apps.news.services.updater import UpdateService
+    from apps.news.services.ingest import UpdateService
 
     service = UpdateService()
     result = service.run()

@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 
-from apps.news.services.updater import UpdateService
+from apps.news.services.ingest import UpdateService
 
 
 class Command(BaseCommand):
