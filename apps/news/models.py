@@ -129,6 +129,7 @@ class DigestItem(models.Model):
     topic = models.CharField(max_length=500)
     summary = models.TextField()
     order = models.PositiveIntegerField(default=0)
+    importance = models.PositiveSmallIntegerField(default=0)
     articles = models.ManyToManyField(Article, blank=True, related_name="digest_items")
 
     class Meta:

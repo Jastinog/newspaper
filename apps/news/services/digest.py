@@ -121,6 +121,11 @@ class DigestGenerator:
             '  - "topic": short name/event label (2-5 words, like a headline tag)\n'
             '  - "summary": detailed explanation of what happened, the context, '
             "key players involved, and why it matters (2-3 sentences)\n"
+            '  - "importance": integer 0-9 rating how urgent/significant this news is. '
+            "0 = routine/mundane, 1-3 = minor news, 4-6 = notable event, "
+            "7-8 = major breaking news, 9 = extreme urgency (war escalation, major disaster, "
+            "assassination, etc.). Be selective — most items should be 2-5, "
+            "only truly extraordinary events deserve 7+.\n"
             '  - "article_ids": array of [ID:N] numbers from the input articles '
             "that this item is based on. Include ALL relevant article IDs.\n"
             "- ZERO DUPLICATION RULE: Each article_id MUST be used in ONLY ONE tile across the entire output. "
@@ -134,7 +139,7 @@ class DigestGenerator:
             'Also provide a "headline" field: 2-3 sentences summarizing the overall news picture.\n\n'
             "JSON format:\n"
             '{"headline": "...", "sections": [{"title": "...", "items": ['
-            '{"topic": "...", "summary": "...", "article_ids": [1, 2]}, ...]}, ...]}'
+            '{"topic": "...", "summary": "...", "importance": 3, "article_ids": [1, 2]}, ...]}, ...]}'
         )
 
     def generate(self, articles: list[dict]) -> dict:
@@ -188,11 +193,17 @@ class DigestSaver:
 
             items = section_data.get("items", [])
             for j, item_data in enumerate(items):
+                importance = item_data.get("importance", 0)
+                if not isinstance(importance, int) or importance < 0:
+                    importance = 0
+                elif importance > 9:
+                    importance = 9
                 item = DigestItem.objects.create(
                     section=section,
                     topic=item_data.get("topic", ""),
                     summary=item_data.get("summary", ""),
                     order=j,
+                    importance=importance,
                 )
                 # Link source articles via M2M
                 raw_ids = item_data.get("article_ids", [])

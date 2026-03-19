@@ -107,6 +107,16 @@
     .digest-section .summary li {
         padding: 0.5rem 0;
         border-bottom: 1px solid var(--border-faint);
+        border-left: 3px solid transparent;
+        padding-left: 0.6rem;
+    }
+
+    .digest-section .summary li.importance-high {
+        border-left-color: #d32f2f;
+    }
+
+    .digest-section .summary li.importance-medium {
+        border-left-color: #e67e22;
     }
 
     .digest-section .summary li:last-child {
@@ -434,7 +444,7 @@
             <div class="summary">
                 <ul>
                 {% for item in section.items.all %}
-                    <li>
+                    <li{% if item.importance >= 7 %} class="importance-high"{% elif item.importance >= 4 %} class="importance-medium"{% endif %}>
                         <a href="{% url 'deep_dive' item.id %}" class="item-topic deep-dive-link" data-item-id="{{ item.id }}">{{ item.topic }}</a>
                         <span class="item-summary">{{ item.summary }}</span>
                         <span class="deep-dive-hint-wrap"><a href="{% url 'deep_dive' item.id %}" class="deep-dive-hint deep-dive-link" data-item-id="{{ item.id }}">{% trans "details" %} &rarr;</a></span>
