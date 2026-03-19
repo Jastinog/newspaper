@@ -4,6 +4,7 @@ from . import views
 
 urlpatterns = [
     path("", views.index, name="index"),
+    path("digest/<str:date>/", views.index, name="digest_by_date"),
     path("article/<int:pk>/<slug:slug>/", views.article_detail, name="article_detail"),
     path("article/<int:pk>/", views.article_detail_redirect, name="article_detail_redirect"),
     path("deep-dive/<int:item_id>/", views.deep_dive, name="deep_dive"),

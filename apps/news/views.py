@@ -21,24 +21,38 @@ SITE_DESCRIPTION = _("Daily AI-curated news digest from 100+ RSS sources worldwi
 # ── Template Views ────────────────────────────────────────
 
 
-def index(request):
+def index(request, date=None):
+    from datetime import datetime as dt
+
     current_lang = get_language() or "en"
-    digest = (
-        Digest.objects
-        .filter(language=current_lang)
-        .prefetch_related("sections__items__articles__feed")
-        .order_by("-date")
-        .first()
-    )
+    qs = Digest.objects.filter(language=current_lang)
+
+    if date:
+        try:
+            parsed = dt.strptime(date, "%Y-%m-%d").date()
+        except ValueError:
+            return redirect("index")
+        digest = qs.filter(date=parsed).prefetch_related("sections__items__articles__feed").first()
+    else:
+        digest = qs.prefetch_related("sections__items__articles__feed").order_by("-date").first()
+
     # Fallback to English if no digest for current language
     if not digest and current_lang != "en":
-        digest = (
-            Digest.objects
-            .filter(language="en")
-            .prefetch_related("sections__items__articles__feed")
-            .order_by("-date")
-            .first()
-        )
+        qs_en = Digest.objects.filter(language="en")
+        if date:
+            digest = qs_en.filter(date=parsed).prefetch_related("sections__items__articles__feed").first()
+        else:
+            digest = qs_en.prefetch_related("sections__items__articles__feed").order_by("-date").first()
+
+    # Prev/next navigation
+    prev_date = next_date = None
+    if digest:
+        prev_digest = Digest.objects.filter(language=digest.language, date__lt=digest.date).order_by("-date").only("date").first()
+        next_digest = Digest.objects.filter(language=digest.language, date__gt=digest.date).order_by("date").only("date").first()
+        if prev_digest:
+            prev_date = prev_digest.date
+        if next_digest:
+            next_date = next_digest.date
 
     seo = {
         "title": f"{SITE_NAME} — {_('Daily News Digest')}",
@@ -47,7 +61,12 @@ def index(request):
         "og_type": "website",
     }
 
-    return render(request, "news/index.html", {"digest": digest, "seo": seo})
+    return render(request, "news/index.html", {
+        "digest": digest,
+        "prev_date": prev_date,
+        "next_date": next_date,
+        "seo": seo,
+    })
 
 
 def article_detail(request, pk, slug=""):

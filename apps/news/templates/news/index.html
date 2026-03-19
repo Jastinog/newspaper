@@ -3,14 +3,33 @@
 
 {% block extra_css %}
 <style>
-    .digest-date {
+    .digest-date-nav {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        margin-bottom: 0.5rem;
+    }
+    .digest-date-nav .date-label {
         font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
         font-size: 0.75rem;
         color: var(--fg-muted);
-        text-align: center;
         text-transform: uppercase;
         letter-spacing: 0.1em;
-        margin-bottom: 0.5rem;
+    }
+    .digest-date-nav a {
+        font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+        font-size: 0.85rem;
+        color: var(--fg-muted);
+        text-decoration: none;
+        line-height: 1;
+        transition: color 0.2s;
+    }
+    .digest-date-nav a:hover {
+        color: var(--fg);
+    }
+    .digest-date-nav .arrow-disabled {
+        visibility: hidden;
     }
 
     .digest-headline {
@@ -377,7 +396,19 @@
 
 {% block content %}
 {% if digest %}
-    <div class="digest-date">{{ digest.date|date:"F j, Y" }}</div>
+    <div class="digest-date-nav">
+        {% if prev_date %}
+            <a href="{% url 'digest_by_date' prev_date|date:'Y-m-d' %}">&larr;</a>
+        {% else %}
+            <span class="arrow-disabled">&larr;</span>
+        {% endif %}
+        <span class="date-label">{{ digest.date|date:"F j, Y" }}</span>
+        {% if next_date %}
+            <a href="{% url 'digest_by_date' next_date|date:'Y-m-d' %}">&rarr;</a>
+        {% else %}
+            <span class="arrow-disabled">&rarr;</span>
+        {% endif %}
+    </div>
 
     {% if digest.headline %}
         <div class="digest-headline">{{ digest.headline }}</div>
