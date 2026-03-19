@@ -8,10 +8,19 @@ from django.utils import timezone
 from apps.news.models import APIUsage, Article, DeepDive, Digest, Feed
 
 
+def _build_labels(now, days=30):
+    return [
+        (now - timedelta(days=days - 1 - i)).date()
+        for i in range(days)
+    ]
+
+
 def dashboard_callback(request, context):
     now = timezone.now()
     today = now.date()
     thirty_days_ago = now - timedelta(days=30)
+    dates = _build_labels(now, 30)
+    labels = [d.strftime("%d.%m") for d in dates]
 
     # === KPI cards ===
     total_cost = APIUsage.objects.aggregate(t=Sum("cost_usd"))["t"] or Decimal("0")
@@ -33,7 +42,30 @@ def dashboard_callback(request, context):
     total_digests = Digest.objects.count()
     total_deep_dives = DeepDive.objects.count()
 
-    # === Cost by service (all time) ===
+    # === Breakdown by model (all time) ===
+    by_model = (
+        APIUsage.objects.values("model")
+        .annotate(
+            cost=Sum("cost_usd"),
+            tokens=Sum("total_tokens"),
+            prompt=Sum("prompt_tokens"),
+            completion=Sum("completion_tokens"),
+            calls=Count("id"),
+        )
+        .order_by("model")
+    )
+    model_stats = []
+    for row in by_model:
+        model_stats.append({
+            "model": row["model"],
+            "cost": f"${row['cost']:.4f}",
+            "tokens": f"{row['tokens']:,}",
+            "prompt": f"{row['prompt']:,}",
+            "completion": f"{row['completion']:,}",
+            "calls": row["calls"],
+        })
+
+    # === Breakdown by service (all time) ===
     by_service = (
         APIUsage.objects.values("service")
         .annotate(cost=Sum("cost_usd"), tokens=Sum("total_tokens"), calls=Count("id"))
@@ -49,6 +81,31 @@ def dashboard_callback(request, context):
             "calls": row["calls"],
         })
 
+    # === Breakdown by service + model (all time) ===
+    by_service_model = (
+        APIUsage.objects.values("service", "model")
+        .annotate(
+            cost=Sum("cost_usd"),
+            tokens=Sum("total_tokens"),
+            prompt=Sum("prompt_tokens"),
+            completion=Sum("completion_tokens"),
+            calls=Count("id"),
+        )
+        .order_by("service", "model")
+    )
+    service_model_stats = []
+    for row in by_service_model:
+        label = dict(APIUsage.Service.choices).get(row["service"], row["service"])
+        service_model_stats.append({
+            "service": label,
+            "model": row["model"],
+            "cost": f"${row['cost']:.4f}",
+            "tokens": f"{row['tokens']:,}",
+            "prompt": f"{row['prompt']:,}",
+            "completion": f"{row['completion']:,}",
+            "calls": row["calls"],
+        })
+
     # === Daily cost chart (last 30 days) ===
     daily_usage = (
         APIUsage.objects.filter(created_at__gte=thirty_days_ago)
@@ -57,51 +114,31 @@ def dashboard_callback(request, context):
         .annotate(cost=Sum("cost_usd"), tokens=Sum("total_tokens"))
         .order_by("day")
     )
-
-    days_map = {}
-    for row in daily_usage:
-        days_map[str(row["day"])] = {
-            "cost": float(row["cost"]),
-            "tokens": row["tokens"],
-        }
-
-    labels = []
-    cost_data = []
-    token_data = []
-    for i in range(30):
-        d = (now - timedelta(days=29 - i)).date()
-        day_str = str(d)
-        labels.append(d.strftime("%d.%m"))
-        cost_data.append(days_map.get(day_str, {}).get("cost", 0))
-        token_data.append(days_map.get(day_str, {}).get("tokens", 0))
+    days_map = {str(r["day"]): {"cost": float(r["cost"]), "tokens": r["tokens"]} for r in daily_usage}
 
     cost_chart = json.dumps({
         "labels": labels,
-        "datasets": [
-            {
-                "label": "Cost ($)",
-                "data": cost_data,
-                "backgroundColor": "rgba(99, 102, 241, 0.5)",
-                "borderColor": "rgb(99, 102, 241)",
-                "borderWidth": 2,
-                "type": "bar",
-            },
-        ],
+        "datasets": [{
+            "label": "Cost ($)",
+            "data": [days_map.get(str(d), {}).get("cost", 0) for d in dates],
+            "backgroundColor": "rgba(99, 102, 241, 0.5)",
+            "borderColor": "rgb(99, 102, 241)",
+            "borderWidth": 2,
+            "type": "bar",
+        }],
     })
 
     token_chart = json.dumps({
         "labels": labels,
-        "datasets": [
-            {
-                "label": "Tokens",
-                "data": token_data,
-                "borderColor": "rgb(234, 179, 8)",
-                "backgroundColor": "rgba(234, 179, 8, 0.1)",
-                "borderWidth": 2,
-                "fill": True,
-                "tension": 0.3,
-            },
-        ],
+        "datasets": [{
+            "label": "Tokens",
+            "data": [days_map.get(str(d), {}).get("tokens", 0) for d in dates],
+            "borderColor": "rgb(234, 179, 8)",
+            "backgroundColor": "rgba(234, 179, 8, 0.1)",
+            "borderWidth": 2,
+            "fill": True,
+            "tension": 0.3,
+        }],
     })
 
     # === Daily cost by service chart (last 30 days) ===
@@ -119,29 +156,78 @@ def dashboard_callback(request, context):
         "embedding": ("rgb(34, 197, 94)", "rgba(34, 197, 94, 0.5)"),
     }
 
-    service_days = {}
+    svc_days = {}
     for row in service_daily:
         svc = row["service"]
-        if svc not in service_days:
-            service_days[svc] = {}
-        service_days[svc][str(row["day"])] = float(row["cost"])
-
-    service_datasets = []
-    for svc, svc_data in service_days.items():
-        border, bg = service_colors.get(svc, ("rgb(156, 163, 175)", "rgba(156, 163, 175, 0.5)"))
-        label = dict(APIUsage.Service.choices).get(svc, svc)
-        data = [svc_data.get(str((now - timedelta(days=29 - i)).date()), 0) for i in range(30)]
-        service_datasets.append({
-            "label": label,
-            "data": data,
-            "backgroundColor": bg,
-            "borderColor": border,
-            "borderWidth": 1,
-        })
+        svc_days.setdefault(svc, {})[str(row["day"])] = float(row["cost"])
 
     service_chart = json.dumps({
         "labels": labels,
-        "datasets": service_datasets,
+        "datasets": [
+            {
+                "label": dict(APIUsage.Service.choices).get(svc, svc),
+                "data": [data.get(str(d), 0) for d in dates],
+                "backgroundColor": service_colors.get(svc, ("rgb(156,163,175)", "rgba(156,163,175,0.5)"))[1],
+                "borderColor": service_colors.get(svc, ("rgb(156,163,175)", "rgba(156,163,175,0.5)"))[0],
+                "borderWidth": 1,
+            }
+            for svc, data in svc_days.items()
+        ],
+    })
+
+    # === Daily cost by model chart (last 30 days) ===
+    model_daily = (
+        APIUsage.objects.filter(created_at__gte=thirty_days_ago)
+        .extra(select={"day": "DATE(created_at)"})
+        .values("day", "model")
+        .annotate(cost=Sum("cost_usd"), tokens=Sum("total_tokens"))
+        .order_by("day")
+    )
+
+    model_colors = {
+        "gpt-4.1-mini": ("rgb(99, 102, 241)", "rgba(99, 102, 241, 0.5)"),
+        "gpt-4.1": ("rgb(168, 85, 247)", "rgba(168, 85, 247, 0.5)"),
+        "gpt-4o-mini": ("rgb(59, 130, 246)", "rgba(59, 130, 246, 0.5)"),
+        "gpt-4o": ("rgb(14, 165, 233)", "rgba(14, 165, 233, 0.5)"),
+        "text-embedding-3-small": ("rgb(34, 197, 94)", "rgba(34, 197, 94, 0.5)"),
+        "text-embedding-3-large": ("rgb(16, 185, 129)", "rgba(16, 185, 129, 0.5)"),
+    }
+
+    mdl_cost_days = {}
+    mdl_token_days = {}
+    for row in model_daily:
+        m = row["model"]
+        mdl_cost_days.setdefault(m, {})[str(row["day"])] = float(row["cost"])
+        mdl_token_days.setdefault(m, {})[str(row["day"])] = row["tokens"]
+
+    model_cost_chart = json.dumps({
+        "labels": labels,
+        "datasets": [
+            {
+                "label": mdl,
+                "data": [data.get(str(d), 0) for d in dates],
+                "backgroundColor": model_colors.get(mdl, ("rgb(156,163,175)", "rgba(156,163,175,0.5)"))[1],
+                "borderColor": model_colors.get(mdl, ("rgb(156,163,175)", "rgba(156,163,175,0.5)"))[0],
+                "borderWidth": 1,
+            }
+            for mdl, data in mdl_cost_days.items()
+        ],
+    })
+
+    model_token_chart = json.dumps({
+        "labels": labels,
+        "datasets": [
+            {
+                "label": mdl,
+                "data": [data.get(str(d), 0) for d in dates],
+                "borderColor": model_colors.get(mdl, ("rgb(156,163,175)", "rgba(156,163,175,0.5)"))[0],
+                "backgroundColor": model_colors.get(mdl, ("rgb(156,163,175)", "rgba(156,163,175,0.5)"))[1],
+                "borderWidth": 2,
+                "fill": True,
+                "tension": 0.3,
+            }
+            for mdl, data in mdl_token_days.items()
+        ],
     })
 
     # === Recent API calls table ===
@@ -168,10 +254,14 @@ def dashboard_callback(request, context):
         "total_feeds": total_feeds,
         "total_digests": total_digests,
         "total_deep_dives": total_deep_dives,
+        "model_stats": model_stats,
         "service_stats": service_stats,
+        "service_model_stats": service_model_stats,
         "cost_chart": cost_chart,
         "token_chart": token_chart,
         "service_chart": service_chart,
+        "model_cost_chart": model_cost_chart,
+        "model_token_chart": model_token_chart,
         "recent_table": recent_table,
     })
     return context

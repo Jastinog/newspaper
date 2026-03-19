@@ -40,7 +40,7 @@
     {% endcomponent %}
 </div>
 
-{# --- Charts --- #}
+{# --- Daily charts --- #}
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
     {% component "unfold/components/card.html" with title="Daily Cost (30 days)" %}
         {% component "unfold/components/chart/bar.html" with data=cost_chart height=280 %}{% endcomponent %}
@@ -51,14 +51,53 @@
     {% endcomponent %}
 </div>
 
+{# --- By service charts --- #}
 <div class="grid grid-cols-1 mb-8">
     {% component "unfold/components/card.html" with title="Daily Cost by Service (30 days)" %}
         {% component "unfold/components/chart/bar.html" with data=service_chart height=280 %}{% endcomponent %}
     {% endcomponent %}
 </div>
 
-{# --- Service breakdown table --- #}
+{# --- By model charts --- #}
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
+    {% component "unfold/components/card.html" with title="Daily Cost by Model (30 days)" %}
+        {% component "unfold/components/chart/bar.html" with data=model_cost_chart height=280 %}{% endcomponent %}
+    {% endcomponent %}
+
+    {% component "unfold/components/card.html" with title="Daily Tokens by Model (30 days)" %}
+        {% component "unfold/components/chart/line.html" with data=model_token_chart height=280 %}{% endcomponent %}
+    {% endcomponent %}
+</div>
+
+{# --- Breakdown tables --- #}
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
+    {% component "unfold/components/card.html" with title="Cost by Model (All Time)" %}
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-gray-200 dark:border-gray-700">
+                    <th class="text-left py-2 font-medium">Model</th>
+                    <th class="text-right py-2 font-medium">Calls</th>
+                    <th class="text-right py-2 font-medium">Prompt</th>
+                    <th class="text-right py-2 font-medium">Completion</th>
+                    <th class="text-right py-2 font-medium">Total</th>
+                    <th class="text-right py-2 font-medium">Cost</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in model_stats %}
+                <tr class="border-b border-gray-100 dark:border-gray-800">
+                    <td class="py-2 font-mono text-xs">{{ row.model }}</td>
+                    <td class="text-right py-2">{{ row.calls }}</td>
+                    <td class="text-right py-2 text-gray-500">{{ row.prompt }}</td>
+                    <td class="text-right py-2 text-gray-500">{{ row.completion }}</td>
+                    <td class="text-right py-2">{{ row.tokens }}</td>
+                    <td class="text-right py-2 font-medium">{{ row.cost }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endcomponent %}
+
     {% component "unfold/components/card.html" with title="Cost by Service (All Time)" %}
         <table class="w-full text-sm">
             <thead>
@@ -75,6 +114,36 @@
                     <td class="py-2">{{ row.service }}</td>
                     <td class="text-right py-2">{{ row.calls }}</td>
                     <td class="text-right py-2">{{ row.tokens }}</td>
+                    <td class="text-right py-2 font-medium">{{ row.cost }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endcomponent %}
+</div>
+
+{# --- Service + Model detail table --- #}
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
+    {% component "unfold/components/card.html" with title="Cost by Service & Model (All Time)" %}
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-gray-200 dark:border-gray-700">
+                    <th class="text-left py-2 font-medium">Service</th>
+                    <th class="text-left py-2 font-medium">Model</th>
+                    <th class="text-right py-2 font-medium">Calls</th>
+                    <th class="text-right py-2 font-medium">Prompt</th>
+                    <th class="text-right py-2 font-medium">Completion</th>
+                    <th class="text-right py-2 font-medium">Cost</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in service_model_stats %}
+                <tr class="border-b border-gray-100 dark:border-gray-800">
+                    <td class="py-2">{{ row.service }}</td>
+                    <td class="py-2 font-mono text-xs">{{ row.model }}</td>
+                    <td class="text-right py-2">{{ row.calls }}</td>
+                    <td class="text-right py-2 text-gray-500">{{ row.prompt }}</td>
+                    <td class="text-right py-2 text-gray-500">{{ row.completion }}</td>
                     <td class="text-right py-2 font-medium">{{ row.cost }}</td>
                 </tr>
                 {% endfor %}
@@ -98,7 +167,7 @@
                 <tr class="border-b border-gray-100 dark:border-gray-800">
                     <td class="py-2 text-gray-500">{{ row.date }}</td>
                     <td class="py-2">{{ row.service }}</td>
-                    <td class="py-2 text-gray-500">{{ row.model }}</td>
+                    <td class="py-2 font-mono text-xs">{{ row.model }}</td>
                     <td class="text-right py-2">{{ row.tokens }}</td>
                     <td class="text-right py-2 font-medium">{{ row.cost }}</td>
                 </tr>
