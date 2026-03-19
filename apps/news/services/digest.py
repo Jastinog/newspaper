@@ -4,6 +4,8 @@ import re
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta, timezone
 
+from django.db.models import Max
+
 from apps.news.models import APIUsage, Article, Digest, DigestItem, DigestSection
 
 from .openai_client import MODEL_MINI, OpenAIClient, OpenAIError, calculate_cost, fix_truncated_json
@@ -188,6 +190,17 @@ class DigestSaver:
                 linked_ids = [aid for aid in raw_ids if aid in valid_article_ids]
                 if linked_ids:
                     item.articles.set(linked_ids)
+
+        # Calculate freshness for each section based on newest linked article
+        for section in digest.sections.all():
+            newest = (
+                Article.objects
+                .filter(digest_items__section=section, published__isnull=False)
+                .aggregate(newest=Max("published"))["newest"]
+            )
+            if newest:
+                section.freshness = newest.timestamp()
+                section.save(update_fields=["freshness"])
 
         return digest
 

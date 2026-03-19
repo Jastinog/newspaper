@@ -115,9 +115,10 @@ class DigestSection(models.Model):
     digest = models.ForeignKey(Digest, on_delete=models.CASCADE, related_name="sections")
     title = models.CharField(max_length=300)
     order = models.PositiveIntegerField(default=0)
+    freshness = models.FloatField(default=0, db_index=True)
 
     class Meta:
-        ordering = ["order"]
+        ordering = ["-freshness", "order"]
 
     def __str__(self):
         return f"{self.digest.date} — {self.title}"
