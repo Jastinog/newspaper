@@ -139,6 +139,20 @@ class DigestItem(models.Model):
         return self.topic
 
 
+class TopicEmbedding(models.Model):
+    """Pre-computed embeddings for digest topic matching (multiple per topic)."""
+    topic_index = models.PositiveIntegerField(db_index=True)
+    description = models.TextField()
+    embedding = VectorField(dimensions=1536)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["topic_index"]
+
+    def __str__(self):
+        return f"Topic {self.topic_index}: {self.description[:60]}"
+
+
 class DeepDive(models.Model):
     item = models.ForeignKey(DigestItem, on_delete=models.CASCADE, related_name="deep_dives")
     title = models.CharField(max_length=500)

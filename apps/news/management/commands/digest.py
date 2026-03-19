@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
-    help = "Generate a daily news digest using OpenAI"
+    help = "Generate a daily news digest using OpenAI (parallel per-topic pipeline)"
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -20,22 +20,22 @@ class Command(BaseCommand):
             help="Digest date in YYYY-MM-DD format (default: today)",
         )
         parser.add_argument(
-            "--limit",
-            type=int,
-            default=80,
-            help="Max number of recent articles to include",
-        )
-        parser.add_argument(
             "--hours",
             type=int,
             default=72,
             help="Look back N hours for articles",
         )
         parser.add_argument(
+            "--per-topic",
+            type=int,
+            default=25,
+            help="Max articles per topic (default: 25)",
+        )
+        parser.add_argument(
             "--lang",
             type=str,
             default=None,
-            help="Comma-separated language codes to generate (default: all — en,ru,uk)",
+            help="Comma-separated language codes to save (default: all — en,ru,uk)",
         )
 
     def handle(self, *args, **options):
@@ -45,15 +45,15 @@ class Command(BaseCommand):
 
         languages = None
         if options["lang"]:
-            languages = [l.strip() for l in options["lang"].split(",")]
+            languages = [lang.strip() for lang in options["lang"].split(",")]
 
         lang_label = ",".join(languages) if languages else "all"
         self.stdout.write(f"Generating digest for {digest_date} [{lang_label}]...")
 
         try:
             service = DigestService(
-                limit=options["limit"],
                 hours=options["hours"],
+                per_topic=options["per_topic"],
             )
             digests = service.run(digest_date=digest_date, languages=languages)
         except OpenAIError as e:
@@ -65,8 +65,9 @@ class Command(BaseCommand):
 
         for digest in digests:
             sections = digest.sections.all()
+            total_items = sum(s.items.count() for s in sections)
             self.stdout.write(self.style.SUCCESS(
-                f"Done: {digest.date} [{digest.language}] — {len(sections)} sections"
+                f"Done: {digest.date} [{digest.language}] — {len(sections)} sections, {total_items} items"
             ))
             self.stdout.write(f"  Headline: {digest.headline[:120]}...")
             for s in sections:

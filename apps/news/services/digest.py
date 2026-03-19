@@ -1,16 +1,19 @@
 import json
 import logging
 import re
-from concurrent.futures import ThreadPoolExecutor
-from datetime import date, datetime, timedelta, timezone
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import date
 
 from django.db.models import Max
 
 from apps.news.models import APIUsage, Article, Digest, DigestItem, DigestSection
 
 from .openai_client import MODEL_MINI, OpenAIClient, OpenAIError, calculate_cost, fix_truncated_json
+from .topic_collector import TopicArticleCollector
 
 logger = logging.getLogger(__name__)
+
+LANGUAGES = ["en", "ru", "uk"]
 
 TOPICS = {
     "en": [
@@ -51,107 +54,72 @@ TOPICS = {
     ],
 }
 
-LANGUAGE_INSTRUCTIONS = {
-    "en": "ALWAYS respond in English (topic and summary must be in English)",
-    "ru": "ALWAYS respond in Russian (topic and summary must be in Russian)",
-    "uk": "ALWAYS respond in Ukrainian (topic and summary must be in Ukrainian)",
-}
+
+def _sanitize(s: str) -> str:
+    """Remove control characters except newline/tab."""
+    return re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', '', s)
 
 
-class ArticleCollector:
-    """Collects recent articles for digest generation."""
+class TopicDigestGenerator:
+    """Generates digest items for a single topic in all languages at once."""
 
-    def __init__(self, limit=150, hours=72):
-        self.limit = limit
-        self.hours = hours
-
-    def collect(self):
-        """Return recent articles as list of dicts with id, title, feed, published, snippet."""
-        cutoff = datetime.now(timezone.utc) - timedelta(hours=self.hours)
-        articles = (
-            Article.objects
-            .select_related("feed")
-            .filter(published__gte=cutoff)
-            .order_by("-published")
-            [:self.limit]
-        )
-        result = []
-        for a in articles:
-            snippet = a.summary or (a.content[:300] if a.content else "")
-            result.append({
-                "id": a.id,
-                "title": a.title,
-                "feed": a.feed.title if a.feed else "",
-                "published": a.published.strftime("%Y-%m-%d") if a.published else "",
-                "snippet": snippet,
-            })
-        return result
-
-
-class DigestGenerator:
-    """Generates a digest by calling OpenAI with collected articles."""
-
-    def __init__(self, client: OpenAIClient = None, language: str = "uk"):
+    def __init__(self, client: OpenAIClient = None, topic_index: int = 0):
         self.client = client or OpenAIClient()
-        self.language = language
-        self.topics = TOPICS.get(language, TOPICS["en"])
+        self.topic_index = topic_index
+        self.topic_names = {lang: TOPICS[lang][topic_index] for lang in LANGUAGES}
 
     def _build_article_list(self, articles: list[dict]) -> str:
         lines = []
         for a in articles:
-            aid = a["id"]
             title = _sanitize(a["title"])
             feed = _sanitize(a["feed"])
             pub = a["published"]
             snippet = _sanitize(a["snippet"][:400])
             date_part = f", {pub}" if pub else ""
             snippet_part = f" -- {snippet}" if snippet else ""
-            lines.append(f'- [ID:{aid}] "{title}" ({feed}{date_part}){snippet_part}')
+            lines.append(f'- [ID:{a["id"]}] "{title}" ({feed}{date_part}){snippet_part}')
         return "\n".join(lines)
 
-    def _build_system_prompt(self) -> str:
-        topics_str = ", ".join(f'"{t}"' for t in self.topics)
+    def _build_system_prompt(self, num_articles: int) -> str:
+        target = "8-10" if num_articles >= 12 else "4-8"
         return (
-            "You are a world news analyst. Based on the provided recent news articles, "
-            "create detailed thematic news tiles summarizing what is happening right now.\n\n"
+            f'You are a world news analyst specializing in "{self.topic_names["en"]}". '
+            "Based on the provided articles, create detailed news items about key developments.\n\n"
             "Rules:\n"
-            "- Each tile should have 4-8 items, aiming for 6-8. Each item covers one key development. "
-            "The absolute minimum is 4 items per tile (only if the topic genuinely lacks news). "
-            "Always try to maximize coverage — find more angles, related developments, or smaller stories to fill tiles.\n"
+            f"- Create {target} items, each covering one distinct development. Minimum 4.\n"
+            "- Each item MUST have text in 3 languages: English (en), Russian (ru), Ukrainian (uk).\n"
             "- For each item provide:\n"
-            '  - "topic": short name/event label (2-5 words, like a headline tag)\n'
-            '  - "summary": detailed explanation of what happened, the context, '
-            "key players involved, and why it matters (2-3 sentences)\n"
-            '  - "importance": integer 0-9 rating how urgent/significant this news is. '
-            "0 = routine/mundane, 1-3 = minor news, 4-6 = notable event, "
-            "7-8 = major breaking news, 9 = extreme urgency (war escalation, major disaster, "
-            "assassination, etc.). Be selective — most items should be 2-5, "
-            "only truly extraordinary events deserve 7+.\n"
-            '  - "article_ids": array of [ID:N] numbers from the input articles '
-            "that this item is based on. Include ALL relevant article IDs.\n"
-            "- ZERO DUPLICATION RULE: Each article_id MUST be used in ONLY ONE tile across the entire output. "
-            "Each news story or event MUST appear in ONLY ONE tile — the single most relevant one. "
-            "Before finalizing, verify that no article_id appears in more than one tile. "
-            "Having fewer items per tile is ALWAYS better than duplicating content across tiles.\n"
-            "- Do NOT reference article IDs in the topic or summary text — only in the article_ids array.\n"
-            f"- {LANGUAGE_INSTRUCTIONS.get(self.language, LANGUAGE_INSTRUCTIONS['en'])}\n"
-            "- Output ONLY valid JSON, no markdown fences\n\n"
-            f"Create EXACTLY {len(self.topics)} tiles on these topics: {topics_str}\n"
-            'Also provide a "headline" field: 2-3 sentences summarizing the overall news picture.\n\n'
+            '  - "topic": {"en": "...", "ru": "...", "uk": "..."} — short event label (2-5 words)\n'
+            '  - "summary": {"en": "...", "ru": "...", "uk": "..."} — what happened, context, '
+            "why it matters (2-3 sentences)\n"
+            '  - "importance": integer 0-9 (0=mundane, 1-3=minor, 4-6=notable, 7-8=major, 9=extreme). '
+            "Most items should be 2-5, only extraordinary events deserve 7+.\n"
+            '  - "article_ids": array of [ID:N] numbers from the input. Include ALL relevant IDs.\n'
+            "- Do NOT reference article IDs in topic or summary text — only in article_ids.\n"
+            "- Output ONLY valid JSON, no markdown fences.\n\n"
             "JSON format:\n"
-            '{"headline": "...", "sections": [{"title": "...", "items": ['
-            '{"topic": "...", "summary": "...", "importance": 3, "article_ids": [1, 2]}, ...]}, ...]}'
+            '{"items": [{"topic": {"en": "...", "ru": "...", "uk": "..."}, '
+            '"summary": {"en": "...", "ru": "...", "uk": "..."}, '
+            '"importance": 5, "article_ids": [1, 2]}, ...]}'
         )
 
     def generate(self, articles: list[dict]) -> dict:
-        """Call OpenAI and return parsed {headline, sections} dict."""
-        system = self._build_system_prompt()
-        user = f"Here are the recent news articles:\n\n{self._build_article_list(articles)}"
+        """Generate items for this topic. Returns {topic_index, topic_names, items, usage}."""
+        if not articles:
+            return {
+                "topic_index": self.topic_index,
+                "topic_names": self.topic_names,
+                "items": [],
+                "usage": {},
+            }
+
+        system = self._build_system_prompt(len(articles))
+        user = f"Articles on {self.topic_names['en']}:\n\n{self._build_article_list(articles)}"
 
         content, usage = self.client.chat(
             system=system,
             user=user,
-            max_tokens=24000,
+            max_tokens=6000,
             temperature=0.3,
         )
 
@@ -160,139 +128,220 @@ class DigestGenerator:
             data = json.loads(fixed)
         except json.JSONDecodeError as e:
             raise OpenAIError(
-                f"Failed to parse digest JSON: {e}\n"
+                f"Failed to parse topic {self.topic_index} JSON: {e}\n"
                 f"Response (first 300 chars): {fixed[:300]}"
             )
 
-        data["usage"] = usage
-        return data
+        return {
+            "topic_index": self.topic_index,
+            "topic_names": self.topic_names,
+            "items": data.get("items", []),
+            "usage": usage,
+        }
+
+
+class HeadlineGenerator:
+    """Generates a multilingual headline from all topic results."""
+
+    def __init__(self, client: OpenAIClient = None):
+        self.client = client or OpenAIClient()
+
+    def generate(self, topic_results: list[dict]) -> tuple[dict, dict]:
+        """Return ({en: headline, ru: headline, uk: headline}, usage)."""
+        top_items = []
+        for tr in topic_results:
+            topic_en = tr["topic_names"]["en"]
+            for item in tr.get("items", []):
+                imp = item.get("importance", 0)
+                topic_text = item.get("topic", {}).get("en", "")
+                if imp >= 4 and topic_text:
+                    top_items.append((imp, f"[{topic_en}] {topic_text}"))
+
+        top_items.sort(key=lambda x: x[0], reverse=True)
+        top_labels = [t[1] for t in top_items[:20]]
+
+        if not top_labels:
+            return {"en": "", "ru": "", "uk": ""}, {}
+
+        system = (
+            "You are a news editor. Based on today's top stories, write a 2-3 sentence "
+            "headline summarizing the overall news picture. Provide in 3 languages.\n\n"
+            'Output ONLY valid JSON: {"en": "...", "ru": "...", "uk": "..."}'
+        )
+        user = "Top stories today:\n" + "\n".join(f"- {t}" for t in top_labels)
+
+        content, usage = self.client.chat(
+            system=system,
+            user=user,
+            max_tokens=1000,
+            temperature=0.3,
+        )
+
+        fixed = fix_truncated_json(content)
+        try:
+            data = json.loads(fixed)
+        except json.JSONDecodeError:
+            data = {"en": "", "ru": "", "uk": ""}
+
+        return data, usage
+
+
+def _localized(value, lang: str) -> str:
+    """Extract a localized string from a multilingual dict or plain value."""
+    if isinstance(value, dict):
+        return value.get(lang, value.get("en", ""))
+    return str(value)
 
 
 class DigestSaver:
-    """Persists a generated digest to the database."""
+    """Saves multilingual digest from parallel topic results."""
 
-    def save(self, digest_date: date, data: dict, language: str = "en", valid_article_ids: set = None) -> Digest:
-        """Create or replace a Digest for the given date and language."""
-        valid_article_ids = valid_article_ids or set()
-
-        # Delete existing digest for this date+language (regeneration)
-        Digest.objects.filter(date=digest_date, language=language).delete()
-
-        digest = Digest.objects.create(
-            date=digest_date,
-            language=language,
-            headline=data.get("headline", ""),
-        )
-
-        sections = data.get("sections", [])
-        for i, section_data in enumerate(sections):
-            section = DigestSection.objects.create(
-                digest=digest,
-                title=section_data.get("title", ""),
-                order=i,
-            )
-
-            items = section_data.get("items", [])
-            for j, item_data in enumerate(items):
-                importance = item_data.get("importance", 0)
-                if not isinstance(importance, int) or importance < 0:
-                    importance = 0
-                elif importance > 9:
-                    importance = 9
-                item = DigestItem.objects.create(
-                    section=section,
-                    topic=item_data.get("topic", ""),
-                    summary=item_data.get("summary", ""),
-                    order=j,
-                    importance=importance,
-                )
-                # Link source articles via M2M
-                raw_ids = item_data.get("article_ids", [])
-                linked_ids = [aid for aid in raw_ids if aid in valid_article_ids]
-                if linked_ids:
-                    item.articles.set(linked_ids)
-
-        # Calculate freshness for each section based on newest linked article
-        for section in digest.sections.all():
-            newest = (
-                Article.objects
-                .filter(digest_items__section=section, published__isnull=False)
-                .aggregate(newest=Max("published"))["newest"]
-            )
-            if newest:
-                section.freshness = newest.timestamp()
-                section.save(update_fields=["freshness"])
-
-        return digest
-
-
-class DigestService:
-    """Orchestrates the full digest pipeline: collect → generate → save."""
-
-    def __init__(self, client: OpenAIClient = None, limit=80, hours=72):
-        self.collector = ArticleCollector(limit=limit, hours=hours)
-        self.client = client
-        self.saver = DigestSaver()
-
-    def _run_single(self, language: str, articles: list[dict], digest_date: date, valid_article_ids: set) -> Digest:
-        """Generate and save a digest for a single language."""
-        generator = DigestGenerator(client=self.client, language=language)
-
-        logger.info("Generating %s digest for %s with %d articles...", language, digest_date, len(articles))
-        data = generator.generate(articles)
-
-        usage = data.get("usage", {})
-        total_tokens = usage.get("total_tokens", 0)
-        logger.info(
-            "Digest [%s] generated: %d sections, %d tokens",
-            language,
-            len(data.get("sections", [])),
-            total_tokens,
-        )
-
-        digest = self.saver.save(digest_date, data, language=language, valid_article_ids=valid_article_ids)
-
-        prompt_tokens = usage.get("prompt_tokens", 0)
-        completion_tokens = usage.get("completion_tokens", 0)
-        APIUsage.objects.create(
-            service=APIUsage.Service.DIGEST,
-            api_type=APIUsage.APIType.CHAT,
-            model=MODEL_MINI,
-            prompt_tokens=prompt_tokens,
-            completion_tokens=completion_tokens,
-            total_tokens=total_tokens,
-            cost_usd=calculate_cost(MODEL_MINI, prompt_tokens, completion_tokens),
-            digest=digest,
-        )
-
-        logger.info("Digest saved: %s [%s]", digest, language)
-        return digest
-
-    def run(self, digest_date: date = None, languages: list[str] = None) -> list[Digest]:
-        digest_date = digest_date or date.today()
-        languages = languages or list(TOPICS.keys())
-
-        articles = self.collector.collect()
-        if not articles:
-            raise RuntimeError("No recent articles found. Run fetch_feeds first.")
-
-        valid_article_ids = {a["id"] for a in articles}
-
-        if len(languages) == 1:
-            return [self._run_single(languages[0], articles, digest_date, valid_article_ids)]
-
+    def save(
+        self,
+        digest_date: date,
+        topic_results: list[dict],
+        headlines: dict,
+        languages: list[str],
+        valid_article_ids: set,
+    ) -> list[Digest]:
+        """Create Digest records for each language from topic results."""
         digests = []
-        with ThreadPoolExecutor(max_workers=3) as executor:
-            futures = {
-                executor.submit(self._run_single, lang, articles, digest_date, valid_article_ids): lang
-                for lang in languages
-            }
-            for future in futures:
-                digests.append(future.result())
+
+        for lang in languages:
+            Digest.objects.filter(date=digest_date, language=lang).delete()
+
+            digest = Digest.objects.create(
+                date=digest_date,
+                language=lang,
+                headline=headlines.get(lang, ""),
+            )
+
+            for topic_result in sorted(topic_results, key=lambda r: r["topic_index"]):
+                topic_idx = topic_result["topic_index"]
+                section = DigestSection.objects.create(
+                    digest=digest,
+                    title=topic_result["topic_names"].get(lang, TOPICS["en"][topic_idx]),
+                    order=topic_idx,
+                )
+
+                for j, item_data in enumerate(topic_result.get("items", [])):
+                    raw_importance = item_data.get("importance", 0)
+                    importance = max(0, min(9, int(raw_importance))) if isinstance(raw_importance, (int, float)) else 0
+
+                    item = DigestItem.objects.create(
+                        section=section,
+                        topic=_localized(item_data.get("topic", {}), lang),
+                        summary=_localized(item_data.get("summary", {}), lang),
+                        order=j,
+                        importance=importance,
+                    )
+
+                    raw_ids = item_data.get("article_ids", [])
+                    linked_ids = [aid for aid in raw_ids if aid in valid_article_ids]
+                    if linked_ids:
+                        item.articles.set(linked_ids)
+
+            # Calculate freshness per section
+            for section in digest.sections.all():
+                newest = (
+                    Article.objects
+                    .filter(digest_items__section=section, published__isnull=False)
+                    .aggregate(newest=Max("published"))["newest"]
+                )
+                if newest:
+                    section.freshness = newest.timestamp()
+                    section.save(update_fields=["freshness"])
+
+            digests.append(digest)
 
         return digests
 
 
-def _sanitize(s: str) -> str:
-    """Remove control characters except newline/tab."""
-    return re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', '', s)
+class DigestService:
+    """Orchestrates parallel digest pipeline: collect by topic → generate → save."""
+
+    def __init__(self, client: OpenAIClient = None, hours=72, per_topic=25):
+        self.client = client
+        self.collector = TopicArticleCollector(hours=hours, per_topic=per_topic)
+        self.saver = DigestSaver()
+
+    def _generate_topic(self, topic_index: int, articles: list[dict]) -> dict:
+        """Generate digest items for a single topic (runs in thread)."""
+        generator = TopicDigestGenerator(client=self.client, topic_index=topic_index)
+        logger.info("Generating topic %d (%s) with %d articles...",
+                     topic_index, TOPICS["en"][topic_index], len(articles))
+        result = generator.generate(articles)
+        usage = result.get("usage", {})
+        logger.info("Topic %d done: %d items, %d tokens",
+                     topic_index, len(result.get("items", [])),
+                     usage.get("total_tokens", 0))
+        return result
+
+    def run(self, digest_date: date = None, languages: list[str] = None) -> list[Digest]:
+        digest_date = digest_date or date.today()
+        languages = languages or LANGUAGES
+
+        # 1. Collect articles per topic via embeddings
+        topic_articles = self.collector.collect()
+        total = sum(len(v) for v in topic_articles.values())
+        if total == 0:
+            raise RuntimeError("No articles found via topic embeddings. Check embeddings and seed_topics.")
+
+        valid_article_ids = {a["id"] for articles in topic_articles.values() for a in articles}
+
+        # 2. Generate all topics in parallel (10 threads)
+        topic_results = []
+        total_usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+
+        def _accum_usage(usage):
+            for key in total_usage:
+                total_usage[key] += usage.get(key, 0)
+
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            futures = {
+                executor.submit(self._generate_topic, idx, articles): idx
+                for idx, articles in topic_articles.items()
+            }
+            for future in as_completed(futures):
+                result = future.result()
+                topic_results.append(result)
+                _accum_usage(result.get("usage", {}))
+
+        # 3. Generate headline
+        headline_gen = HeadlineGenerator(client=self.client)
+        headlines, headline_usage = headline_gen.generate(topic_results)
+        _accum_usage(headline_usage)
+
+        logger.info("All topics + headline generated: %d total tokens", total_usage["total_tokens"])
+
+        # 4. Save digests for each language
+        digests = self.saver.save(
+            digest_date=digest_date,
+            topic_results=topic_results,
+            headlines=headlines,
+            languages=languages,
+            valid_article_ids=valid_article_ids,
+        )
+
+        # 5. Log API usage (split evenly across language digests)
+        num_langs = len(digests)
+        per_lang_prompt = total_usage["prompt_tokens"] // num_langs
+        per_lang_completion = total_usage["completion_tokens"] // num_langs
+        per_lang_total = total_usage["total_tokens"] // num_langs
+
+        for digest in digests:
+            APIUsage.objects.create(
+                service=APIUsage.Service.DIGEST,
+                api_type=APIUsage.APIType.CHAT,
+                model=MODEL_MINI,
+                prompt_tokens=per_lang_prompt,
+                completion_tokens=per_lang_completion,
+                total_tokens=per_lang_total,
+                cost_usd=calculate_cost(MODEL_MINI, per_lang_prompt, per_lang_completion),
+                digest=digest,
+            )
+
+        for d in digests:
+            logger.info("Digest saved: %s [%s]", d, d.language)
+
+        return digests

@@ -3,7 +3,7 @@ from unfold.admin import ModelAdmin, TabularInline
 
 from .models import (
     APIUsage, Article, ArticleChunk, Category, DeepDive, DeepDiveSource,
-    Digest, DigestItem, DigestSection, Feed,
+    Digest, DigestItem, DigestSection, Feed, TopicEmbedding,
 )
 
 
@@ -87,6 +87,16 @@ class DeepDiveAdmin(ModelAdmin):
     @admin.display(description="Title")
     def title_short(self, obj):
         return obj.title[:80] if obj.title else ""
+
+
+@admin.register(TopicEmbedding)
+class TopicEmbeddingAdmin(ModelAdmin):
+    list_display = ("topic_index", "description_short", "created_at")
+    list_filter = ("topic_index",)
+
+    @admin.display(description="Description")
+    def description_short(self, obj):
+        return obj.description[:80] if obj.description else ""
 
 
 @admin.register(APIUsage)
