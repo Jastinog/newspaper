@@ -7,6 +7,8 @@ from django.db.models.functions import ExtractHour
 from django.utils import timezone
 
 from apps.analytics.models import PageView
+import re
+
 from apps.news.models import APIUsage, Article, DeepDive, Digest, Feed
 
 
@@ -337,6 +339,36 @@ def dashboard_callback(request, context):
         .order_by("-views")[:8]
     )
 
+    # === Top Deep Dives by views ===
+    deep_dive_views = list(
+        base_pv.filter(timestamp__gte=thirty_days_ago, view_name="deep_dive")
+        .values("path")
+        .annotate(views=Count("id"))
+        .order_by("-views")[:10]
+    )
+    # Extract item_id from path like /deep-dive/123/ or /en/deep-dive/123/
+    item_ids_map = {}
+    for row in deep_dive_views:
+        m = re.search(r"/deep-dive/(\d+)/", row["path"])
+        if m:
+            item_ids_map[int(m.group(1))] = row["views"]
+
+    top_deep_dives = []
+    if item_ids_map:
+        dives = (
+            DeepDive.objects
+            .filter(item_id__in=item_ids_map.keys())
+            .select_related("item__section__digest")
+        )
+        for dive in dives:
+            top_deep_dives.append({
+                "title": dive.title[:80],
+                "views": item_ids_map.get(dive.item_id, 0),
+                "item_id": dive.item_id,
+                "date": dive.created_at.strftime("%d.%m"),
+            })
+        top_deep_dives.sort(key=lambda x: x["views"], reverse=True)
+
     # === Recent API calls table ===
     recent_calls = (
         APIUsage.objects.select_related("digest", "deep_dive")
@@ -379,5 +411,6 @@ def dashboard_callback(request, context):
         "views_chart": views_chart,
         "os_chart": os_chart,
         "top_referrers": top_referrers,
+        "top_deep_dives": top_deep_dives,
     })
     return context

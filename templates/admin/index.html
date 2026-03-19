@@ -44,6 +44,34 @@
     {% endcomponent %}
 </div>
 
+{# --- Top Deep Dives --- #}
+<div class="grid grid-cols-1 mb-8">
+    {% component "unfold/components/card.html" with title="Top Deep Dives (30 days)" %}
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-gray-200 dark:border-gray-700">
+                    <th class="text-left py-2 font-medium">Title</th>
+                    <th class="text-right py-2 font-medium">Date</th>
+                    <th class="text-right py-2 font-medium">Views</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for dd in top_deep_dives %}
+                <tr class="border-b border-gray-100 dark:border-gray-800">
+                    <td class="py-2">
+                        <a href="/deep-dive/{{ dd.item_id }}/" class="text-primary-600 dark:text-primary-400 hover:underline">{{ dd.title }}</a>
+                    </td>
+                    <td class="text-right py-2 text-gray-500">{{ dd.date }}</td>
+                    <td class="text-right py-2 font-medium">{{ dd.views }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="3" class="py-4 text-center text-gray-400">No deep dive views yet</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endcomponent %}
+</div>
+
 {# --- KPI Cards --- #}
 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
     {% component "unfold/components/card.html" with title="Total Spent" %}
