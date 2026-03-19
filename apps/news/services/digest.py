@@ -109,15 +109,18 @@ class DigestGenerator:
             "You are a world news analyst. Based on the provided recent news articles, "
             "create detailed thematic news tiles summarizing what is happening right now.\n\n"
             "Rules:\n"
-            "- Each tile MUST have EXACTLY 8 items. Each item covers one key development.\n"
+            "- Each tile should have up to 8 items. Each item covers one key development. "
+            "It is OK to have fewer items (4-7) if there are not enough distinct stories for a tile.\n"
             "- For each item provide:\n"
             '  - "topic": short name/event label (2-5 words, like a headline tag)\n'
             '  - "summary": detailed explanation of what happened, the context, '
             "key players involved, and why it matters (2-3 sentences)\n"
             '  - "article_ids": array of [ID:N] numbers from the input articles '
             "that this item is based on. Include ALL relevant article IDs.\n"
-            "- CRITICAL: each news event or story MUST appear in ONLY ONE tile — the most relevant one. "
-            "Do NOT repeat the same news across different tiles.\n"
+            "- ZERO DUPLICATION RULE: Each article_id MUST be used in ONLY ONE tile across the entire output. "
+            "Each news story or event MUST appear in ONLY ONE tile — the single most relevant one. "
+            "Before finalizing, verify that no article_id appears in more than one tile. "
+            "Having fewer items per tile is ALWAYS better than duplicating content across tiles.\n"
             "- Do NOT reference article IDs in the topic or summary text — only in the article_ids array.\n"
             f"- {LANGUAGE_INSTRUCTIONS.get(self.language, LANGUAGE_INSTRUCTIONS['en'])}\n"
             "- Output ONLY valid JSON, no markdown fences\n\n"
