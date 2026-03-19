@@ -117,7 +117,7 @@
     }
 
     /* Topic name — prominent */
-    .item-topic {
+    a.item-topic {
         display: block;
         font-family: "Libre Baskerville", Georgia, serif;
         font-size: 0.95rem;
@@ -125,6 +125,10 @@
         color: var(--fg);
         line-height: 1.35;
         margin-bottom: 0.15rem;
+        text-decoration: none;
+    }
+    a.item-topic:hover {
+        color: var(--accent);
     }
 
     /* Summary text — subdued */
@@ -424,7 +428,7 @@
                 <ul>
                 {% for item in section.items.all %}
                     <li>
-                        <span class="item-topic">{{ item.topic }}</span>
+                        <a href="{% url 'deep_dive' item.id %}" class="item-topic deep-dive-link" data-item-id="{{ item.id }}">{{ item.topic }}</a>
                         <span class="item-summary">{{ item.summary }}</span>
                         <a href="{% url 'deep_dive' item.id %}" class="deep-dive-hint deep-dive-link" data-item-id="{{ item.id }}">{% trans "details" %} &rarr;</a>
                     </li>
