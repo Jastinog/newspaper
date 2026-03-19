@@ -147,39 +147,14 @@ def robots_txt(request):
     lines = [
         "User-agent: *",
         "Allow: /",
+        "Disallow: /admin/",
+        "Disallow: /api/",
+        "Disallow: /analytics/",
         "",
         f"Sitemap: {request.build_absolute_uri('/sitemap.xml')}",
     ]
     return HttpResponse("\n".join(lines), content_type="text/plain")
 
-
-def sitemap_xml(request):
-    categories = Category.objects.all()
-    articles = Article.objects.order_by("-published")[:1000]
-
-    urls = []
-    # Homepage
-    urls.append({
-        "loc": request.build_absolute_uri("/"),
-        "changefreq": "daily",
-        "priority": "1.0",
-    })
-    # Categories
-    for cat in categories:
-        urls.append({
-            "loc": request.build_absolute_uri(cat.get_absolute_url()),
-            "changefreq": "daily",
-            "priority": "0.8",
-        })
-    # Articles
-    for article in articles:
-        urls.append({
-            "loc": request.build_absolute_uri(article.get_absolute_url()),
-            "changefreq": "weekly",
-            "priority": "0.6",
-        })
-
-    return render(request, "news/sitemap.xml", {"urls": urls}, content_type="application/xml")
 
 
 # ── API Views ─────────────────────────────────────────────
