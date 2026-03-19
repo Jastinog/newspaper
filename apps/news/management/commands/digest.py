@@ -22,7 +22,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--limit",
             type=int,
-            default=60,
+            default=80,
             help="Max number of recent articles to include",
         )
         parser.add_argument(

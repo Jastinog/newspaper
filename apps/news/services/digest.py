@@ -16,32 +16,38 @@ TOPICS = {
     "en": [
         "AI & Technology",
         "World Politics",
-        "Economy & Finance",
-        "Science & Space",
-        "Middle East & Conflicts",
-        "Society & Culture",
-        "Security & Cyber",
+        "Business & Economy",
+        "Science & Health",
+        "War & Conflicts",
+        "Crime & Justice",
+        "Cybersecurity & Privacy",
         "Energy & Climate",
+        "Sports & Entertainment",
+        "Society & Culture",
     ],
     "ru": [
         "AI & Технологии",
         "Мировая политика",
-        "Экономика & Финансы",
-        "Наука & Космос",
-        "Ближний Восток & Конфликты",
-        "Общество & Культура",
-        "Безопасность & Кибер",
+        "Бизнес & Экономика",
+        "Наука & Здоровье",
+        "Война & Конфликты",
+        "Криминал & Правосудие",
+        "Кибербезопасность & Приватность",
         "Энергетика & Климат",
+        "Спорт & Развлечения",
+        "Общество & Культура",
     ],
     "uk": [
         "AI & Технології",
         "Світова політика",
-        "Економіка & Фінанси",
-        "Наука & Космос",
-        "Близький Схід & Конфлікти",
-        "Суспільство & Культура",
-        "Безпека & Кібер",
+        "Бізнес & Економіка",
+        "Наука & Здоров'я",
+        "Війна & Конфлікти",
+        "Кримінал & Правосуддя",
+        "Кібербезпека & Приватність",
         "Енергетика & Клімат",
+        "Спорт & Розваги",
+        "Суспільство & Культура",
     ],
 }
 
@@ -109,8 +115,8 @@ class DigestGenerator:
             "You are a world news analyst. Based on the provided recent news articles, "
             "create detailed thematic news tiles summarizing what is happening right now.\n\n"
             "Rules:\n"
-            "- Each tile should have up to 8 items. Each item covers one key development. "
-            "It is OK to have fewer items (4-7) if there are not enough distinct stories for a tile.\n"
+            "- Each tile should have up to 6 items. Each item covers one key development. "
+            "It is OK to have fewer items (3-5) if there are not enough distinct stories for a tile.\n"
             "- For each item provide:\n"
             '  - "topic": short name/event label (2-5 words, like a headline tag)\n'
             '  - "summary": detailed explanation of what happened, the context, '
@@ -211,7 +217,7 @@ class DigestSaver:
 class DigestService:
     """Orchestrates the full digest pipeline: collect → generate → save."""
 
-    def __init__(self, client: OpenAIClient = None, limit=60, hours=72):
+    def __init__(self, client: OpenAIClient = None, limit=80, hours=72):
         self.collector = ArticleCollector(limit=limit, hours=hours)
         self.client = client
         self.saver = DigestSaver()
