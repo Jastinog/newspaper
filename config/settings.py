@@ -109,19 +109,15 @@ CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND", "redis://127.0.0
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
-CELERY_TIMEZONE = TIME_ZONE
+CELERY_TIMEZONE = "Europe/Kyiv"
 CELERY_BEAT_SCHEDULE = {
     "update-news-every-hour": {
         "task": "news.update",
         "schedule": 3600,  # every hour
     },
-    "digest-morning": {
+    "digest-daily": {
         "task": "news.digest",
-        "schedule": crontab(hour=6, minute=0),  # 06:00 UTC = 8:00 EET
-    },
-    "digest-evening": {
-        "task": "news.digest",
-        "schedule": crontab(hour=16, minute=0),  # 16:00 UTC = 18:00 EET
+        "schedule": crontab(hour=4, minute=0),  # 04:00 Kyiv time
     },
 }
 
