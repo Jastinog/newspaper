@@ -1,10 +1,11 @@
 from django.contrib import admin
+from unfold.admin import ModelAdmin
 
 from .models import PageView
 
 
 @admin.register(PageView)
-class PageViewAdmin(admin.ModelAdmin):
+class PageViewAdmin(ModelAdmin):
     list_display = ("path", "view_name", "device_type", "country", "is_bot", "timestamp")
     list_filter = ("is_bot", "device_type", "country", "view_name")
     search_fields = ("path", "referrer_domain")

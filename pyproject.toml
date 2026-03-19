@@ -19,4 +19,5 @@ dependencies = [
     "channels>=4.3.2",
     "daphne>=4.2.1",
     "celery[redis]>=5.4",
+    "django-unfold>=0.85.0",
 ]

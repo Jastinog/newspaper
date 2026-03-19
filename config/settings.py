@@ -22,6 +22,8 @@ DEBUG = os.environ.get("DJANGO_DEBUG", "True").lower() in ("true", "1", "yes")
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "*").split(",")
 
 INSTALLED_APPS = [
+    "unfold",
+    "unfold.contrib.filters",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -120,6 +122,13 @@ CELERY_BEAT_SCHEDULE = {
         "task": "news.digest",
         "schedule": crontab(hour=16, minute=0),  # 16:00 UTC = 18:00 EET
     },
+}
+
+UNFOLD = {
+    "SITE_TITLE": "Newspaper",
+    "SITE_HEADER": "Newspaper",
+    "SHOW_HISTORY": True,
+    "SHOW_VIEW_ON_SITE": True,
 }
 
 REST_FRAMEWORK = {

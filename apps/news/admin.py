@@ -1,4 +1,5 @@
 from django.contrib import admin
+from unfold.admin import ModelAdmin, TabularInline
 
 from .models import (
     APIUsage, Article, ArticleChunk, Category, DeepDive, DeepDiveSource,
@@ -7,14 +8,14 @@ from .models import (
 
 
 @admin.register(Category)
-class CategoryAdmin(admin.ModelAdmin):
+class CategoryAdmin(ModelAdmin):
     list_display = ("name", "slug", "order")
     list_editable = ("order",)
     prepopulated_fields = {"slug": ("name",)}
 
 
 @admin.register(Feed)
-class FeedAdmin(admin.ModelAdmin):
+class FeedAdmin(ModelAdmin):
     list_display = ("title", "category", "enabled", "last_fetched")
     list_filter = ("category", "enabled")
     search_fields = ("title", "url")
@@ -22,7 +23,7 @@ class FeedAdmin(admin.ModelAdmin):
 
 
 @admin.register(Article)
-class ArticleAdmin(admin.ModelAdmin):
+class ArticleAdmin(ModelAdmin):
     list_display = ("title", "feed", "published", "read", "starred", "embedded")
     list_filter = ("feed__category", "read", "starred", "embedded")
     search_fields = ("title", "content")
@@ -30,26 +31,26 @@ class ArticleAdmin(admin.ModelAdmin):
 
 
 @admin.register(ArticleChunk)
-class ArticleChunkAdmin(admin.ModelAdmin):
+class ArticleChunkAdmin(ModelAdmin):
     list_display = ("article", "chunk_index", "model", "created_at")
     list_filter = ("model",)
     raw_id_fields = ("article",)
 
 
-class DigestItemInline(admin.TabularInline):
+class DigestItemInline(TabularInline):
     model = DigestItem
     extra = 0
     readonly_fields = ("topic", "summary", "order")
 
 
-class DigestSectionInline(admin.TabularInline):
+class DigestSectionInline(TabularInline):
     model = DigestSection
     extra = 0
     show_change_link = True
 
 
 @admin.register(DigestSection)
-class DigestSectionAdmin(admin.ModelAdmin):
+class DigestSectionAdmin(ModelAdmin):
     list_display = ("title", "digest", "order", "item_count")
     raw_id_fields = ("digest",)
     inlines = [DigestItemInline]
@@ -60,8 +61,9 @@ class DigestSectionAdmin(admin.ModelAdmin):
 
 
 @admin.register(Digest)
-class DigestAdmin(admin.ModelAdmin):
-    list_display = ("date", "headline_short", "created_at")
+class DigestAdmin(ModelAdmin):
+    list_display = ("date", "language", "headline_short", "created_at")
+    list_filter = ("language",)
     inlines = [DigestSectionInline]
 
     @admin.display(description="Headline")
@@ -69,7 +71,7 @@ class DigestAdmin(admin.ModelAdmin):
         return obj.headline[:100] if obj.headline else ""
 
 
-class DeepDiveSourceInline(admin.TabularInline):
+class DeepDiveSourceInline(TabularInline):
     model = DeepDiveSource
     extra = 0
     raw_id_fields = ("article",)
@@ -77,7 +79,7 @@ class DeepDiveSourceInline(admin.TabularInline):
 
 
 @admin.register(DeepDive)
-class DeepDiveAdmin(admin.ModelAdmin):
+class DeepDiveAdmin(ModelAdmin):
     list_display = ("title_short", "item", "chunks_used", "generation_time_ms", "created_at")
     raw_id_fields = ("item",)
     inlines = [DeepDiveSourceInline]
@@ -88,7 +90,7 @@ class DeepDiveAdmin(admin.ModelAdmin):
 
 
 @admin.register(APIUsage)
-class APIUsageAdmin(admin.ModelAdmin):
+class APIUsageAdmin(ModelAdmin):
     list_display = ("created_at", "service", "api_type", "model", "total_tokens", "cost_usd")
     list_filter = ("service", "api_type", "model")
     date_hierarchy = "created_at"
