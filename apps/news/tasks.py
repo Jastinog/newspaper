@@ -26,3 +26,19 @@ def update_news():
         "articles_extracted": result.articles_extracted,
         "articles_embedded": result.articles_embedded,
     }
+
+
+@shared_task(name="news.digest")
+def generate_digest():
+    """Generate daily digest for all languages."""
+    from apps.news.services.digest import DigestService
+
+    service = DigestService()
+    digests = service.run()
+
+    result = []
+    for d in digests:
+        sections = d.sections.count()
+        logger.info("Digest [%s] %s: %d sections", d.language, d.date, sections)
+        result.append({"language": d.language, "date": str(d.date), "sections": sections})
+    return result

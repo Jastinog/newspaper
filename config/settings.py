@@ -1,6 +1,8 @@
 import os
 from pathlib import Path
 
+from celery.schedules import crontab
+
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -109,6 +111,14 @@ CELERY_BEAT_SCHEDULE = {
     "update-news-every-hour": {
         "task": "news.update",
         "schedule": 3600,  # every hour
+    },
+    "digest-morning": {
+        "task": "news.digest",
+        "schedule": crontab(hour=6, minute=0),  # 06:00 UTC = 8:00 EET
+    },
+    "digest-evening": {
+        "task": "news.digest",
+        "schedule": crontab(hour=16, minute=0),  # 16:00 UTC = 18:00 EET
     },
 }
 
