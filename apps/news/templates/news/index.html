@@ -187,10 +187,12 @@
         color: var(--fg-faint);
     }
 
-    .deep-dive-hint {
+    .deep-dive-hint-wrap {
         display: block;
         margin-top: 0.3rem;
         text-align: right;
+    }
+    .deep-dive-hint {
         font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
         font-size: 0.75em;
         color: var(--fg-faint);
@@ -433,7 +435,7 @@
                     <li>
                         <a href="{% url 'deep_dive' item.id %}" class="item-topic deep-dive-link" data-item-id="{{ item.id }}">{{ item.topic }}</a>
                         <span class="item-summary">{{ item.summary }}</span>
-                        <a href="{% url 'deep_dive' item.id %}" class="deep-dive-hint deep-dive-link" data-item-id="{{ item.id }}">{% trans "details" %} &rarr;</a>
+                        <span class="deep-dive-hint-wrap"><a href="{% url 'deep_dive' item.id %}" class="deep-dive-hint deep-dive-link" data-item-id="{{ item.id }}">{% trans "details" %} &rarr;</a></span>
                     </li>
                 {% endfor %}
                 </ul>
