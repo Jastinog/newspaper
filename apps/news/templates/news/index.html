@@ -47,33 +47,17 @@
         margin-bottom: 1.5rem;
     }
 
-    /* === 4-COLUMN GRID === */
+    /* === AUTO-FILL GRID === */
     .digest-grid {
         display: grid;
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
         row-gap: 1.5rem;
+        overflow: hidden; /* clips leftmost column's box-shadow divider */
     }
 
     .digest-grid .digest-section {
         padding: 0 1.2rem;
-    }
-
-    .digest-grid .digest-section:nth-child(4n+1) {
-        padding-left: 0;
-    }
-
-    .digest-grid .digest-section:nth-child(4n) {
-        padding-right: 0;
-    }
-
-    .digest-grid .digest-section:not(:nth-child(4n+1)) {
-        border-left: 1px solid var(--border);
-    }
-
-    /* Row separator on sections starting a new row (except first row) */
-    .digest-grid .digest-section:nth-child(n+5) {
-        border-top: 1px solid var(--border-light);
-        padding-top: 1.5rem;
+        box-shadow: -1px 0 0 var(--border);
     }
 
     /* === SECTION STYLES === */
@@ -281,16 +265,13 @@
         .digest-grid {
             display: flex;
             flex-direction: column;
-            gap: 0;
+            overflow: visible;
         }
 
         .digest-grid .digest-section {
-            padding: 0;
-            border-left: none !important;
-            margin-bottom: 0;
-            padding-bottom: 1.2rem;
+            padding: 1.2rem 0;
+            box-shadow: none;
             border-bottom: 1px solid var(--border-light);
-            padding-top: 1.2rem;
         }
 
         .digest-grid .digest-section:first-child {
@@ -299,11 +280,6 @@
 
         .digest-grid .digest-section:last-child {
             border-bottom: none;
-        }
-
-        .digest-grid .digest-section:nth-child(n+5) {
-            border-top: none;
-            padding-top: 1.2rem;
         }
 
         .digest-section h3 {
@@ -323,106 +299,6 @@
         }
     }
 
-    /* Tablet portrait: 2 columns */
-    @media (min-width: 600px) and (max-width: 899px) {
-        .digest-grid {
-            grid-template-columns: repeat(2, 1fr);
-        }
-
-        .digest-grid .digest-section {
-            padding: 0 1rem;
-        }
-
-        .digest-grid .digest-section:nth-child(4n+1) {
-            padding-left: 0;
-        }
-
-        .digest-grid .digest-section:nth-child(4n) {
-            padding-right: 0;
-        }
-
-        /* Reset 4-col borders; apply 2-col borders */
-        .digest-grid .digest-section:not(:nth-child(4n+1)) {
-            border-left: none;
-        }
-
-        .digest-grid .digest-section:nth-child(2n+1) {
-            padding-left: 0;
-        }
-
-        .digest-grid .digest-section:nth-child(2n) {
-            padding-right: 0;
-        }
-
-        .digest-grid .digest-section:nth-child(2n) {
-            border-left: 1px solid var(--border);
-        }
-
-        /* Row separator after first 2 */
-        .digest-grid .digest-section:nth-child(n+5) {
-            border-top: none;
-            padding-top: 0;
-        }
-
-        .digest-grid .digest-section:nth-child(n+3) {
-            border-top: 1px solid var(--border-light);
-            padding-top: 1.5rem;
-        }
-    }
-
-    /* Tablet landscape / small laptop: 3 columns */
-    @media (min-width: 900px) and (max-width: 1199px) {
-        .digest-grid {
-            grid-template-columns: repeat(3, 1fr);
-        }
-
-        .digest-grid .digest-section {
-            padding: 0 1rem;
-        }
-
-        /* Reset 4-col specific rules */
-        .digest-grid .digest-section:nth-child(4n+1) {
-            padding-left: 1rem;
-        }
-
-        .digest-grid .digest-section:nth-child(4n) {
-            padding-right: 1rem;
-        }
-
-        .digest-grid .digest-section:not(:nth-child(4n+1)) {
-            border-left: none;
-        }
-
-        /* Apply 3-col rules */
-        .digest-grid .digest-section:nth-child(3n+1) {
-            padding-left: 0;
-        }
-
-        .digest-grid .digest-section:nth-child(3n) {
-            padding-right: 0;
-        }
-
-        .digest-grid .digest-section:not(:nth-child(3n+1)) {
-            border-left: 1px solid var(--border);
-        }
-
-        .digest-grid .digest-section:nth-child(n+5) {
-            border-top: none;
-            padding-top: 0;
-        }
-
-        .digest-grid .digest-section:nth-child(n+4) {
-            border-top: 1px solid var(--border-light);
-            padding-top: 1.5rem;
-        }
-    }
-
-    /* Large desktop: wider container */
-    @media (min-width: 1440px) {
-        .digest-grid .digest-section {
-            padding: 0 1.5rem;
-        }
-    }
 </style>
 {% endblock %}
 
