@@ -115,8 +115,9 @@ class DigestGenerator:
             "You are a world news analyst. Based on the provided recent news articles, "
             "create detailed thematic news tiles summarizing what is happening right now.\n\n"
             "Rules:\n"
-            "- Each tile should have up to 6 items. Each item covers one key development. "
-            "It is OK to have fewer items (3-5) if there are not enough distinct stories for a tile.\n"
+            "- Each tile should have 4-8 items, aiming for 6-8. Each item covers one key development. "
+            "The absolute minimum is 4 items per tile (only if the topic genuinely lacks news). "
+            "Always try to maximize coverage — find more angles, related developments, or smaller stories to fill tiles.\n"
             "- For each item provide:\n"
             '  - "topic": short name/event label (2-5 words, like a headline tag)\n'
             '  - "summary": detailed explanation of what happened, the context, '
@@ -150,7 +151,7 @@ class DigestGenerator:
         content, usage = self.client.chat(
             system=system,
             user=user,
-            max_tokens=16000,
+            max_tokens=24000,
             temperature=0.3,
         )
 
