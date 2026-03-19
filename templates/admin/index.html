@@ -3,6 +3,47 @@
 
 {% block content %}
 
+{# --- Traffic KPI Cards --- #}
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    {% component "unfold/components/card.html" with title="Views Today" %}
+        <span class="text-3xl font-bold text-green-600 dark:text-green-400">{{ today_views }}</span>
+        <div class="text-xs text-gray-500 mt-1">yesterday: {{ yesterday_views }}</div>
+    {% endcomponent %}
+
+    {% component "unfold/components/card.html" with title="Visitors Today" %}
+        <span class="text-3xl font-bold text-green-600 dark:text-green-400">{{ today_visitors }}</span>
+        <div class="text-xs text-gray-500 mt-1">yesterday: {{ yesterday_visitors }}</div>
+    {% endcomponent %}
+
+    {% component "unfold/components/card.html" with title="Top Referrers (30d)" %}
+        <div class="text-sm space-y-1">
+            {% for ref in top_referrers %}
+            <div class="flex justify-between">
+                <span class="truncate mr-2">{{ ref.referrer_domain }}</span>
+                <span class="font-mono text-xs text-gray-500">{{ ref.views }}</span>
+            </div>
+            {% empty %}
+            <span class="text-gray-400">&mdash;</span>
+            {% endfor %}
+        </div>
+    {% endcomponent %}
+
+    {% component "unfold/components/card.html" with title="OS Breakdown (30d)" %}
+        {% component "unfold/components/chart/bar.html" with data=os_chart height=180 %}{% endcomponent %}
+    {% endcomponent %}
+</div>
+
+{# --- Traffic charts --- #}
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
+    {% component "unfold/components/card.html" with title="Today — Hourly Traffic" %}
+        {% component "unfold/components/chart/bar.html" with data=hourly_chart height=240 %}{% endcomponent %}
+    {% endcomponent %}
+
+    {% component "unfold/components/card.html" with title="Views & Visitors (30 days)" %}
+        {% component "unfold/components/chart/line.html" with data=views_chart height=240 %}{% endcomponent %}
+    {% endcomponent %}
+</div>
+
 {# --- KPI Cards --- #}
 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
     {% component "unfold/components/card.html" with title="Total Spent" %}

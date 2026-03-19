@@ -3,8 +3,10 @@ from datetime import timedelta
 from decimal import Decimal
 
 from django.db.models import Count, Sum
+from django.db.models.functions import ExtractHour
 from django.utils import timezone
 
+from apps.analytics.models import PageView
 from apps.news.models import APIUsage, Article, DeepDive, Digest, Feed
 
 
@@ -230,6 +232,111 @@ def dashboard_callback(request, context):
         ],
     })
 
+    # === Traffic analytics ===
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    yesterday_start = today_start - timedelta(days=1)
+    base_pv = PageView.objects.filter(is_bot=False)
+
+    today_pv = base_pv.filter(timestamp__gte=today_start)
+    yesterday_pv = base_pv.filter(timestamp__gte=yesterday_start, timestamp__lt=today_start)
+
+    today_views = today_pv.count()
+    today_visitors = today_pv.values("session_hash").distinct().count()
+    yesterday_views = yesterday_pv.count()
+    yesterday_visitors = yesterday_pv.values("session_hash").distinct().count()
+
+    # Hourly traffic for today
+    hourly_qs = list(
+        today_pv
+        .annotate(hour=ExtractHour("timestamp"))
+        .values("hour")
+        .annotate(views=Count("id"))
+        .order_by("hour")
+    )
+    hourly_map = {r["hour"]: r["views"] for r in hourly_qs}
+    current_hour = now.hour
+    hourly_labels = [f"{h}:00" for h in range(current_hour + 1)]
+    hourly_values = [hourly_map.get(h, 0) for h in range(current_hour + 1)]
+
+    hourly_chart = json.dumps({
+        "labels": hourly_labels,
+        "datasets": [{
+            "label": "Views",
+            "data": hourly_values,
+            "backgroundColor": "rgba(34, 197, 94, 0.5)",
+            "borderColor": "rgb(34, 197, 94)",
+            "borderWidth": 1,
+            "type": "bar",
+        }],
+    })
+
+    # Daily views chart (last 30 days)
+    daily_views = (
+        base_pv.filter(timestamp__gte=thirty_days_ago)
+        .extra(select={"day": "DATE(timestamp)"})
+        .values("day")
+        .annotate(views=Count("id"), visitors=Count("session_hash", distinct=True))
+        .order_by("day")
+    )
+    views_map = {str(r["day"]): {"views": r["views"], "visitors": r["visitors"]} for r in daily_views}
+
+    views_chart = json.dumps({
+        "labels": labels,
+        "datasets": [
+            {
+                "label": "Views",
+                "data": [views_map.get(str(d), {}).get("views", 0) for d in dates],
+                "borderColor": "rgb(34, 197, 94)",
+                "backgroundColor": "rgba(34, 197, 94, 0.1)",
+                "borderWidth": 2,
+                "fill": True,
+                "tension": 0.3,
+            },
+            {
+                "label": "Visitors",
+                "data": [views_map.get(str(d), {}).get("visitors", 0) for d in dates],
+                "borderColor": "rgb(59, 130, 246)",
+                "backgroundColor": "rgba(59, 130, 246, 0.1)",
+                "borderWidth": 2,
+                "borderDash": [5, 5],
+                "fill": False,
+                "tension": 0.3,
+            },
+        ],
+    })
+
+    # Top OS
+    top_os = list(
+        base_pv.filter(timestamp__gte=thirty_days_ago)
+        .exclude(os="")
+        .values("os")
+        .annotate(count=Count("id"))
+        .order_by("-count")[:6]
+    )
+    os_palette = [
+        "rgba(99,102,241,0.7)", "rgba(236,72,153,0.7)", "rgba(34,197,94,0.7)",
+        "rgba(234,179,8,0.7)", "rgba(59,130,246,0.7)", "rgba(168,85,247,0.7)",
+    ]
+    os_chart = json.dumps({
+        "labels": [r["os"] for r in top_os],
+        "datasets": [{
+            "label": "Views",
+            "data": [r["count"] for r in top_os],
+            "backgroundColor": os_palette[:len(top_os)],
+            "borderWidth": 0,
+            "type": "bar",
+        }],
+    })
+
+    # Top referrers
+    top_referrers = list(
+        base_pv.filter(timestamp__gte=thirty_days_ago)
+        .exclude(referrer_domain="")
+        .values("referrer_domain")
+        .annotate(views=Count("id"))
+        .order_by("-views")[:8]
+    )
+
     # === Recent API calls table ===
     recent_calls = (
         APIUsage.objects.select_related("digest", "deep_dive")
@@ -263,5 +370,14 @@ def dashboard_callback(request, context):
         "model_cost_chart": model_cost_chart,
         "model_token_chart": model_token_chart,
         "recent_table": recent_table,
+        # Traffic
+        "today_views": f"{today_views:,}",
+        "today_visitors": f"{today_visitors:,}",
+        "yesterday_views": f"{yesterday_views:,}",
+        "yesterday_visitors": f"{yesterday_visitors:,}",
+        "hourly_chart": hourly_chart,
+        "views_chart": views_chart,
+        "os_chart": os_chart,
+        "top_referrers": top_referrers,
     })
     return context
