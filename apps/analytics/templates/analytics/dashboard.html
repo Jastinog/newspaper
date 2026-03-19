@@ -43,6 +43,7 @@
     }
     .period-toggle button:hover:not(.active) { background: var(--bg-card, rgba(0,0,0,0.05)); }
 
+    /* ── Summary cards ───────────────────────── */
     .summary-cards {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -67,7 +68,25 @@
         margin-top: 0.3rem;
         opacity: 0.7;
     }
+    .summary-card .delta {
+        font-size: 0.8rem;
+        margin-top: 0.2rem;
+    }
+    .delta.up { color: #2d6a4f; }
+    .delta.down { color: #c1121f; }
+    .delta.flat { opacity: 0.5; }
 
+    /* ── Section heading ─────────────────────── */
+    .section-title {
+        font-family: "Libre Baskerville", serif;
+        font-size: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        opacity: 0.5;
+        margin: 2.5rem 0 1rem;
+    }
+
+    /* ── Charts ──────────────────────────────── */
     .chart-section {
         margin-bottom: 2rem;
     }
@@ -83,16 +102,28 @@
         width: 100%;
         max-height: 350px;
     }
+    .chart-container-sm {
+        position: relative;
+        width: 100%;
+        max-height: 220px;
+    }
 
+    /* ── Grid layouts ────────────────────────── */
     .grid-2 {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 2rem;
     }
+    .grid-3 {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 2rem;
+    }
     @media (max-width: 768px) {
-        .grid-2 { grid-template-columns: 1fr; }
+        .grid-2, .grid-3 { grid-template-columns: 1fr; }
     }
 
+    /* ── Tables ──────────────────────────────── */
     .data-table {
         width: 100%;
         border-collapse: collapse;
@@ -127,18 +158,27 @@
     </div>
 </div>
 
+<!-- ── Today ─────────────────────────────────────────── -->
+<div class="section-title">{% trans "Today" %}</div>
+
 <div class="summary-cards">
     <div class="summary-card">
-        <div class="value" id="total-views">&mdash;</div>
-        <div class="label">{% trans "Page Views" %}</div>
+        <div class="value" id="today-views">&mdash;</div>
+        <div class="label">{% trans "Views Today" %}</div>
+        <div class="delta flat" id="today-views-delta"></div>
     </div>
     <div class="summary-card">
-        <div class="value" id="total-visitors">&mdash;</div>
-        <div class="label">{% trans "Unique Visitors" %}</div>
+        <div class="value" id="today-visitors">&mdash;</div>
+        <div class="label">{% trans "Visitors Today" %}</div>
+        <div class="delta flat" id="today-visitors-delta"></div>
     </div>
     <div class="summary-card">
-        <div class="value" id="total-articles">&mdash;</div>
-        <div class="label">{% trans "Articles Viewed" %}</div>
+        <div class="value" id="period-views">&mdash;</div>
+        <div class="label">{% trans "Period Views" %}</div>
+    </div>
+    <div class="summary-card">
+        <div class="value" id="period-visitors">&mdash;</div>
+        <div class="label">{% trans "Period Visitors" %}</div>
     </div>
     <div class="summary-card">
         <div class="value" id="top-country">&mdash;</div>
@@ -146,7 +186,17 @@
     </div>
 </div>
 
-<!-- Views over time -->
+<!-- Hourly chart for today -->
+<div class="chart-section">
+    <h2>{% trans "Today — Hourly Traffic" %}</h2>
+    <div class="chart-container-sm">
+        <canvas id="chart-hourly"></canvas>
+    </div>
+</div>
+
+<!-- ── Period stats ──────────────────────────────────── -->
+<div class="section-title">{% trans "Period Overview" %}</div>
+
 <div class="chart-section">
     <h2>{% trans "Views Over Time" %}</h2>
     <div class="chart-container">
@@ -155,49 +205,60 @@
 </div>
 
 <div class="grid-2">
-    <!-- Top articles -->
     <div class="chart-section">
         <h2>{% trans "Top Articles" %}</h2>
         <div id="table-articles"><div class="loading">Loading...</div></div>
     </div>
-    <!-- Top referrers -->
+    <div class="chart-section">
+        <h2>{% trans "Top Pages" %}</h2>
+        <div id="table-pages"><div class="loading">Loading...</div></div>
+    </div>
+</div>
+
+<div class="grid-2">
     <div class="chart-section">
         <h2>{% trans "Top Referrers" %}</h2>
         <div id="table-referrers"><div class="loading">Loading...</div></div>
     </div>
-</div>
-
-<div class="grid-2">
-    <!-- Devices -->
-    <div class="chart-section">
-        <h2>{% trans "Devices" %}</h2>
-        <div class="chart-container">
-            <canvas id="chart-devices"></canvas>
-        </div>
-    </div>
-    <!-- Browsers -->
-    <div class="chart-section">
-        <h2>{% trans "Browsers" %}</h2>
-        <div class="chart-container">
-            <canvas id="chart-browsers"></canvas>
-        </div>
-    </div>
-</div>
-
-<div class="grid-2">
-    <!-- Countries -->
     <div class="chart-section">
         <h2>{% trans "Countries" %}</h2>
         <div class="chart-container">
             <canvas id="chart-geo"></canvas>
         </div>
     </div>
-    <!-- Categories -->
+</div>
+
+<!-- ── Devices & Tech ───────────────────────────────── -->
+<div class="section-title">{% trans "Devices & Tech" %}</div>
+
+<div class="grid-3">
     <div class="chart-section">
-        <h2>{% trans "Categories" %}</h2>
+        <h2>{% trans "Devices" %}</h2>
         <div class="chart-container">
-            <canvas id="chart-categories"></canvas>
+            <canvas id="chart-devices"></canvas>
         </div>
+    </div>
+    <div class="chart-section">
+        <h2>{% trans "Browsers" %}</h2>
+        <div class="chart-container">
+            <canvas id="chart-browsers"></canvas>
+        </div>
+    </div>
+    <div class="chart-section">
+        <h2>{% trans "Operating Systems" %}</h2>
+        <div class="chart-container">
+            <canvas id="chart-os"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- ── Content ──────────────────────────────────────── -->
+<div class="section-title">{% trans "Content" %}</div>
+
+<div class="chart-section">
+    <h2>{% trans "Categories" %}</h2>
+    <div class="chart-container">
+        <canvas id="chart-categories"></canvas>
     </div>
 </div>
 
@@ -217,9 +278,10 @@
     var currentDays = 30;
     var charts = {};
 
-    function api(endpoint) {
-        return fetch('/analytics/api/' + endpoint + '?days=' + currentDays)
-            .then(function(r) { return r.json(); });
+    function api(endpoint, useDays) {
+        var url = '/analytics/api/' + endpoint;
+        if (useDays !== false) url += '?days=' + currentDays;
+        return fetch(url).then(function(r) { return r.json(); });
     }
 
     function destroyChart(key) {
@@ -230,6 +292,20 @@
         if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
         if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
         return n.toString();
+    }
+
+    function pctChange(current, previous) {
+        if (!previous) return current > 0 ? '+100%' : '—';
+        var pct = Math.round(((current - previous) / previous) * 100);
+        if (pct > 0) return '+' + pct + '%';
+        if (pct < 0) return pct + '%';
+        return '0%';
+    }
+
+    function deltaClass(current, previous) {
+        if (current > previous) return 'delta up';
+        if (current < previous) return 'delta down';
+        return 'delta flat';
     }
 
     function clearChildren(el) {
@@ -245,12 +321,91 @@
         return el;
     }
 
-    function loadSummary(viewsData) {
+    function buildTable(headers, rows) {
+        var table = createEl('table', {'class': 'data-table'});
+        var thead = createEl('thead');
+        var headRow = createEl('tr');
+        headers.forEach(function(h) { headRow.appendChild(createEl('th', null, h)); });
+        thead.appendChild(headRow);
+        table.appendChild(thead);
+
+        var tbody = createEl('tbody');
+        rows.forEach(function(cells) {
+            var tr = createEl('tr');
+            cells.forEach(function(cell) {
+                var td = createEl('td');
+                if (cell.href) {
+                    var a = createEl('a', {'href': cell.href}, cell.text);
+                    td.appendChild(a);
+                } else {
+                    td.textContent = cell.text;
+                }
+                tr.appendChild(td);
+            });
+            tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+        return table;
+    }
+
+    /* ── Today ──────────────────────────────── */
+
+    function loadToday() {
+        api('today/', false).then(function(r) {
+            var t = r.today, y = r.yesterday;
+
+            document.getElementById('today-views').textContent = formatNum(t.views);
+            document.getElementById('today-visitors').textContent = formatNum(t.visitors);
+
+            var vd = document.getElementById('today-views-delta');
+            vd.textContent = pctChange(t.views, y.views) + ' vs yesterday';
+            vd.className = deltaClass(t.views, y.views);
+
+            var vv = document.getElementById('today-visitors-delta');
+            vv.textContent = pctChange(t.visitors, y.visitors) + ' vs yesterday';
+            vv.className = deltaClass(t.visitors, y.visitors);
+
+            // Hourly bar chart
+            loadHourlyChart(r.hourly);
+        });
+    }
+
+    function loadHourlyChart(data) {
+        destroyChart('hourly');
+        var ctx = document.getElementById('chart-hourly').getContext('2d');
+        charts['hourly'] = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.map(function(d) { return d.hour + ':00'; }),
+                datasets: [{
+                    data: data.map(function(d) { return d.views; }),
+                    backgroundColor: ACCENT + '88',
+                    borderColor: ACCENT,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, grid: { color: BORDER_C + '44' } },
+                    x: { grid: { display: false }, ticks: { font: { size: 10 } } }
+                }
+            }
+        });
+    }
+
+    /* ── Period summary ─────────────────────── */
+
+    function loadPeriodSummary(viewsData) {
         var totalViews = 0, totalVisitors = 0;
         viewsData.forEach(function(d) { totalViews += d.views; totalVisitors += d.visitors; });
-        document.getElementById('total-views').textContent = formatNum(totalViews);
-        document.getElementById('total-visitors').textContent = formatNum(totalVisitors);
+        document.getElementById('period-views').textContent = formatNum(totalViews);
+        document.getElementById('period-visitors').textContent = formatNum(totalVisitors);
     }
+
+    /* ── Views over time ────────────────────── */
 
     function loadViewsChart(data) {
         destroyChart('views');
@@ -294,54 +449,42 @@
         });
     }
 
-    function buildTable(headers, rows) {
-        var table = createEl('table', {'class': 'data-table'});
-        var thead = createEl('thead');
-        var headRow = createEl('tr');
-        headers.forEach(function(h) { headRow.appendChild(createEl('th', null, h)); });
-        thead.appendChild(headRow);
-        table.appendChild(thead);
-
-        var tbody = createEl('tbody');
-        rows.forEach(function(cells) {
-            var tr = createEl('tr');
-            cells.forEach(function(cell) {
-                var td = createEl('td');
-                if (cell.href) {
-                    var a = createEl('a', {'href': cell.href}, cell.text);
-                    td.appendChild(a);
-                } else {
-                    td.textContent = cell.text;
-                }
-                tr.appendChild(td);
-            });
-            tbody.appendChild(tr);
-        });
-        table.appendChild(tbody);
-        return table;
-    }
+    /* ── Tables ─────────────────────────────── */
 
     function loadArticlesTable(data) {
         var el = document.getElementById('table-articles');
         clearChildren(el);
         if (!data.length) { el.appendChild(createEl('div', {'class': 'loading'}, 'No data')); return; }
-        document.getElementById('total-articles').textContent = formatNum(data.length);
-        var rows = data.slice(0, 10).map(function(r) {
-            var title = r.title.length > 60 ? r.title.substring(0, 60) + '...' : r.title;
+        var rows = data.slice(0, 15).map(function(r) {
+            var title = r.title.length > 60 ? r.title.substring(0, 60) + '\u2026' : r.title;
             return [{href: '/article/' + r.id + '/', text: title}, {text: formatNum(r.views)}];
         });
         el.appendChild(buildTable(['Article', 'Views'], rows));
+    }
+
+    function loadPagesTable(data) {
+        var el = document.getElementById('table-pages');
+        clearChildren(el);
+        if (!data.length) { el.appendChild(createEl('div', {'class': 'loading'}, 'No data')); return; }
+        var rows = data.slice(0, 15).map(function(r) {
+            var path = r.path.length > 50 ? r.path.substring(0, 50) + '\u2026' : r.path;
+            var name = r.view_name || '—';
+            return [{text: path}, {text: name}, {text: formatNum(r.views)}];
+        });
+        el.appendChild(buildTable(['Path', 'View', 'Views'], rows));
     }
 
     function loadReferrersTable(data) {
         var el = document.getElementById('table-referrers');
         clearChildren(el);
         if (!data.length) { el.appendChild(createEl('div', {'class': 'loading'}, 'No data')); return; }
-        var rows = data.slice(0, 10).map(function(r) {
+        var rows = data.slice(0, 15).map(function(r) {
             return [{text: r.referrer_domain}, {text: formatNum(r.views)}];
         });
         el.appendChild(buildTable(['Domain', 'Views'], rows));
     }
+
+    /* ── Doughnut / Bar charts ──────────────── */
 
     function makeDoughnut(canvasId, labels, values, key) {
         destroyChart(key);
@@ -382,13 +525,18 @@
         });
     }
 
+    /* ── Load all ───────────────────────────── */
+
     function loadAll() {
+        loadToday();
+
         api('views-over-time/').then(function(r) {
-            loadSummary(r.data);
+            loadPeriodSummary(r.data);
             loadViewsChart(r.data);
         });
 
         api('top-articles/').then(function(r) { loadArticlesTable(r.data); });
+        api('top-pages/').then(function(r) { loadPagesTable(r.data); });
         api('top-referrers/').then(function(r) { loadReferrersTable(r.data); });
 
         api('devices/').then(function(r) {
@@ -399,6 +547,10 @@
             var brLabels = r.browsers.map(function(d) { return d.browser; });
             var brValues = r.browsers.map(function(d) { return d.count; });
             makeDoughnut('chart-browsers', brLabels, brValues, 'browsers');
+
+            var osLabels = r.oses.map(function(d) { return d.os; });
+            var osValues = r.oses.map(function(d) { return d.count; });
+            makeDoughnut('chart-os', osLabels, osValues, 'os');
         });
 
         api('geo/').then(function(r) {

@@ -2,7 +2,7 @@ from datetime import timedelta
 
 from django.contrib.admin.views.decorators import staff_member_required
 from django.db.models import Count, Q
-from django.db.models.functions import TruncDate
+from django.db.models.functions import ExtractHour, TruncDate
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.utils import timezone
@@ -26,6 +26,45 @@ def dashboard(request):
 
 
 # ── JSON API endpoints ─────────────────────────────────────
+
+
+@staff_member_required
+def api_today(request):
+    """Today vs yesterday stats + hourly breakdown for today."""
+    now = timezone.now()
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    yesterday_start = today_start - timedelta(days=1)
+    base = PageView.objects.filter(is_bot=False)
+
+    today_qs = base.filter(timestamp__gte=today_start)
+    yesterday_qs = base.filter(timestamp__gte=yesterday_start, timestamp__lt=today_start)
+
+    today_views = today_qs.count()
+    today_visitors = today_qs.values("session_hash").distinct().count()
+    yesterday_views = yesterday_qs.count()
+    yesterday_visitors = yesterday_qs.values("session_hash").distinct().count()
+
+    # Hourly breakdown for today
+    hourly = list(
+        today_qs
+        .annotate(hour=ExtractHour("timestamp"))
+        .values("hour")
+        .annotate(views=Count("id"))
+        .order_by("hour")
+    )
+    # Fill missing hours
+    hourly_map = {r["hour"]: r["views"] for r in hourly}
+    current_hour = now.hour
+    hourly_full = [
+        {"hour": h, "views": hourly_map.get(h, 0)}
+        for h in range(current_hour + 1)
+    ]
+
+    return JsonResponse({
+        "today": {"views": today_views, "visitors": today_visitors},
+        "yesterday": {"views": yesterday_views, "visitors": yesterday_visitors},
+        "hourly": hourly_full,
+    })
 
 
 @staff_member_required
