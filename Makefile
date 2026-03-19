@@ -58,6 +58,14 @@ add:
 add-dev:
 	uv add --dev $(p)
 
+# Generate translation message files
+messages:
+	uv run python manage.py makemessages -l en -l ru -l uk
+
+# Compile translation message files
+compilemessages:
+	uv run python manage.py compilemessages
+
 # Clean old analytics data
 analytics-cleanup:
 	uv run python manage.py analytics_cleanup

@@ -12,6 +12,9 @@ uv sync
 echo '>> Running migrations...'
 uv run python manage.py migrate
 
+echo '>> Compiling translations...'
+uv run python manage.py compilemessages
+
 echo '>> Collecting static files...'
 uv run python manage.py collectstatic --no-input --clear > /dev/null
 

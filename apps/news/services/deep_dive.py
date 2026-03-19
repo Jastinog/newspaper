@@ -97,26 +97,38 @@ class ArticleSynthesizer:
     def __init__(self, client: OpenAIClient = None):
         self.client = client or OpenAIClient()
 
-    def synthesize(self, topic: str, section_title: str, chunks_by_article: dict) -> dict:
-        """Generate an analytical article about a specific topic from relevant chunks.
-
-        Args:
-            topic: The specific news topic (bold phrase from bullet)
-            section_title: Parent section title for context
-            chunks_by_article: {article_title: [chunk_texts]}
-
-        Returns:
-            {"title": str, "subtitle": str, "content": str}  (content is markdown)
-        """
-        # Build context from chunks
-        context_parts = []
-        for article_title, chunks in chunks_by_article.items():
-            text = "\n".join(chunks)
-            context_parts.append(f"### {article_title}\n{text}")
-
-        context = "\n\n---\n\n".join(context_parts)
-
-        system = (
+    SYSTEM_PROMPTS = {
+        "en": (
+            "You are a news analyst. Based on the provided article fragments, "
+            "synthesize a deep analytical article in English about the SPECIFIC topic.\n\n"
+            "Rules:\n"
+            "- Length: 800-1500 words\n"
+            "- Use markdown with subheadings (## sections)\n"
+            "- Write analytically: don't just retell, analyze causes, consequences, context\n"
+            "- Structure: introduction → key facts → analysis → context → conclusions\n"
+            "- Don't invent facts — use only information from the provided fragments\n"
+            "- Don't reference 'fragments' or 'sources' in the text — write as a cohesive article\n"
+            "- Focus specifically on the indicated topic, don't diverge to others\n\n"
+            "Response format — ONLY JSON, no markdown fences:\n"
+            '{"title": "article title", "subtitle": "short subtitle (1 sentence)", '
+            '"content": "markdown article text"}'
+        ),
+        "ru": (
+            "Ты — аналитик новостей. На основе предоставленных фрагментов статей "
+            "синтезируй глубокую аналитическую статью на русском языке о КОНКРЕТНОЙ теме.\n\n"
+            "Правила:\n"
+            "- Объём: 800-1500 слов\n"
+            "- Используй markdown с подзаголовками (## секции)\n"
+            "- Пиши аналитически: не просто пересказывай, а анализируй причины, последствия, контекст\n"
+            "- Структура: введение → ключевые факты → анализ → контекст → выводы\n"
+            "- Не выдумывай факты — используй только информацию из предоставленных фрагментов\n"
+            "- Не ссылайся на 'фрагменты' или 'источники' в тексте — пиши как целостную статью\n"
+            "- Фокусируйся именно на указанной теме, не отвлекайся на другие\n\n"
+            "Формат ответа — ТОЛЬКО JSON, без markdown-ограды:\n"
+            '{"title": "заголовок статьи", "subtitle": "короткий подзаголовок (1 предложение)", '
+            '"content": "markdown текст статьи"}'
+        ),
+        "uk": (
             "Ти — аналітик новин. На основі наданих фрагментів статей "
             "синтезуй глибоку аналітичну статтю українською мовою про КОНКРЕТНУ тему.\n\n"
             "Правила:\n"
@@ -130,13 +142,39 @@ class ArticleSynthesizer:
             "Формат відповіді — ТІЛЬКИ JSON, без markdown-огорожі:\n"
             '{"title": "заголовок статті", "subtitle": "короткий підзаголовок (1 речення)", '
             '"content": "markdown текст статті"}'
-        )
+        ),
+    }
 
-        user = (
-            f"Конкретна тема: {topic}\n"
-            f"Розділ дайджесту: {section_title}\n\n"
-            f"Фрагменти з релевантних статей:\n\n{context[:12000]}"
-        )
+    USER_TEMPLATES = {
+        "en": "Specific topic: {topic}\nDigest section: {section_title}\n\nFragments from relevant articles:\n\n{context}",
+        "ru": "Конкретная тема: {topic}\nРаздел дайджеста: {section_title}\n\nФрагменты из релевантных статей:\n\n{context}",
+        "uk": "Конкретна тема: {topic}\nРозділ дайджесту: {section_title}\n\nФрагменти з релевантних статей:\n\n{context}",
+    }
+
+    def synthesize(self, topic: str, section_title: str, chunks_by_article: dict, language: str = "uk") -> dict:
+        """Generate an analytical article about a specific topic from relevant chunks.
+
+        Args:
+            topic: The specific news topic (bold phrase from bullet)
+            section_title: Parent section title for context
+            chunks_by_article: {article_title: [chunk_texts]}
+            language: Target language code (en, ru, uk)
+
+        Returns:
+            {"title": str, "subtitle": str, "content": str}  (content is markdown)
+        """
+        # Build context from chunks
+        context_parts = []
+        for article_title, chunks in chunks_by_article.items():
+            text = "\n".join(chunks)
+            context_parts.append(f"### {article_title}\n{text}")
+
+        context = "\n\n---\n\n".join(context_parts)
+
+        system = self.SYSTEM_PROMPTS.get(language, self.SYSTEM_PROMPTS["en"])
+
+        user_template = self.USER_TEMPLATES.get(language, self.USER_TEMPLATES["en"])
+        user = user_template.format(topic=topic, section_title=section_title, context=context[:12000])
 
         content, usage = self.client.chat(
             system=system,
@@ -221,7 +259,8 @@ class DeepDiveService:
                 article_scores[article_id] = score
 
         # 5. Synthesize article
-        result = self.synthesizer.synthesize(item.topic, item.section.title, chunks_by_article)
+        language = getattr(item.section.digest, "language", "uk")
+        result = self.synthesizer.synthesize(item.topic, item.section.title, chunks_by_article, language=language)
 
         elapsed_ms = int((time.time() - start) * 1000)
 

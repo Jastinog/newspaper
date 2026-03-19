@@ -1,5 +1,5 @@
 {% extends "news/base.html" %}
-{% load static %}
+{% load static i18n %}
 
 {% block extra_css %}
 <style>
@@ -45,9 +45,9 @@
     <div id="loadingOverlay" class="active" style="position:static;background:none;backdrop-filter:none;display:flex">
         <canvas id="orbitCanvas"></canvas>
     </div>
-    <div class="loading-label" id="loadingLabel">Збираємо інформацію з джерел...</div>
+    <div class="loading-label" id="loadingLabel">{% trans "Gathering information from sources..." %}</div>
     <div class="loading-error" id="loadingError">
-        Помилка генерації. <a href="{% url 'index' %}">Назад до дайджесту</a>
+        {% trans "Generation error." %} <a href="{% url 'index' %}">{% trans "Back to digest" %}</a>
     </div>
 </div>
 

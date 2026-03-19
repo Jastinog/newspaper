@@ -1,0 +1,135 @@
+# English translations for Newspaper.
+# Copyright (C) 2026
+# This file is distributed under the same license as the Newspaper package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Newspaper 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-03-18 18:00+0000\n"
+"PO-Revision-Date: 2026-03-18 18:00+0000\n"
+"Last-Translator: \n"
+"Language-Team: English\n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: apps/analytics/templates/analytics/dashboard.html
+msgid "Analytics"
+msgstr "Analytics"
+
+msgid "7 days"
+msgstr "7 days"
+
+msgid "30 days"
+msgstr "30 days"
+
+msgid "90 days"
+msgstr "90 days"
+
+msgid "Page Views"
+msgstr "Page Views"
+
+msgid "Unique Visitors"
+msgstr "Unique Visitors"
+
+msgid "Articles Viewed"
+msgstr "Articles Viewed"
+
+msgid "Top Country"
+msgstr "Top Country"
+
+msgid "Views Over Time"
+msgstr "Views Over Time"
+
+msgid "Top Articles"
+msgstr "Top Articles"
+
+msgid "Top Referrers"
+msgstr "Top Referrers"
+
+msgid "Devices"
+msgstr "Devices"
+
+msgid "Browsers"
+msgstr "Browsers"
+
+msgid "Countries"
+msgstr "Countries"
+
+msgid "Categories"
+msgstr "Categories"
+
+msgid "Back to digest"
+msgstr "Back to digest"
+
+msgid "(no title)"
+msgstr "(no title)"
+
+msgid "ago"
+msgstr "ago"
+
+msgid "Original"
+msgstr "Original"
+
+msgid "No content available."
+msgstr "No content available."
+
+msgid "Read on the original site"
+msgstr "Read on the original site"
+
+msgid "Read original"
+msgstr "Read original"
+
+msgid "Generation error"
+msgstr "Generation error"
+
+msgid "Newspaper"
+msgstr "Newspaper"
+
+msgid "Daily News Digest"
+msgstr "Daily News Digest"
+
+msgid "Toggle dark/light theme"
+msgstr "Toggle dark/light theme"
+
+msgid "Toggle theme"
+msgstr "Toggle theme"
+
+msgid "RSS aggregator"
+msgstr "RSS aggregator"
+
+msgid "latest articles"
+msgstr "latest articles"
+
+msgid "No articles yet."
+msgstr "No articles yet."
+
+msgid "Deep Dive"
+msgstr "Deep Dive"
+
+#, python-format
+msgid "Synthesized from %(num_sources)s source"
+msgid_plural "Synthesized from %(num_sources)s sources"
+msgstr[0] "Synthesized from %(num_sources)s source"
+msgstr[1] "Synthesized from %(num_sources)s sources"
+
+msgid "Sources"
+msgstr "Sources"
+
+msgid "Gathering information from sources..."
+msgstr "Gathering information from sources..."
+
+msgid "Generation error."
+msgstr "Generation error."
+
+msgid "details"
+msgstr "details"
+
+msgid "No digest yet. Run the digest command to generate one."
+msgstr "No digest yet. Run the digest command to generate one."
+
+msgid "Daily AI-curated news digest from 100+ RSS sources worldwide"
+msgstr "Daily AI-curated news digest from 100+ RSS sources worldwide"

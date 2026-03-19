@@ -31,20 +31,31 @@ class Command(BaseCommand):
             default=72,
             help="Look back N hours for articles",
         )
+        parser.add_argument(
+            "--lang",
+            type=str,
+            default=None,
+            help="Comma-separated language codes to generate (default: all — en,ru,uk)",
+        )
 
     def handle(self, *args, **options):
         digest_date = date.today()
         if options["date"]:
             digest_date = datetime.strptime(options["date"], "%Y-%m-%d").date()
 
-        self.stdout.write(f"Generating digest for {digest_date}...")
+        languages = None
+        if options["lang"]:
+            languages = [l.strip() for l in options["lang"].split(",")]
+
+        lang_label = ",".join(languages) if languages else "all"
+        self.stdout.write(f"Generating digest for {digest_date} [{lang_label}]...")
 
         try:
             service = DigestService(
                 limit=options["limit"],
                 hours=options["hours"],
             )
-            digest = service.run(digest_date=digest_date)
+            digests = service.run(digest_date=digest_date, languages=languages)
         except OpenAIError as e:
             self.stdout.write(self.style.ERROR(f"OpenAI error: {e}"))
             return
@@ -52,10 +63,11 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING(str(e)))
             return
 
-        sections = digest.sections.all()
-        self.stdout.write(self.style.SUCCESS(
-            f"Done: {digest.date} — {len(sections)} sections"
-        ))
-        self.stdout.write(f"  Headline: {digest.headline[:120]}...")
-        for s in sections:
-            self.stdout.write(f"  [{s.order}] {s.title} ({s.items.count()} items)")
+        for digest in digests:
+            sections = digest.sections.all()
+            self.stdout.write(self.style.SUCCESS(
+                f"Done: {digest.date} [{digest.language}] — {len(sections)} sections"
+            ))
+            self.stdout.write(f"  Headline: {digest.headline[:120]}...")
+            for s in sections:
+                self.stdout.write(f"  [{s.order}] {s.title} ({s.items.count()} items)")

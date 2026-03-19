@@ -53,7 +53,8 @@
         if (msg.item_id === pendingItemId) {
             pendingItemId = null;
             OrbitAnimation.stop();
-            alert('Помилка генерації: ' + msg.message);
+            var errorPrefix = document.body.dataset.errorGeneration || 'Generation error';
+            alert(errorPrefix + ': ' + msg.message);
         }
     });
 

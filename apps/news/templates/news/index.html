@@ -1,5 +1,5 @@
 {% extends "news/base.html" %}
-{% load markdown_extras %}
+{% load markdown_extras i18n %}
 
 {% block extra_css %}
 <style>
@@ -395,7 +395,7 @@
                     <li>
                         <span class="item-topic">{{ item.topic }}</span>
                         <span class="item-summary">{{ item.summary }}</span>
-                        <a href="{% url 'deep_dive' item.id %}" class="deep-dive-hint deep-dive-link" data-item-id="{{ item.id }}">детальніше &rarr;</a>
+                        <a href="{% url 'deep_dive' item.id %}" class="deep-dive-hint deep-dive-link" data-item-id="{{ item.id }}">{% trans "details" %} &rarr;</a>
                     </li>
                 {% endfor %}
                 </ul>
@@ -406,7 +406,7 @@
 
     <div class="loading-overlay" id="loadingOverlay">
         <canvas id="orbitCanvas"></canvas>
-        <div class="loading-label">Збираємо інформацію з джерел…</div>
+        <div class="loading-label">{% trans "Gathering information from sources..." %}</div>
     </div>
 
     {% load static %}
@@ -415,7 +415,7 @@
     <script src="{% static 'news/js/deep-dive.js' %}"></script>
 {% else %}
     <div class="empty">
-        <p>No digest yet. Run <code>python manage.py digest</code> to generate one.</p>
+        <p>{% trans "No digest yet. Run the digest command to generate one." %}</p>
     </div>
 {% endif %}
 {% endblock %}

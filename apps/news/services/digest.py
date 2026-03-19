@@ -1,6 +1,7 @@
 import json
 import logging
 import re
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta, timezone
 
 from apps.news.models import APIUsage, Article, Digest, DigestItem, DigestSection
@@ -9,16 +10,44 @@ from .openai_client import MODEL_MINI, OpenAIClient, OpenAIError, calculate_cost
 
 logger = logging.getLogger(__name__)
 
-TOPICS = [
-    "AI & Технології",
-    "Світова політика",
-    "Економіка & Фінанси",
-    "Наука & Космос",
-    "Близький Схід & Конфлікти",
-    "Суспільство & Культура",
-    "Безпека & Кібер",
-    "Енергетика & Клімат",
-]
+TOPICS = {
+    "en": [
+        "AI & Technology",
+        "World Politics",
+        "Economy & Finance",
+        "Science & Space",
+        "Middle East & Conflicts",
+        "Society & Culture",
+        "Security & Cyber",
+        "Energy & Climate",
+    ],
+    "ru": [
+        "AI & Технологии",
+        "Мировая политика",
+        "Экономика & Финансы",
+        "Наука & Космос",
+        "Ближний Восток & Конфликты",
+        "Общество & Культура",
+        "Безопасность & Кибер",
+        "Энергетика & Климат",
+    ],
+    "uk": [
+        "AI & Технології",
+        "Світова політика",
+        "Економіка & Фінанси",
+        "Наука & Космос",
+        "Близький Схід & Конфлікти",
+        "Суспільство & Культура",
+        "Безпека & Кібер",
+        "Енергетика & Клімат",
+    ],
+}
+
+LANGUAGE_INSTRUCTIONS = {
+    "en": "ALWAYS respond in English (topic and summary must be in English)",
+    "ru": "ALWAYS respond in Russian (topic and summary must be in Russian)",
+    "uk": "ALWAYS respond in Ukrainian (topic and summary must be in Ukrainian)",
+}
 
 
 class ArticleCollector:
@@ -54,9 +83,10 @@ class ArticleCollector:
 class DigestGenerator:
     """Generates a digest by calling OpenAI with collected articles."""
 
-    def __init__(self, client: OpenAIClient = None, topics: list[str] = None):
+    def __init__(self, client: OpenAIClient = None, language: str = "uk"):
         self.client = client or OpenAIClient()
-        self.topics = topics or TOPICS
+        self.language = language
+        self.topics = TOPICS.get(language, TOPICS["en"])
 
     def _build_article_list(self, articles: list[dict]) -> str:
         lines = []
@@ -87,7 +117,7 @@ class DigestGenerator:
             "- CRITICAL: each news event or story MUST appear in ONLY ONE tile — the most relevant one. "
             "Do NOT repeat the same news across different tiles.\n"
             "- Do NOT reference article IDs in the topic or summary text — only in the article_ids array.\n"
-            "- ALWAYS respond in Ukrainian (topic and summary must be in Ukrainian)\n"
+            f"- {LANGUAGE_INSTRUCTIONS.get(self.language, LANGUAGE_INSTRUCTIONS['en'])}\n"
             "- Output ONLY valid JSON, no markdown fences\n\n"
             f"Create EXACTLY {len(self.topics)} tiles on these topics: {topics_str}\n"
             'Also provide a "headline" field: 2-3 sentences summarizing the overall news picture.\n\n'
@@ -124,15 +154,16 @@ class DigestGenerator:
 class DigestSaver:
     """Persists a generated digest to the database."""
 
-    def save(self, digest_date: date, data: dict, valid_article_ids: set = None) -> Digest:
-        """Create or replace a Digest for the given date."""
+    def save(self, digest_date: date, data: dict, language: str = "en", valid_article_ids: set = None) -> Digest:
+        """Create or replace a Digest for the given date and language."""
         valid_article_ids = valid_article_ids or set()
 
-        # Delete existing digest for this date (regeneration)
-        Digest.objects.filter(date=digest_date).delete()
+        # Delete existing digest for this date+language (regeneration)
+        Digest.objects.filter(date=digest_date, language=language).delete()
 
         digest = Digest.objects.create(
             date=digest_date,
+            language=language,
             headline=data.get("headline", ""),
         )
 
@@ -166,30 +197,26 @@ class DigestService:
 
     def __init__(self, client: OpenAIClient = None, limit=60, hours=72):
         self.collector = ArticleCollector(limit=limit, hours=hours)
-        self.generator = DigestGenerator(client=client)
+        self.client = client
         self.saver = DigestSaver()
 
-    def run(self, digest_date: date = None) -> Digest:
-        digest_date = digest_date or date.today()
+    def _run_single(self, language: str, articles: list[dict], digest_date: date, valid_article_ids: set) -> Digest:
+        """Generate and save a digest for a single language."""
+        generator = DigestGenerator(client=self.client, language=language)
 
-        articles = self.collector.collect()
-        if not articles:
-            raise RuntimeError("No recent articles found. Run fetch_feeds first.")
-
-        valid_article_ids = {a["id"] for a in articles}
-
-        logger.info("Generating digest for %s with %d articles...", digest_date, len(articles))
-        data = self.generator.generate(articles)
+        logger.info("Generating %s digest for %s with %d articles...", language, digest_date, len(articles))
+        data = generator.generate(articles)
 
         usage = data.get("usage", {})
         total_tokens = usage.get("total_tokens", 0)
         logger.info(
-            "Digest generated: %d sections, %d tokens",
+            "Digest [%s] generated: %d sections, %d tokens",
+            language,
             len(data.get("sections", [])),
             total_tokens,
         )
 
-        digest = self.saver.save(digest_date, data, valid_article_ids)
+        digest = self.saver.save(digest_date, data, language=language, valid_article_ids=valid_article_ids)
 
         prompt_tokens = usage.get("prompt_tokens", 0)
         completion_tokens = usage.get("completion_tokens", 0)
@@ -204,8 +231,32 @@ class DigestService:
             digest=digest,
         )
 
-        logger.info("Digest saved: %s", digest)
+        logger.info("Digest saved: %s [%s]", digest, language)
         return digest
+
+    def run(self, digest_date: date = None, languages: list[str] = None) -> list[Digest]:
+        digest_date = digest_date or date.today()
+        languages = languages or list(TOPICS.keys())
+
+        articles = self.collector.collect()
+        if not articles:
+            raise RuntimeError("No recent articles found. Run fetch_feeds first.")
+
+        valid_article_ids = {a["id"] for a in articles}
+
+        if len(languages) == 1:
+            return [self._run_single(languages[0], articles, digest_date, valid_article_ids)]
+
+        digests = []
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            futures = {
+                executor.submit(self._run_single, lang, articles, digest_date, valid_article_ids): lang
+                for lang in languages
+            }
+            for future in futures:
+                digests.append(future.result())
+
+        return digests
 
 
 def _sanitize(s: str) -> str:

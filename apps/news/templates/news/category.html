@@ -1,4 +1,5 @@
 {% extends "news/base.html" %}
+{% load i18n %}
 
 {% block extra_css %}
 <style>
@@ -70,7 +71,7 @@
 {% block content %}
 <div class="category-header">
     <h1>{{ category.name }}</h1>
-    <p>{{ articles|length }} latest articles</p>
+    <p>{{ articles|length }} {% trans "latest articles" %}</p>
 </div>
 
 <ul class="article-list">
@@ -79,11 +80,11 @@
         <a href="{{ article.get_absolute_url }}">{{ article.title }}</a>
         <div class="meta">
             {{ article.feed.title }}
-            {% if article.published %} &middot; {{ article.published|timesince }} ago{% endif %}
+            {% if article.published %} &middot; {{ article.published|timesince }} {% trans "ago" %}{% endif %}
         </div>
     </li>
 {% empty %}
-    <li style="text-align:center; color: var(--fg-muted);">No articles yet.</li>
+    <li style="text-align:center; color: var(--fg-muted);">{% trans "No articles yet." %}</li>
 {% endfor %}
 </ul>
 {% endblock %}

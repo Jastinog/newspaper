@@ -1,0 +1,136 @@
+# Ukrainian translations for Newspaper.
+# Copyright (C) 2026
+# This file is distributed under the same license as the Newspaper package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Newspaper 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-03-18 18:00+0000\n"
+"PO-Revision-Date: 2026-03-18 18:00+0000\n"
+"Last-Translator: \n"
+"Language-Team: Ukrainian\n"
+"Language: uk\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=4; plural=(n % 1 == 0 && n % 10 == 1 && n % 100 != 11 ? 0 : n % 1 == 0 && n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 1 : n % 1 == 0 && (n % 10 ==0 || (n % 10 >=5 && n % 10 <=9) || (n % 100 >=11 && n % 100 <=14 )) ? 2: 3);\n"
+
+msgid "Analytics"
+msgstr "Аналітика"
+
+msgid "7 days"
+msgstr "7 днів"
+
+msgid "30 days"
+msgstr "30 днів"
+
+msgid "90 days"
+msgstr "90 днів"
+
+msgid "Page Views"
+msgstr "Перегляди"
+
+msgid "Unique Visitors"
+msgstr "Унікальні відвідувачі"
+
+msgid "Articles Viewed"
+msgstr "Переглянуто статей"
+
+msgid "Top Country"
+msgstr "Топ країна"
+
+msgid "Views Over Time"
+msgstr "Перегляди за період"
+
+msgid "Top Articles"
+msgstr "Популярні статті"
+
+msgid "Top Referrers"
+msgstr "Джерела трафіку"
+
+msgid "Devices"
+msgstr "Пристрої"
+
+msgid "Browsers"
+msgstr "Браузери"
+
+msgid "Countries"
+msgstr "Країни"
+
+msgid "Categories"
+msgstr "Категорії"
+
+msgid "Back to digest"
+msgstr "Назад до дайджесту"
+
+msgid "(no title)"
+msgstr "(без заголовка)"
+
+msgid "ago"
+msgstr "тому"
+
+msgid "Original"
+msgstr "Оригінал"
+
+msgid "No content available."
+msgstr "Вміст недоступний."
+
+msgid "Read on the original site"
+msgstr "Читати на оригінальному сайті"
+
+msgid "Read original"
+msgstr "Читати оригінал"
+
+msgid "Generation error"
+msgstr "Помилка генерації"
+
+msgid "Newspaper"
+msgstr "Newspaper"
+
+msgid "Daily News Digest"
+msgstr "Щоденний дайджест новин"
+
+msgid "Toggle dark/light theme"
+msgstr "Перемкнути темну/світлу тему"
+
+msgid "Toggle theme"
+msgstr "Змінити тему"
+
+msgid "RSS aggregator"
+msgstr "RSS-агрегатор"
+
+msgid "latest articles"
+msgstr "останніх статей"
+
+msgid "No articles yet."
+msgstr "Статей поки немає."
+
+msgid "Deep Dive"
+msgstr "Глибокий аналіз"
+
+#, python-format
+msgid "Synthesized from %(num_sources)s source"
+msgid_plural "Synthesized from %(num_sources)s sources"
+msgstr[0] "Синтезовано з %(num_sources)s джерела"
+msgstr[1] "Синтезовано з %(num_sources)s джерел"
+msgstr[2] "Синтезовано з %(num_sources)s джерел"
+msgstr[3] "Синтезовано з %(num_sources)s джерел"
+
+msgid "Sources"
+msgstr "Джерела"
+
+msgid "Gathering information from sources..."
+msgstr "Збираємо інформацію з джерел..."
+
+msgid "Generation error."
+msgstr "Помилка генерації."
+
+msgid "details"
+msgstr "детальніше"
+
+msgid "No digest yet. Run the digest command to generate one."
+msgstr "Дайджест ще не створено. Запустіть команду генерації дайджесту."
+
+msgid "Daily AI-curated news digest from 100+ RSS sources worldwide"
+msgstr "Щоденний AI-дайджест новин з 100+ RSS-джерел з усього світу"

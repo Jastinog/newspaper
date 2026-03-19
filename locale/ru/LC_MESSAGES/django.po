@@ -1,0 +1,136 @@
+# Russian translations for Newspaper.
+# Copyright (C) 2026
+# This file is distributed under the same license as the Newspaper package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Newspaper 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-03-18 18:00+0000\n"
+"PO-Revision-Date: 2026-03-18 18:00+0000\n"
+"Last-Translator: \n"
+"Language-Team: Russian\n"
+"Language: ru\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=4; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<12 || n%100>14) ? 1 : n%10==0 || (n%10>=5 && n%10<=9) || (n%100>=11 && n%100<=14)? 2 : 3);\n"
+
+msgid "Analytics"
+msgstr "Аналитика"
+
+msgid "7 days"
+msgstr "7 дней"
+
+msgid "30 days"
+msgstr "30 дней"
+
+msgid "90 days"
+msgstr "90 дней"
+
+msgid "Page Views"
+msgstr "Просмотры"
+
+msgid "Unique Visitors"
+msgstr "Уникальные посетители"
+
+msgid "Articles Viewed"
+msgstr "Просмотрено статей"
+
+msgid "Top Country"
+msgstr "Топ страна"
+
+msgid "Views Over Time"
+msgstr "Просмотры за период"
+
+msgid "Top Articles"
+msgstr "Популярные статьи"
+
+msgid "Top Referrers"
+msgstr "Источники трафика"
+
+msgid "Devices"
+msgstr "Устройства"
+
+msgid "Browsers"
+msgstr "Браузеры"
+
+msgid "Countries"
+msgstr "Страны"
+
+msgid "Categories"
+msgstr "Категории"
+
+msgid "Back to digest"
+msgstr "Назад к дайджесту"
+
+msgid "(no title)"
+msgstr "(без заголовка)"
+
+msgid "ago"
+msgstr "назад"
+
+msgid "Original"
+msgstr "Оригинал"
+
+msgid "No content available."
+msgstr "Содержимое недоступно."
+
+msgid "Read on the original site"
+msgstr "Читать на оригинальном сайте"
+
+msgid "Read original"
+msgstr "Читать оригинал"
+
+msgid "Generation error"
+msgstr "Ошибка генерации"
+
+msgid "Newspaper"
+msgstr "Newspaper"
+
+msgid "Daily News Digest"
+msgstr "Ежедневный дайджест новостей"
+
+msgid "Toggle dark/light theme"
+msgstr "Переключить тёмную/светлую тему"
+
+msgid "Toggle theme"
+msgstr "Сменить тему"
+
+msgid "RSS aggregator"
+msgstr "RSS-агрегатор"
+
+msgid "latest articles"
+msgstr "последних статей"
+
+msgid "No articles yet."
+msgstr "Статей пока нет."
+
+msgid "Deep Dive"
+msgstr "Глубокий анализ"
+
+#, python-format
+msgid "Synthesized from %(num_sources)s source"
+msgid_plural "Synthesized from %(num_sources)s sources"
+msgstr[0] "Синтезировано из %(num_sources)s источника"
+msgstr[1] "Синтезировано из %(num_sources)s источников"
+msgstr[2] "Синтезировано из %(num_sources)s источников"
+msgstr[3] "Синтезировано из %(num_sources)s источников"
+
+msgid "Sources"
+msgstr "Источники"
+
+msgid "Gathering information from sources..."
+msgstr "Собираем информацию из источников..."
+
+msgid "Generation error."
+msgstr "Ошибка генерации."
+
+msgid "details"
+msgstr "подробнее"
+
+msgid "No digest yet. Run the digest command to generate one."
+msgstr "Дайджест ещё не создан. Запустите команду генерации дайджеста."
+
+msgid "Daily AI-curated news digest from 100+ RSS sources worldwide"
+msgstr "Ежедневный AI-дайджест новостей из 100+ RSS-источников по всему миру"

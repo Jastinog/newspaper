@@ -132,13 +132,16 @@ class SiteConsumer(AsyncWebsocketConsumer):
     def _deep_dive_state(self):
         from apps.news.models import DeepDive, Digest
 
-        digest = Digest.objects.order_by("-date").first()
-        if not digest:
+        # Return state for the most recent digest of each language
+        digests = Digest.objects.order_by("-date")[:3]
+        if not digests:
             return {"ready": [], "generating": []}
 
-        item_ids = set(
-            digest.sections.values_list("items__id", flat=True)
-        )
+        item_ids = set()
+        for digest in digests:
+            item_ids.update(
+                digest.sections.values_list("items__id", flat=True)
+            )
         ready = list(
             DeepDive.objects.filter(item_id__in=item_ids)
             .values_list("item_id", flat=True)

@@ -1,5 +1,6 @@
+{% load i18n %}
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="{{ LANGUAGE_CODE }}" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -150,6 +151,46 @@
             border-top: 4px double var(--border-heavy);
         }
 
+        /* === LANGUAGE SWITCHER === */
+        .lang-switcher {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            transform: translateY(-50%);
+        }
+        .lang-switcher form {
+            display: flex;
+            gap: 0;
+        }
+        .lang-switcher button {
+            background: none;
+            border: 1px solid var(--border);
+            border-right: none;
+            padding: 0.3rem 0.5rem;
+            font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+            font-size: 0.65rem;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            cursor: pointer;
+            color: var(--fg-muted);
+            transition: color 0.2s, background 0.2s;
+        }
+        .lang-switcher button:first-of-type {
+            border-radius: 3px 0 0 3px;
+        }
+        .lang-switcher button:last-of-type {
+            border-right: 1px solid var(--border);
+            border-radius: 0 3px 3px 0;
+        }
+        .lang-switcher button:hover {
+            color: var(--fg);
+        }
+        .lang-switcher button.active {
+            background: var(--fg);
+            color: var(--bg);
+            border-color: var(--fg);
+        }
+
         /* === THEME TOGGLE === */
         .theme-toggle {
             position: absolute;
@@ -231,15 +272,25 @@
     </style>
     {% block extra_css %}{% endblock %}
 </head>
-<body>
+<body data-error-generation="{% trans "Generation error" %}">
     <header>
         <div class="masthead-rule-top"></div>
         <div class="container">
             <div class="masthead">
+                <div class="lang-switcher">
+                    <form method="post" action="{% url 'set_language' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.path }}">
+                        {% get_available_languages as languages %}
+                        {% for code, name in languages %}
+                            <button type="submit" name="language" value="{{ code }}" class="{% if code == LANGUAGE_CODE %}active{% endif %}">{{ code|upper }}</button>
+                        {% endfor %}
+                    </form>
+                </div>
                 <div class="masthead-date">{% now "l, F j, Y" %}</div>
-                <div class="site-title"><a href="/">Newspaper</a></div>
-                <div class="masthead-subtitle">Daily News Digest</div>
-                <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark/light theme" aria-label="Toggle theme">
+                <div class="site-title"><a href="/">{% trans "Newspaper" %}</a></div>
+                <div class="masthead-subtitle">{% trans "Daily News Digest" %}</div>
+                <button class="theme-toggle" onclick="toggleTheme()" title="{% trans "Toggle dark/light theme" %}" aria-label="{% trans "Toggle theme" %}">
                     <span class="theme-icon"></span>
                 </button>
             </div>
@@ -252,7 +303,7 @@
         </div>
     </main>
     <footer>
-        <div class="container">Newspaper &mdash; RSS aggregator</div>
+        <div class="container">{% trans "Newspaper" %} &mdash; {% trans "RSS aggregator" %}</div>
     </footer>
     <script>
         function getTheme() {

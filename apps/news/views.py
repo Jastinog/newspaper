@@ -1,6 +1,7 @@
 from django.db.models import Count
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.translation import get_language, gettext_lazy as _
 from rest_framework import generics
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -14,22 +15,33 @@ from .serializers import (
     FeedSerializer,
 )
 
-SITE_NAME = "Newspaper"
-SITE_DESCRIPTION = "Daily AI-curated news digest from 100+ RSS sources worldwide"
+SITE_NAME = _("Newspaper")
+SITE_DESCRIPTION = _("Daily AI-curated news digest from 100+ RSS sources worldwide")
 
 # ── Template Views ────────────────────────────────────────
 
 
 def index(request):
+    current_lang = get_language() or "en"
     digest = (
         Digest.objects
+        .filter(language=current_lang)
         .prefetch_related("sections__items__articles__feed")
         .order_by("-date")
         .first()
     )
+    # Fallback to English if no digest for current language
+    if not digest and current_lang != "en":
+        digest = (
+            Digest.objects
+            .filter(language="en")
+            .prefetch_related("sections__items__articles__feed")
+            .order_by("-date")
+            .first()
+        )
 
     seo = {
-        "title": f"{SITE_NAME} — Daily News Digest",
+        "title": f"{SITE_NAME} — {_('Daily News Digest')}",
         "description": SITE_DESCRIPTION,
         "canonical": request.build_absolute_uri("/"),
         "og_type": "website",

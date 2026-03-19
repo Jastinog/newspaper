@@ -1,5 +1,5 @@
 {% extends "news/base.html" %}
-{% load tz %}
+{% load tz i18n %}
 
 {% block json_ld %}
 <script type="application/ld+json">
@@ -161,16 +161,16 @@
 {% endblock %}
 
 {% block content %}
-<a href="{% url 'index' %}" class="back-link">&larr; Back to digest</a>
+<a href="{% url 'index' %}" class="back-link">&larr; {% trans "Back to digest" %}</a>
 
 <article>
     <div class="article-header">
-        <h1>{{ article.title|default:"(no title)" }}</h1>
+        <h1>{{ article.title|default:_("(no title)") }}</h1>
         <div class="meta">
             {{ article.feed.title }}
             {% if article.feed.category %} &middot; {{ article.feed.category }}{% endif %}
-            {% if article.published %} &middot; {{ article.published|timesince }} ago{% endif %}
-            &middot; <a href="{{ article.url }}" target="_blank" rel="noopener">Original</a>
+            {% if article.published %} &middot; {{ article.published|timesince }} {% trans "ago" %}{% endif %}
+            &middot; <a href="{{ article.url }}" target="_blank" rel="noopener">{% trans "Original" %}</a>
         </div>
     </div>
 
@@ -183,12 +183,12 @@
         {% if article.content %}
             {{ article.content|safe }}
         {% else %}
-            <p style="color: var(--fg-muted);">No content available. <a href="{{ article.url }}" target="_blank" rel="noopener">Read on the original site &rarr;</a></p>
+            <p style="color: var(--fg-muted);">{% trans "No content available." %} <a href="{{ article.url }}" target="_blank" rel="noopener">{% trans "Read on the original site" %} &rarr;</a></p>
         {% endif %}
     </div>
 
     <div class="article-actions">
-        <a href="{{ article.url }}" target="_blank" rel="noopener">Read original &rarr;</a>
+        <a href="{{ article.url }}" target="_blank" rel="noopener">{% trans "Read original" %} &rarr;</a>
     </div>
 </article>
 {% endblock %}

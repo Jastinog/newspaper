@@ -98,12 +98,14 @@ class ArticleChunk(models.Model):
 
 
 class Digest(models.Model):
-    date = models.DateField(unique=True)
+    date = models.DateField()
+    language = models.CharField(max_length=5, default="en", db_index=True)
     headline = models.TextField(blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ["-date"]
+        unique_together = [("date", "language")]
 
     def __str__(self):
         return f"Digest {self.date}"
