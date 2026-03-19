@@ -49,6 +49,8 @@
             --border-heavy: #161210;
             --code-bg: #eae5da;
             --grain-opacity: 0.30;
+            --emboss: 0 2px 1px rgba(255,255,255,0.9), 0 -1px 1px rgba(0,0,0,0.1);
+            --emboss-subtle: 0 1px 1px rgba(255,255,255,0.8), 0 -1px 0 rgba(0,0,0,0.06);
         }
 
         [data-theme="dark"] {
@@ -67,6 +69,8 @@
             --border-heavy: #685e50;
             --code-bg: #221e18;
             --grain-opacity: 0.04;
+            --emboss: 0 2px 2px rgba(0,0,0,0.6), 0 -1px 0 rgba(255,255,255,0.06);
+            --emboss-subtle: 0 1px 2px rgba(0,0,0,0.4), 0 -1px 0 rgba(255,255,255,0.04);
         }
 
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -132,6 +136,7 @@
             letter-spacing: 0.12em;
             line-height: 1.05;
             margin-bottom: 0.2rem;
+            text-shadow: var(--emboss);
         }
 
         .masthead .site-title a {
