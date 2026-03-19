@@ -21,7 +21,11 @@ uv run python manage.py collectstatic --no-input --clear > /dev/null
 echo '>> Restarting services...'
 systemctl restart newspaper-gunicorn
 systemctl restart newspaper-daphne
+systemctl restart newspaper-celery
+systemctl restart newspaper-celerybeat
 
 echo '>> Done!'
 systemctl status newspaper-gunicorn --no-pager | head -3
 systemctl status newspaper-daphne --no-pager | head -3
+systemctl status newspaper-celery --no-pager | head -3
+systemctl status newspaper-celerybeat --no-pager | head -3
