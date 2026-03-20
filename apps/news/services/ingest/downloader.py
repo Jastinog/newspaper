@@ -1,8 +1,13 @@
+import hashlib
 import io
 import logging
+import random
+import time
 import uuid
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from collections import defaultdict, deque
+from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
+from urllib.parse import urlparse
 
 import requests
 from django.conf import settings
@@ -18,11 +23,16 @@ logger = logging.getLogger(__name__)
 TIMEOUT = 20
 MAX_FILE_SIZE = 15 * 1024 * 1024  # 15 MB
 MIN_DIMENSION = 100  # skip tracking pixels
+DOMAIN_DELAY = 2.0  # seconds between requests to same domain
 
 HEADERS = {
     "User-Agent": BROWSER_UA,
     "Accept": "image/webp,image/avif,image/apng,image/*,*/*;q=0.8",
 }
+
+
+def _get_domain(url: str) -> str:
+    return urlparse(url).netloc.lower()
 
 
 def _download_and_resize(source_url: str) -> tuple[bytes, int, int] | None:
@@ -70,7 +80,7 @@ def _download_and_resize(source_url: str) -> tuple[bytes, int, int] | None:
             img = img.convert("RGB")
 
         # Resize if wider than max
-        max_width = getattr(settings, "IMAGE_MAX_WIDTH", 1200)
+        max_width = getattr(settings, "IMAGE_MAX_WIDTH", 800)
         if img.width > max_width:
             ratio = max_width / img.width
             new_height = int(img.height * ratio)
@@ -94,7 +104,11 @@ def _unique_filename() -> str:
 
 
 class ImageDownloader:
-    """Download and resize article images locally."""
+    """Download and resize article images locally.
+
+    Uses per-domain throttling: at most one concurrent request per domain,
+    with a cooldown of DOMAIN_DELAY seconds between requests to the same domain.
+    """
 
     def __init__(self, workers: int = 10, days: int = 7, stdout=None):
         self.workers = workers
@@ -105,9 +119,48 @@ class ImageDownloader:
         if self.stdout:
             self.stdout.write(msg)
 
+    def _save_result(self, img_id: int, result, downloaded_count: int) -> int:
+        """Save download result to DB. Returns updated downloaded_count."""
+        if result is None:
+            ArticleImage.objects.filter(id=img_id).update(downloaded=True)
+            return downloaded_count
+
+        webp_bytes, width, height = result
+        content_hash = hashlib.sha256(webp_bytes).hexdigest()
+
+        # Check for existing image with same content
+        existing = (
+            ArticleImage.objects
+            .filter(content_hash=content_hash)
+            .exclude(image="")
+            .first()
+        )
+
+        try:
+            img_obj = ArticleImage.objects.get(id=img_id)
+            img_obj.width = width
+            img_obj.height = height
+            img_obj.file_size = len(webp_bytes)
+            img_obj.content_hash = content_hash
+            img_obj.downloaded = True
+
+            if existing:
+                # Reuse existing file, no new write
+                img_obj.image.name = existing.image.name
+                img_obj.save()
+            else:
+                img_obj.image.save(_unique_filename(), ContentFile(webp_bytes), save=True)
+
+            return downloaded_count + 1
+        except Exception as e:
+            logger.warning("Failed to save image %s: %s", img_id, e)
+            ArticleImage.objects.filter(id=img_id).update(downloaded=True)
+            return downloaded_count
+
     def download_new(self) -> tuple[int, int]:
         """Download images not yet attempted.
 
+        Uses domain-based scheduling to avoid hammering any single host.
         Returns (processed, downloaded).
         """
         cutoff = django_tz.now() - timedelta(days=self.days)
@@ -122,38 +175,62 @@ class ImageDownloader:
             self._write("No images to download.\n")
             return 0, 0
 
-        self._write(f"Downloading {len(pending)} images...\n")
+        # Group by domain
+        domain_queues: dict[str, deque] = defaultdict(deque)
+        for img_id, url in pending:
+            domain = _get_domain(url)
+            domain_queues[domain].append((img_id, url))
+
+        domains = list(domain_queues.keys())
+        random.shuffle(domains)
+        self._write(f"Downloading {len(pending)} images from {len(domains)} domains...\n")
 
         downloaded = 0
+        done_count = 0
+
+        domain_last_req: dict[str, float] = {}
+        active_domains: set[str] = set()
+        in_flight: dict = {}  # future -> (img_id, domain)
 
         with ThreadPoolExecutor(max_workers=self.workers) as pool:
-            futures = {
-                pool.submit(_download_and_resize, url): (img_id, url)
-                for img_id, url in pending
-            }
+            while domain_queues or in_flight:
+                # Submit new tasks for eligible domains
+                now = time.monotonic()
+                eligible = [
+                    d for d in domains
+                    if d in domain_queues
+                    and d not in active_domains
+                    and now - domain_last_req.get(d, 0) >= DOMAIN_DELAY
+                ]
+                random.shuffle(eligible)
 
-            for future in as_completed(futures):
-                img_id, source_url = futures[future]
-                result = future.result()
+                for domain in eligible[:self.workers - len(in_flight)]:
+                    img_id, url = domain_queues[domain].popleft()
+                    if not domain_queues[domain]:
+                        del domain_queues[domain]
+                    active_domains.add(domain)
+                    future = pool.submit(_download_and_resize, url)
+                    in_flight[future] = (img_id, domain)
 
-                if result is not None:
-                    webp_bytes, width, height = result
-                    filename = _unique_filename()
+                # Collect finished results (non-blocking)
+                finished = [f for f in in_flight if f.done()]
+                for future in finished:
+                    img_id, domain = in_flight.pop(future)
+                    active_domains.discard(domain)
+                    domain_last_req[domain] = time.monotonic()
 
-                    try:
-                        img_obj = ArticleImage.objects.get(id=img_id)
-                        img_obj.width = width
-                        img_obj.height = height
-                        img_obj.file_size = len(webp_bytes)
-                        img_obj.downloaded = True
-                        img_obj.image.save(filename, ContentFile(webp_bytes), save=True)
-                        downloaded += 1
-                    except Exception as e:
-                        logger.warning("Failed to save image %s: %s", img_id, e)
-                        ArticleImage.objects.filter(id=img_id).update(downloaded=True)
-                else:
-                    # Mark as attempted so we don't retry
-                    ArticleImage.objects.filter(id=img_id).update(downloaded=True)
+                    downloaded = self._save_result(img_id, future.result(), downloaded)
+                    done_count += 1
+
+                    if done_count % 200 == 0:
+                        self._write(
+                            f"  {done_count}/{len(pending)} processed "
+                            f"({downloaded} ok)\n"
+                        )
+
+                # If nothing finished, sleep briefly to avoid busy-waiting
+                if not finished:
+                    time.sleep(0.1)
 
         self._write(f"Done: {downloaded}/{len(pending)} images downloaded\n")
         return len(pending), downloaded

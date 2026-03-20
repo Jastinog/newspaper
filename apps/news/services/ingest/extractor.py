@@ -115,10 +115,28 @@ def _extract_og_image(html: str) -> str:
     return ""
 
 
-def _fetch_and_extract(article_id: int, url: str) -> tuple[int, str, str, str | None, str | None]:
+MAX_CONTENT_IMAGES = 3
+
+
+def _extract_content_images(html_content: str) -> list[str]:
+    """Extract image URLs from readability-processed HTML content."""
+    urls = []
+    seen = set()
+    for match in re.finditer(r'<img[^>]+src=["\']([^"\']+)["\']', html_content, re.IGNORECASE):
+        url = match.group(1)
+        if url in seen or url.startswith("data:"):
+            continue
+        seen.add(url)
+        urls.append(url)
+        if len(urls) >= MAX_CONTENT_IMAGES:
+            break
+    return urls
+
+
+def _fetch_and_extract(article_id: int, url: str) -> tuple[int, str, str, list[str], str | None, str | None]:
     """Download page and extract main content. Runs in a thread.
 
-    Returns (article_id, clean_text, og_image, error_category, error_message).
+    Returns (article_id, clean_text, og_image, content_images, error_category, error_message).
     """
     try:
         resp = requests.get(url, timeout=TIMEOUT, headers=HEADERS)
@@ -126,21 +144,22 @@ def _fetch_and_extract(article_id: int, url: str) -> tuple[int, str, str, str | 
 
         html = _clean_for_xml(resp.text).strip()
         if not html:
-            return article_id, "", "", ERR_TOO_SHORT, "Empty response body"
+            return article_id, "", "", [], ERR_TOO_SHORT, "Empty response body"
 
         og_image = _extract_og_image(html)
 
         doc = Document(html)
         html_content = doc.summary(html_partial=True)
+        content_images = _extract_content_images(html_content)
         clean_text = _strip_html(html_content)
 
         if len(clean_text) < 50:
-            return article_id, "", og_image, ERR_TOO_SHORT, f"Content too short ({len(clean_text)} chars)"
+            return article_id, "", og_image, content_images, ERR_TOO_SHORT, f"Content too short ({len(clean_text)} chars)"
 
-        return article_id, clean_text, og_image, None, None
+        return article_id, clean_text, og_image, content_images, None, None
     except Exception as e:
         category, message = _classify_error(e)
-        return article_id, "", "", category, message
+        return article_id, "", "", [], category, message
 
 
 class ContentExtractor:
@@ -230,16 +249,24 @@ class ContentExtractor:
                     active_domains.discard(domain)
                     domain_last_req[domain] = time.monotonic()
 
-                    article_id, clean_text, og_image, err_category, err_message = future.result()
+                    article_id, clean_text, og_image, content_images, err_category, err_message = future.result()
                     rss_content = rss_lookup.get(article_id, "")
                     done_count += 1
 
-                    # og:image → create ArticleImage if not duplicate
+                    # Create ArticleImage for discovered image URLs
+                    # Use og:image first; fall back to content images only if no sources exist
                     if og_image:
                         ArticleImage.objects.get_or_create(
                             article_id=article_id,
                             source_url=og_image[:2000],
                         )
+
+                    if not ArticleImage.objects.filter(article_id=article_id).exists():
+                        for img_url in content_images:
+                            ArticleImage.objects.get_or_create(
+                                article_id=article_id,
+                                source_url=img_url[:2000],
+                            )
 
                     # Determine content and error fields
                     if err_category:

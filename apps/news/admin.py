@@ -29,14 +29,16 @@ def _img_detail(url):
 
 @admin.register(Category)
 class CategoryAdmin(ModelAdmin):
-    list_display = ("name", "slug", "order")
+    list_display = ("id", "name", "slug", "order")
+    list_display_links = ("id", "name")
     list_editable = ("order",)
     prepopulated_fields = {"slug": ("name",)}
 
 
 @admin.register(Feed)
 class FeedAdmin(ModelAdmin):
-    list_display = ("title", "category", "enabled", "last_fetched")
+    list_display = ("id", "title", "category", "enabled", "last_fetched")
+    list_display_links = ("id", "title")
     list_filter = ("category", "enabled")
     search_fields = ("title", "url")
     list_editable = ("enabled",)
@@ -55,7 +57,8 @@ class ArticleImageInline(TabularInline):
 
 @admin.register(Article)
 class ArticleAdmin(ModelAdmin):
-    list_display = ("image_preview", "title", "feed", "published", "read", "starred", "embedded")
+    list_display = ("id", "image_preview", "title", "feed", "published", "read", "starred", "embedded")
+    list_display_links = ("id", "image_preview", "title")
     list_filter = ("feed__category", "read", "starred", "embedded")
     search_fields = ("title", "content")
     raw_id_fields = ("feed",)
@@ -72,14 +75,16 @@ class ArticleAdmin(ModelAdmin):
 
 @admin.register(ArticleChunk)
 class ArticleChunkAdmin(ModelAdmin):
-    list_display = ("article", "chunk_index", "model", "created_at")
+    list_display = ("id", "article", "chunk_index", "model", "created_at")
+    list_display_links = ("id",)
     list_filter = ("model",)
     raw_id_fields = ("article",)
 
 
 @admin.register(ArticleImage)
 class ArticleImageAdmin(ModelAdmin):
-    list_display = ("image_preview", "article", "is_primary", "downloaded", "width", "height", "file_size_display", "created_at")
+    list_display = ("id", "image_preview", "article", "is_primary", "downloaded", "width", "height", "file_size_display", "created_at")
+    list_display_links = ("id", "image_preview")
     list_filter = ("is_primary", "downloaded")
     raw_id_fields = ("article",)
     readonly_fields = ("image_tag", "source_url", "width", "height", "file_size")
@@ -122,7 +127,8 @@ class DigestSectionInline(TabularInline):
 
 @admin.register(DigestSection)
 class DigestSectionAdmin(ModelAdmin):
-    list_display = ("title", "digest", "order", "item_count")
+    list_display = ("id", "title", "digest", "order", "item_count")
+    list_display_links = ("id", "title")
     raw_id_fields = ("digest",)
     inlines = [DigestItemInline]
 
@@ -133,7 +139,8 @@ class DigestSectionAdmin(ModelAdmin):
 
 @admin.register(Digest)
 class DigestAdmin(ModelAdmin):
-    list_display = ("date", "language", "headline_short", "created_at")
+    list_display = ("id", "date", "language", "headline_short", "created_at")
+    list_display_links = ("id", "date")
     list_filter = ("language",)
     inlines = [DigestSectionInline]
 
@@ -151,7 +158,8 @@ class DeepDiveSourceInline(TabularInline):
 
 @admin.register(DeepDive)
 class DeepDiveAdmin(ModelAdmin):
-    list_display = ("title_short", "item", "chunks_used", "generation_time_ms", "created_at")
+    list_display = ("id", "title_short", "item", "chunks_used", "generation_time_ms", "created_at")
+    list_display_links = ("id", "title_short")
     raw_id_fields = ("item",)
     inlines = [DeepDiveSourceInline]
 
@@ -191,7 +199,8 @@ def generate_embeddings(modeladmin, request, queryset):
 
 @admin.register(DigestTopic)
 class DigestTopicAdmin(ModelAdmin):
-    list_display = ("name_en", "order", "enabled", "embedding_count")
+    list_display = ("id", "name_en", "order", "enabled", "embedding_count")
+    list_display_links = ("id", "name_en")
     list_editable = ("order", "enabled")
     inlines = [TopicEmbeddingInline]
     actions = [generate_embeddings]
@@ -211,7 +220,8 @@ class DigestTopicAdmin(ModelAdmin):
 
 @admin.register(APIUsage)
 class APIUsageAdmin(ModelAdmin):
-    list_display = ("created_at", "service", "api_type", "model", "total_tokens", "cost_usd")
+    list_display = ("id", "created_at", "service", "api_type", "model", "total_tokens", "cost_usd")
+    list_display_links = ("id",)
     list_filter = ("service", "api_type", "model")
     date_hierarchy = "created_at"
     raw_id_fields = ("digest", "deep_dive")

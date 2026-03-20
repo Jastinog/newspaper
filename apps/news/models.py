@@ -76,6 +76,7 @@ class ArticleImage(models.Model):
     article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name="images")
     source_url = models.URLField(max_length=2000)
     image = models.ImageField(upload_to="articles/%Y/%m/", blank=True)
+    content_hash = models.CharField(max_length=64, blank=True, default="", db_index=True)
     is_primary = models.BooleanField(default=False, db_index=True)
     downloaded = models.BooleanField(default=False, db_index=True)
     width = models.PositiveIntegerField(default=0)
