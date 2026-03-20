@@ -10,6 +10,21 @@
 (function () {
     'use strict';
 
+    /* ── Helpers ──────────────────────────────────────── */
+
+    /** Create a DOM element with a class name and optional text content. */
+    function el(tag, className, text) {
+        var node = document.createElement(tag);
+        if (className) node.className = className;
+        if (text != null) node.textContent = text;
+        return node;
+    }
+
+    /** Read an i18n data attribute from <body>, with a fallback. */
+    function bodyData(key, fallback) {
+        return document.body.dataset[key] || fallback;
+    }
+
     /* ── State ────────────────────────────────────────── */
 
     var pending = {};
@@ -36,63 +51,45 @@
         if (link) link.closest('li').classList.add('deep-dive-ready');
     }
 
-    /** Get topic text for an item from the DOM. */
+    /** Get truncated topic text for an item from the DOM. */
     function getTopicText(itemId) {
         var link = document.querySelector(
             'a.item-topic[data-item-id="' + itemId + '"]'
         );
-        if (link) {
-            var text = link.textContent.trim();
-            return text.length > 40 ? text.substring(0, 37) + '...' : text;
-        }
-        return 'Deep Dive #' + itemId;
+        if (!link) return 'Deep Dive #' + itemId;
+
+        var text = link.textContent.trim();
+        return text.length > 40 ? text.substring(0, 37) + '...' : text;
     }
 
-    /* ── Toast notification ────────────────────────────── */
+    /* ── Modal ─────────────────────────────────────────── */
 
-    function showToast(topic, url) {
-        var toast = document.createElement('div');
-        toast.className = 'dd-toast';
+    function showModal(topic, url) {
+        var overlay = el('div', 'dd-modal-overlay');
+        var modal = el('div', 'dd-modal');
 
-        function dismiss() {
-            toast.classList.remove('dd-toast-visible');
-            setTimeout(function () { toast.remove(); }, 300);
-        }
+        modal.appendChild(el('div', 'dd-modal-check', '\u2713'));
+        modal.appendChild(el('div', 'dd-modal-title', bodyData('ddReady', 'Deep dive ready')));
+        modal.appendChild(el('div', 'dd-modal-topic', topic));
 
-        var text = document.createElement('div');
-        text.className = 'dd-toast-text';
+        var actions = el('div', 'dd-modal-actions');
 
-        var label = document.createElement('div');
-        label.className = 'dd-toast-label';
-        label.textContent = document.body.dataset.ddReady || 'Deep dive ready';
-        text.appendChild(label);
+        var readBtn = el('a', 'dd-modal-btn dd-modal-btn-primary', bodyData('ddRead', 'Read'));
+        readBtn.href = url;
+        actions.appendChild(readBtn);
 
-        var topicEl = document.createElement('div');
-        topicEl.className = 'dd-toast-topic';
-        topicEl.textContent = topic;
-        text.appendChild(topicEl);
+        var closeBtn = el('button', 'dd-modal-btn dd-modal-btn-secondary', bodyData('ddClose', 'Close'));
+        closeBtn.onclick = function () { overlay.remove(); };
+        actions.appendChild(closeBtn);
 
-        toast.appendChild(text);
+        modal.appendChild(actions);
+        overlay.appendChild(modal);
 
-        var link = document.createElement('a');
-        link.className = 'dd-toast-link';
-        link.href = url;
-        link.textContent = document.body.dataset.ddRead || 'Read \u2192';
-        toast.appendChild(link);
+        overlay.addEventListener('click', function (e) {
+            if (e.target === overlay) overlay.remove();
+        });
 
-        var close = document.createElement('button');
-        close.className = 'dd-toast-close';
-        close.textContent = '\u00d7';
-        close.onclick = dismiss;
-        toast.appendChild(close);
-
-        document.body.appendChild(toast);
-        void toast.offsetHeight; /* trigger reflow for transition */
-        toast.classList.add('dd-toast-visible');
-
-        setTimeout(function () {
-            if (toast.parentNode) dismiss();
-        }, 15000);
+        document.body.appendChild(overlay);
     }
 
     /* ── Progress panel rendering ────────────────────── */
@@ -121,72 +118,43 @@
         container.textContent = '';
 
         for (var i = 0; i < keys.length; i++) {
-            container.appendChild(buildItemRow(keys[i], pending[keys[i]]));
+            container.appendChild(buildItemRow(pending[keys[i]]));
         }
     }
 
-    function buildItemRow(itemId, p) {
-        var row = document.createElement('div');
-        row.className = 'dd-item';
+    function buildStatusIndicator(p) {
+        if (p.url) return el('span', 'dd-item-done', '\u2713');
+        if (p.error) return el('span', 'dd-item-error', '\u2717');
+        return el('span', 'dd-item-status', (p.step || 0) + '/' + (p.totalSteps || 6));
+    }
 
-        if (p.url) {
-            row.classList.add('ready');
-        } else if (p.error) {
-            row.classList.add('errored');
-        }
+    function buildItemRow(p) {
+        var row = el('div', 'dd-item');
 
-        var header = document.createElement('div');
-        header.className = 'dd-item-header';
+        if (p.url) row.classList.add('ready');
+        else if (p.error) row.classList.add('errored');
 
-        var topic = document.createElement('span');
-        topic.className = 'dd-item-topic';
-        topic.textContent = p.topic;
-        header.appendChild(topic);
-
-        if (p.url) {
-            var link = document.createElement('a');
-            link.className = 'dd-item-link';
-            link.href = p.url;
-            link.textContent = document.body.dataset.ddRead || 'Read \u2192';
-            header.appendChild(link);
-        } else if (p.error) {
-            var errSpan = document.createElement('span');
-            errSpan.className = 'dd-item-error';
-            errSpan.textContent = '\u2717';
-            header.appendChild(errSpan);
-        } else {
-            var status = document.createElement('span');
-            status.className = 'dd-item-status';
-            status.textContent = (p.step || 0) + '/' + (p.totalSteps || 6);
-            header.appendChild(status);
-        }
-
+        var header = el('div', 'dd-item-header');
+        header.appendChild(el('span', 'dd-item-topic', p.topic));
+        header.appendChild(buildStatusIndicator(p));
         row.appendChild(header);
 
-        if (!p.url && !p.error) {
-            var barWrap = document.createElement('div');
-            barWrap.className = 'dd-item-bar';
-            var barFill = document.createElement('div');
-            barFill.className = 'dd-item-bar-fill';
-            var pct = Math.round(((p.step || 0) / (p.totalSteps || 6)) * 100);
-            barFill.style.width = pct + '%';
-            barWrap.appendChild(barFill);
-            row.appendChild(barWrap);
+        if (p.url || p.error) return row;
 
-            if (p.step && p.stepId) {
-                var stepRow = document.createElement('div');
-                stepRow.className = 'dd-item-step';
+        var barWrap = el('div', 'dd-item-bar');
+        var barFill = el('div', 'dd-item-bar-fill');
+        var pct = Math.round(((p.step || 0) / (p.totalSteps || 6)) * 100);
+        barFill.style.width = pct + '%';
+        barWrap.appendChild(barFill);
+        row.appendChild(barWrap);
 
-                var icon = STEP_ICONS[p.stepId];
-                stepRow.textContent = (icon ? icon + ' ' : '') + (p.label || p.stepId);
-                if (p.detail) {
-                    var det = document.createElement('span');
-                    det.className = 'dd-item-detail';
-                    det.textContent = p.detail;
-                    stepRow.appendChild(det);
-                }
-                row.appendChild(stepRow);
+        if (p.step && p.stepId) {
+            var icon = STEP_ICONS[p.stepId];
+            var stepRow = el('div', 'dd-item-step', (icon ? icon + ' ' : '') + (p.label || p.stepId));
+            if (p.detail) {
+                stepRow.appendChild(el('span', 'dd-item-detail', p.detail));
             }
+            row.appendChild(stepRow);
         }
 
         return row;
@@ -194,7 +162,7 @@
 
     function cleanupFinished() {
         Object.keys(pending).forEach(function (k) {
-            if (pending[k].error) {
+            if (pending[k].url || pending[k].error) {
                 setTimeout(function () {
                     delete pending[k];
                     renderPanel();
@@ -210,14 +178,12 @@
         var readyIds = dives.ready || [];
         readyIds.forEach(markReady);
 
-        /* Reconnect recovery: re-send generate for any still-pending items */
         var keys = Object.keys(pending);
         for (var i = 0; i < keys.length; i++) {
             var p = pending[keys[i]];
             if (!p.url && !p.error) {
                 var id = parseInt(keys[i], 10);
                 if (readyIds.indexOf(id) !== -1) {
-                    // Finished while disconnected
                     p.url = '/deep-dive/' + id + '/';
                     markReady(id);
                 } else {
@@ -249,14 +215,13 @@
         p.step = p.totalSteps || 6;
         renderPanel();
 
-        showToast(p.topic, msg.url);
+        showModal(p.topic, msg.url);
         cleanupFinished();
     });
 
     WS.on('deep_dive.error', function (msg) {
         if (!hasPending(msg.item_id)) return;
-        pending[msg.item_id].error =
-            msg.message || document.body.dataset.errorGeneration || 'Error';
+        pending[msg.item_id].error = msg.message || bodyData('errorGeneration', 'Error');
         renderPanel();
         cleanupFinished();
     });
@@ -269,16 +234,13 @@
             var itemId = parseInt(this.dataset.itemId, 10);
             var href = this.getAttribute('href');
 
-            /* Already generated — navigate directly */
             if (this.closest('li').classList.contains('deep-dive-ready')) {
                 window.location.href = href;
                 return;
             }
 
-            /* Already pending — ignore duplicate click */
             if (hasPending(itemId)) return;
 
-            /* WS not available — fallback to HTTP */
             if (!WS.send('deep_dive.generate', { item_id: itemId })) {
                 window.location.href = href;
                 return;
