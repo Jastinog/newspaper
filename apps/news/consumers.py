@@ -7,7 +7,7 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 
 logger = logging.getLogger(__name__)
 
-# In-progress deep dive generations: item_id -> {event, url, error}
+# In-progress deep dive generations: item_id -> {event, url, error, waiters}
 _generations = {}
 
 
@@ -24,6 +24,7 @@ class SiteConsumer(AsyncWebsocketConsumer):
     Server -> Client:
         {"type": "init", "deep_dives": {"ready": [1,2], "generating": [3]}}
         {"type": "deep_dive.generating", "item_id": 123}
+        {"type": "deep_dive.progress",   "item_id": 123, "step": 1, "total_steps": 6, "step_id": "queries", "label": "...", "detail": "..."}
         {"type": "deep_dive.ready",      "item_id": 123, "url": "/deep-dive/123/"}
         {"type": "deep_dive.error",      "item_id": 123, "message": "..."}
     """
@@ -81,16 +82,36 @@ class SiteConsumer(AsyncWebsocketConsumer):
                 "event": asyncio.Event(),
                 "url": None,
                 "error": None,
+                "waiters": set(),
             }
             asyncio.create_task(self._run_deep_dive(item_id))
+
+        _generations[item_id]["waiters"].add(self)
 
         # Wait for result in a non-blocking task
         asyncio.create_task(self._await_deep_dive(item_id))
 
     async def _run_deep_dive(self, item_id):
         gen = _generations[item_id]
+        loop = asyncio.get_event_loop()
+
+        def progress_callback(step, total, step_id, label, detail=None):
+            """Called from sync thread — schedules WS sends on the event loop."""
+            msg = json.dumps({
+                "type": "deep_dive.progress",
+                "item_id": item_id,
+                "step": step,
+                "total_steps": total,
+                "step_id": step_id,
+                "label": label,
+                "detail": detail,
+            })
+            asyncio.run_coroutine_threadsafe(
+                self._broadcast_progress(item_id, msg), loop
+            )
+
         try:
-            gen["url"] = await self._do_deep_dive_generate(item_id)
+            gen["url"] = await self._do_deep_dive_generate(item_id, progress_callback)
         except Exception as e:
             logger.exception("Deep dive failed for item %s", item_id)
             gen["error"] = str(e)
@@ -98,6 +119,17 @@ class SiteConsumer(AsyncWebsocketConsumer):
             gen["event"].set()
             await asyncio.sleep(5)  # let waiters read the result
             _generations.pop(item_id, None)
+
+    async def _broadcast_progress(self, item_id, msg):
+        """Send progress message to all waiting clients."""
+        gen = _generations.get(item_id)
+        if not gen:
+            return
+        for consumer in list(gen["waiters"]):
+            try:
+                await consumer.send(msg)
+            except Exception:
+                pass
 
     async def _await_deep_dive(self, item_id):
         gen = _generations.get(item_id)
@@ -160,7 +192,7 @@ class SiteConsumer(AsyncWebsocketConsumer):
         return None
 
     @database_sync_to_async
-    def _do_deep_dive_generate(self, item_id):
+    def _do_deep_dive_generate(self, item_id, progress_callback=None):
         from apps.news.models import DeepDive, DigestItem
         from apps.news.services.deep_dive import DeepDiveService
 
@@ -168,5 +200,5 @@ class SiteConsumer(AsyncWebsocketConsumer):
             return f"/deep-dive/{item_id}/"
 
         item = DigestItem.objects.select_related("section__digest").get(pk=item_id)
-        DeepDiveService().generate(item)
+        DeepDiveService().generate(item, progress_callback=progress_callback)
         return f"/deep-dive/{item_id}/"

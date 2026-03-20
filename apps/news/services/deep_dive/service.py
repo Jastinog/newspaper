@@ -184,17 +184,32 @@ class ArticleSynthesizer:
 class DeepDiveService:
     """Orchestrates the full deep-dive pipeline: queries → embed → search → synthesize → save."""
 
+    STEPS = [
+        (1, "queries", "Generating search queries…"),
+        (2, "embedding", "Creating embeddings…"),
+        (3, "search", "Searching relevant articles…"),
+        (4, "grouping", "Grouping content…"),
+        (5, "synthesis", "Synthesizing article…"),
+        (6, "saving", "Saving result…"),
+    ]
+    TOTAL_STEPS = len(STEPS)
+
     def __init__(self):
         self.query_gen = QueryGenerator()
         self.embedder = EmbeddingClient()
         self.search = SimilaritySearch(days=30)
         self.synthesizer = ArticleSynthesizer()
 
-    def generate(self, item: DigestItem) -> DeepDive:
+    def _progress(self, callback, step_number, step_id, label, detail=None):
+        if callback:
+            callback(step_number, self.TOTAL_STEPS, step_id, label, detail)
+
+    def generate(self, item: DigestItem, progress_callback=None) -> DeepDive:
         """Generate a deep dive for a DigestItem."""
         start = time.time()
 
         # 1. Generate search queries
+        self._progress(progress_callback, 1, "queries", "Generating search queries…")
         queries, query_gen_usage = self.query_gen.generate(item.topic, item.section.title, item.summary)
         logger.info("Generated %d search queries for '%s'", len(queries), item.topic)
 
@@ -202,9 +217,12 @@ class DeepDiveService:
             raise RuntimeError(f"No queries generated for: {item.topic}")
 
         # 2. Embed queries
+        self._progress(progress_callback, 2, "embedding", "Creating embeddings…",
+                        f"{len(queries)} queries")
         query_embeddings, embed_tokens = self.embedder.embed_batch(queries)
 
         # 3. Multi-query similarity search
+        self._progress(progress_callback, 3, "search", "Searching relevant articles…")
         search_results = self.search.multi_query_search(
             query_embeddings,
             top_k_per_query=15,
@@ -216,6 +234,8 @@ class DeepDiveService:
             raise RuntimeError(f"No relevant chunks found for: {item.topic}")
 
         # 4. Load chunk texts and group by article
+        self._progress(progress_callback, 4, "grouping", "Grouping content…",
+                        f"{len(search_results)} chunks")
         chunk_ids = [r[0] for r in search_results]
         chunks = ArticleChunk.objects.filter(id__in=chunk_ids).select_related("article")
         chunk_map = {c.id: c for c in chunks}
@@ -237,12 +257,15 @@ class DeepDiveService:
                 article_scores[article_id] = score
 
         # 5. Synthesize article
+        self._progress(progress_callback, 5, "synthesis", "Synthesizing article…",
+                        f"{len(chunks_by_article)} sources")
         language = getattr(item.section.digest, "language", "uk")
         result = self.synthesizer.synthesize(item.topic, item.section.title, chunks_by_article, language=language)
 
         elapsed_ms = int((time.time() - start) * 1000)
 
         # 6. Save DeepDive
+        self._progress(progress_callback, 6, "saving", "Saving result…")
         dive = DeepDive.objects.create(
             item=item,
             title=result["title"],

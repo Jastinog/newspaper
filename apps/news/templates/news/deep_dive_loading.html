@@ -36,6 +36,60 @@
     }
 
     .loading-error a { color: var(--link); }
+
+    /* Progress steps */
+    .dd-progress-loading {
+        margin-top: 1.5rem;
+        width: 280px;
+        text-align: left;
+    }
+    .dd-progress-loading .dd-progress-bar {
+        height: 3px;
+        background: rgba(128,128,128,0.2);
+        border-radius: 2px;
+        margin-bottom: 0.9rem;
+        overflow: hidden;
+    }
+    .dd-progress-loading .dd-progress-bar-fill {
+        height: 100%;
+        width: 0;
+        background: var(--accent, #6b1520);
+        border-radius: 2px;
+        transition: width 0.5s ease;
+    }
+    .dd-step {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.25rem 0;
+        opacity: 0.3;
+        font-size: 0.8rem;
+        color: var(--fg-muted);
+        transition: opacity 0.3s;
+    }
+    .dd-step.done { opacity: 0.55; }
+    .dd-step.done .dd-step-icon { color: rgba(120, 200, 120, 0.8); }
+    .dd-step.active { opacity: 1; }
+    .dd-step.active .dd-step-icon {
+        color: var(--accent, #6b1520);
+        animation: dd-pulse 1.5s ease-in-out infinite;
+    }
+    .dd-step-icon {
+        width: 1.2em;
+        text-align: center;
+        flex-shrink: 0;
+    }
+    .dd-step-label { flex: 1; }
+    .dd-step-detail {
+        font-size: 0.7rem;
+        color: var(--fg-muted);
+        opacity: 0.6;
+        margin-left: auto;
+    }
+    @keyframes dd-pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
 </style>
 {% endblock %}
 
@@ -46,6 +100,10 @@
         <canvas id="orbitCanvas"></canvas>
     </div>
     <div class="loading-label" id="loadingLabel">{% trans "Gathering information from sources..." %}</div>
+    <div class="dd-progress-loading" id="deepDiveProgress" style="display:none">
+        <div class="dd-progress-bar"><div class="dd-progress-bar-fill"></div></div>
+        <div class="dd-progress-steps"></div>
+    </div>
     <div class="loading-error" id="loadingError">
         {% trans "Generation error." %} <a href="{% url 'index' %}">{% trans "Back to digest" %}</a>
     </div>
@@ -57,8 +115,61 @@
 (function () {
     var itemId = {{ item.id }};
 
+    var STEP_DEFS = [
+        { icon: '\u2049', label: 'Search queries' },
+        { icon: '\u27A4', label: 'Embeddings' },
+        { icon: '\u25CE', label: 'Article search' },
+        { icon: '\u25A6', label: 'Grouping' },
+        { icon: '\u270E', label: 'Synthesis' },
+        { icon: '\u2713', label: 'Saving' },
+    ];
+
+    function showProgress(msg) {
+        var panel = document.getElementById('deepDiveProgress');
+        if (!panel) return;
+        panel.style.display = 'block';
+
+        var stepsEl = panel.querySelector('.dd-progress-steps');
+        var total = msg.total_steps || 6;
+        var current = msg.step || 1;
+
+        while (stepsEl.firstChild) stepsEl.removeChild(stepsEl.firstChild);
+
+        for (var i = 0; i < STEP_DEFS.length && i < total; i++) {
+            var s = STEP_DEFS[i];
+            var num = i + 1;
+            var div = document.createElement('div');
+            div.className = 'dd-step' + (num < current ? ' done' : num === current ? ' active' : '');
+
+            var icon = document.createElement('span');
+            icon.className = 'dd-step-icon';
+            icon.textContent = s.icon;
+            div.appendChild(icon);
+
+            var label = document.createElement('span');
+            label.className = 'dd-step-label';
+            label.textContent = s.label;
+            div.appendChild(label);
+
+            if (num === current && msg.detail) {
+                var det = document.createElement('span');
+                det.className = 'dd-step-detail';
+                det.textContent = msg.detail;
+                div.appendChild(det);
+            }
+            stepsEl.appendChild(div);
+        }
+
+        var bar = panel.querySelector('.dd-progress-bar-fill');
+        if (bar) bar.style.width = Math.round((current / total) * 100) + '%';
+    }
+
     WS.on('init', function () {
         WS.send('deep_dive.generate', { item_id: itemId });
+    });
+
+    WS.on('deep_dive.progress', function (msg) {
+        if (msg.item_id === itemId) showProgress(msg);
     });
 
     WS.on('deep_dive.ready', function (msg) {
@@ -68,6 +179,7 @@
     WS.on('deep_dive.error', function (msg) {
         if (msg.item_id === itemId) {
             document.getElementById('loadingLabel').style.display = 'none';
+            document.getElementById('deepDiveProgress').style.display = 'none';
             document.getElementById('loadingError').style.display = 'block';
         }
     });

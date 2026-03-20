@@ -255,6 +255,106 @@
         text-align: center;
     }
 
+    /* Deep Dive progress panel (multi-item) */
+    .dd-progress {
+        display: none;
+        position: fixed;
+        bottom: 1.5rem;
+        right: 1.5rem;
+        width: 280px;
+        max-height: 60vh;
+        overflow-y: auto;
+        background: rgba(20, 20, 20, 0.88);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 12px;
+        padding: 0.8rem;
+        z-index: 9999;
+        font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    }
+    .dd-progress.active { display: block; }
+
+    .dd-item {
+        padding: 0.6rem 0.5rem;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .dd-item:last-child { border-bottom: none; }
+
+    .dd-item.ready { opacity: 0.7; }
+    .dd-item.errored { opacity: 0.5; }
+
+    .dd-item-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+    }
+    .dd-item-topic {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: rgba(255,255,255,0.85);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        flex: 1;
+        min-width: 0;
+    }
+    .dd-item-status {
+        font-size: 0.65rem;
+        color: rgba(255,255,255,0.4);
+        flex-shrink: 0;
+        font-variant-numeric: tabular-nums;
+    }
+    .dd-item-link {
+        font-size: 0.8rem;
+        color: var(--accent, #6b1520);
+        text-decoration: none;
+        font-weight: 700;
+        flex-shrink: 0;
+        padding: 0.1rem 0.3rem;
+        border-radius: 4px;
+        transition: background 0.2s;
+    }
+    .dd-item-link:hover {
+        background: rgba(255,255,255,0.1);
+    }
+    .dd-item-error {
+        color: #c44;
+        font-size: 0.8rem;
+        flex-shrink: 0;
+    }
+
+    .dd-item-bar {
+        height: 2px;
+        background: rgba(255,255,255,0.08);
+        border-radius: 1px;
+        margin-top: 0.4rem;
+        overflow: hidden;
+    }
+    .dd-item-bar-fill {
+        height: 100%;
+        width: 0;
+        background: var(--accent, #6b1520);
+        border-radius: 1px;
+        transition: width 0.5s ease;
+    }
+
+    .dd-item-step {
+        font-size: 0.68rem;
+        color: rgba(255,255,255,0.5);
+        margin-top: 0.3rem;
+    }
+    .dd-item-detail {
+        font-size: 0.62rem;
+        color: rgba(255,255,255,0.3);
+        margin-left: 0.4rem;
+    }
+
+    .dd-item.ready .dd-item-topic {
+        color: rgba(120, 200, 120, 0.9);
+    }
+
     .empty {
         text-align: center;
         padding: 3rem;
@@ -407,6 +507,9 @@
     <div class="loading-overlay" id="loadingOverlay">
         <canvas id="orbitCanvas"></canvas>
         <div class="loading-label">{% trans "Gathering information from sources..." %}</div>
+    </div>
+    <div class="dd-progress" id="deepDiveProgress">
+        <div class="dd-progress-items"></div>
     </div>
 
     {% load static %}
