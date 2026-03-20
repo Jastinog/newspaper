@@ -2,7 +2,7 @@ from datetime import date
 
 from django.db.models import Max
 
-from apps.news.models import Article, Digest, DigestItem, DigestSection
+from apps.news.models import Article, ArticleImage, Digest, DigestItem, DigestSection
 
 
 def _localized(value, lang: str) -> str:
@@ -62,14 +62,32 @@ class DigestSaver:
                     linked_ids = [aid for aid in raw_ids if aid in valid_article_ids]
                     if linked_ids:
                         item.articles.set(linked_ids)
-                        newest = (
+
+                        # Pick the best image from downloaded ArticleImages
+                        local_image = (
+                            ArticleImage.objects
+                            .filter(article_id__in=linked_ids, downloaded=True)
+                            .exclude(image="")
+                            .select_related("article")
+                            .order_by("-is_primary", "-article__published")
+                            .first()
+                        )
+
+                        newest_published = (
                             Article.objects
                             .filter(id__in=linked_ids, published__isnull=False)
                             .aggregate(newest=Max("published"))["newest"]
                         )
-                        if newest:
-                            item.freshness = newest.timestamp()
-                            item.save(update_fields=["freshness"])
+
+                        update_fields = []
+                        if local_image:
+                            item.image = local_image
+                            update_fields.append("image")
+                        if newest_published:
+                            item.freshness = newest_published.timestamp()
+                            update_fields.append("freshness")
+                        if update_fields:
+                            item.save(update_fields=update_fields)
 
             digests.append(digest)
 

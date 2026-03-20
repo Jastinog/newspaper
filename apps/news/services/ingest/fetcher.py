@@ -1,12 +1,14 @@
 import logging
+import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
+from html import unescape
 
 import feedparser
 import requests
 from django.db import IntegrityError
 
-from apps.news.models import Article, Feed
+from apps.news.models import Article, ArticleImage, Feed
 
 logger = logging.getLogger(__name__)
 
@@ -14,11 +16,42 @@ TIMEOUT = 15
 MAX_WORKERS = 20
 
 
+def _extract_rss_image(entry) -> str:
+    """Extract the best image URL from a feedparser entry."""
+    # 1. media:content or media:thumbnail
+    for attr in ("media_content", "media_thumbnail"):
+        media = getattr(entry, attr, None)
+        if media and isinstance(media, list):
+            for m in media:
+                url = m.get("url", "")
+                if url:
+                    return url
+
+    # 2. <enclosure> with image type
+    image_extensions = (".jpg", ".jpeg", ".png", ".webp")
+    for enc in getattr(entry, "enclosures", []):
+        enc_type = enc.get("type", "")
+        url = enc.get("href", "") or enc.get("url", "")
+        if not url:
+            continue
+        if "image" in enc_type or url.lower().endswith(image_extensions):
+            return url
+
+    # 3. First <img> in RSS summary/description HTML
+    for field in ("summary", "description", "content"):
+        val = getattr(entry, field, None)
+        if isinstance(val, list):
+            val = val[0].get("value", "") if val else ""
+        if val:
+            match = re.search(r'<img[^>]+src=["\']([^"\']+)["\']', str(val), re.IGNORECASE)
+            if match:
+                return match.group(1)
+
+    return ""
+
+
 def _strip_html_basic(text: str) -> str:
     """Strip HTML tags and decode entities from RSS content."""
-    import re
-    from html import unescape
-
     text = re.sub(r"<[^>]+>", "", text)
     text = unescape(text)
     text = re.sub(r"\s+", " ", text)
@@ -109,8 +142,10 @@ class FeedFetcher:
                     if published and published < datetime.now(timezone.utc) - timedelta(days=30):
                         continue
 
+                    image_url = _extract_rss_image(entry)
+
                     try:
-                        Article.objects.create(
+                        article = Article.objects.create(
                             feed_id=feed_id,
                             title=title[:1000],
                             url=link[:2000],
@@ -118,6 +153,12 @@ class FeedFetcher:
                             rss_content=rss_content,
                         )
                         new_count += 1
+                        if image_url:
+                            ArticleImage.objects.create(
+                                article=article,
+                                source_url=image_url[:2000],
+                                is_primary=True,
+                            )
                     except IntegrityError:
                         pass
 

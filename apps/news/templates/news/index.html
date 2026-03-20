@@ -115,6 +115,16 @@
         color: var(--accent);
     }
 
+    /* Item image */
+    .item-image {
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        object-fit: cover;
+        border-radius: 4px;
+        margin-bottom: 0.4rem;
+        display: block;
+    }
+
     /* Summary text — subdued */
     .item-summary {
         color: var(--fg-muted);
@@ -382,6 +392,7 @@
                 <ul>
                 {% for item in section.items.all %}
                     <li>
+                        {% if item.best_image_url %}<a href="{% url 'deep_dive' item.id %}" class="deep-dive-link" data-item-id="{{ item.id }}"><img class="item-image" src="{{ item.best_image_url }}" alt="" loading="lazy"></a>{% endif %}
                         <a href="{% url 'deep_dive' item.id %}" class="item-topic deep-dive-link" data-item-id="{{ item.id }}">{{ item.topic }}</a>
                         <span class="item-summary">{{ item.summary }}</span>
                         <span class="deep-dive-hint-wrap">{% if item.importance >= 7 %}<span class="importance-bar high"></span>{% elif item.importance >= 4 %}<span class="importance-bar medium"></span>{% endif %}<a href="{% url 'deep_dive' item.id %}" class="deep-dive-hint deep-dive-link" data-item-id="{{ item.id }}">{% trans "details" %} &rarr;</a></span>

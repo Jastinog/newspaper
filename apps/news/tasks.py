@@ -14,16 +14,18 @@ def update_news():
     result = service.run()
 
     logger.info(
-        "Update done: %d feeds, %d new articles, %d extracted, %d embedded",
+        "Update done: %d feeds, %d new articles, %d extracted, %d images, %d embedded",
         result.feeds_fetched,
         result.new_articles,
         result.articles_extracted,
+        result.images_downloaded,
         result.articles_embedded,
     )
     return {
         "feeds_fetched": result.feeds_fetched,
         "new_articles": result.new_articles,
         "articles_extracted": result.articles_extracted,
+        "images_downloaded": result.images_downloaded,
         "articles_embedded": result.articles_embedded,
     }
 

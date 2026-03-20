@@ -1,10 +1,30 @@
 from django.contrib import admin
+from django.utils.html import format_html
 from unfold.admin import ModelAdmin, TabularInline
 
 from .models import (
-    APIUsage, Article, ArticleChunk, Category, DeepDive, DeepDiveSource,
-    Digest, DigestItem, DigestSection, DigestTopic, Feed, TopicEmbedding,
+    APIUsage, Article, ArticleChunk, ArticleImage, Category, DeepDive,
+    DeepDiveSource, Digest, DigestItem, DigestSection, DigestTopic, Feed,
+    TopicEmbedding,
 )
+
+
+def _img_thumbnail(url, w=60, h=40):
+    if not url:
+        return ""
+    return format_html(
+        '<img src="{}" style="width:{}px;height:{}px;object-fit:cover;border-radius:3px;" />',
+        url, w, h,
+    )
+
+
+def _img_detail(url):
+    if not url:
+        return "No image"
+    return format_html(
+        '<img src="{}" style="max-width:400px;max-height:250px;border-radius:4px;" />',
+        url,
+    )
 
 
 @admin.register(Category)
@@ -22,12 +42,32 @@ class FeedAdmin(ModelAdmin):
     list_editable = ("enabled",)
 
 
+class ArticleImageInline(TabularInline):
+    model = ArticleImage
+    extra = 0
+    readonly_fields = ("inline_preview", "source_url", "width", "height", "file_size", "is_primary")
+    fields = ("inline_preview", "source_url", "is_primary", "width", "height", "file_size")
+
+    @admin.display(description="Preview")
+    def inline_preview(self, obj):
+        return _img_thumbnail(obj.image.url if obj.image else None, w=80, h=50)
+
+
 @admin.register(Article)
 class ArticleAdmin(ModelAdmin):
-    list_display = ("title", "feed", "published", "read", "starred", "embedded")
+    list_display = ("image_preview", "title", "feed", "published", "read", "starred", "embedded")
     list_filter = ("feed__category", "read", "starred", "embedded")
     search_fields = ("title", "content")
     raw_id_fields = ("feed",)
+    inlines = [ArticleImageInline]
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).prefetch_related("images")
+
+    @admin.display(description="")
+    def image_preview(self, obj):
+        primary = next((i for i in obj.images.all() if i.is_primary and i.image), None)
+        return _img_thumbnail(primary.image.url if primary else None)
 
 
 @admin.register(ArticleChunk)
@@ -37,10 +77,41 @@ class ArticleChunkAdmin(ModelAdmin):
     raw_id_fields = ("article",)
 
 
+@admin.register(ArticleImage)
+class ArticleImageAdmin(ModelAdmin):
+    list_display = ("image_preview", "article", "is_primary", "width", "height", "file_size_display", "created_at")
+    list_filter = ("is_primary",)
+    raw_id_fields = ("article",)
+    readonly_fields = ("image_tag", "source_url", "width", "height", "file_size")
+
+    @admin.display(description="")
+    def image_preview(self, obj):
+        return _img_thumbnail(obj.image.url if obj.image else None)
+
+    @admin.display(description="Image")
+    def image_tag(self, obj):
+        return _img_detail(obj.image.url if obj.image else None)
+
+    @admin.display(description="Size")
+    def file_size_display(self, obj):
+        if obj.file_size < 1024:
+            return f"{obj.file_size} B"
+        if obj.file_size < 1024 * 1024:
+            return f"{obj.file_size / 1024:.1f} KB"
+        return f"{obj.file_size / (1024 * 1024):.1f} MB"
+
+
 class DigestItemInline(TabularInline):
     model = DigestItem
     extra = 0
-    readonly_fields = ("topic", "summary", "order")
+    readonly_fields = ("topic", "summary", "order", "item_image_preview")
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related("image")
+
+    @admin.display(description="Image")
+    def item_image_preview(self, obj):
+        return _img_thumbnail(obj.best_image_url, w=80, h=50)
 
 
 class DigestSectionInline(TabularInline):

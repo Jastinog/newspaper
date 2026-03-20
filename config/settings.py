@@ -98,6 +98,13 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
+MEDIA_URL = "media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
+# Image download settings
+IMAGE_MAX_WIDTH = 1200
+IMAGE_QUALITY = 85
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Analytics — path to MaxMind GeoLite2-City.mmdb (optional)

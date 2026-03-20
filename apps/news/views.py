@@ -32,17 +32,17 @@ def index(request, date=None):
             parsed = dt.strptime(date, "%Y-%m-%d").date()
         except ValueError:
             return redirect("index")
-        digest = qs.filter(date=parsed).prefetch_related("sections__items__articles__feed").first()
+        digest = qs.filter(date=parsed).prefetch_related("sections__items__image", "sections__items__articles__feed").first()
     else:
-        digest = qs.prefetch_related("sections__items__articles__feed").order_by("-date").first()
+        digest = qs.prefetch_related("sections__items__image", "sections__items__articles__feed").order_by("-date").first()
 
     # Fallback to English if no digest for current language
     if not digest and current_lang != "en":
         qs_en = Digest.objects.filter(language="en")
         if date:
-            digest = qs_en.filter(date=parsed).prefetch_related("sections__items__articles__feed").first()
+            digest = qs_en.filter(date=parsed).prefetch_related("sections__items__image", "sections__items__articles__feed").first()
         else:
-            digest = qs_en.prefetch_related("sections__items__articles__feed").order_by("-date").first()
+            digest = qs_en.prefetch_related("sections__items__image", "sections__items__articles__feed").order_by("-date").first()
 
     # Prev/next navigation
     prev_date = next_date = None

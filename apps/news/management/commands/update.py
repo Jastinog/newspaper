@@ -12,6 +12,10 @@ class Command(BaseCommand):
             help="Skip content extraction step",
         )
         parser.add_argument(
+            "--skip-images", action="store_true",
+            help="Skip image download step",
+        )
+        parser.add_argument(
             "--skip-embed", action="store_true",
             help="Skip embedding step",
         )
@@ -32,6 +36,7 @@ class Command(BaseCommand):
         )
         result = service.run(
             skip_extract=options["skip_extract"],
+            skip_images=options["skip_images"],
             skip_embed=options["skip_embed"],
         )
 

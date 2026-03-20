@@ -72,6 +72,24 @@ class Article(models.Model):
         return reverse("article_detail_redirect", kwargs={"pk": self.pk})
 
 
+class ArticleImage(models.Model):
+    article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name="images")
+    source_url = models.URLField(max_length=2000)
+    image = models.ImageField(upload_to="articles/%Y/%m/", blank=True)
+    is_primary = models.BooleanField(default=False, db_index=True)
+    downloaded = models.BooleanField(default=False, db_index=True)
+    width = models.PositiveIntegerField(default=0)
+    height = models.PositiveIntegerField(default=0)
+    file_size = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [("article", "source_url")]
+
+    def __str__(self):
+        return f"Image for {self.article_id} ({'primary' if self.is_primary else 'alt'})"
+
+
 class ArticleChunk(models.Model):
     article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name="chunks")
     chunk_index = models.PositiveIntegerField()
@@ -130,6 +148,10 @@ class DigestItem(models.Model):
     order = models.PositiveIntegerField(default=0)
     importance = models.PositiveSmallIntegerField(default=0)
     freshness = models.FloatField(default=0, db_index=True)
+    image = models.ForeignKey(
+        ArticleImage, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="digest_items",
+    )
     articles = models.ManyToManyField(Article, blank=True, related_name="digest_items")
 
     class Meta:
@@ -137,6 +159,12 @@ class DigestItem(models.Model):
 
     def __str__(self):
         return self.topic
+
+    @property
+    def best_image_url(self):
+        if self.image and self.image.image:
+            return self.image.image.url
+        return ""
 
 
 class DigestTopic(models.Model):

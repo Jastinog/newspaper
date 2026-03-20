@@ -6,6 +6,7 @@ from apps.news.services.ai import EMBEDDING_MODEL, EmbeddingClient, calculate_co
 from apps.news.services.ai.embeddings import BATCH_SIZE
 
 from .chunker import chunk_text
+from .downloader import ImageDownloader
 from .extractor import ContentExtractor
 from .fetcher import FeedFetcher
 
@@ -21,6 +22,7 @@ class UpdateResult:
     fetch_errors: list[str] = field(default_factory=list)
     articles_extracted: int = 0
     extract_errors: list[str] = field(default_factory=list)
+    images_downloaded: int = 0
     articles_embedded: int = 0
     chunks_created: int = 0
     total_tokens: int = 0
@@ -117,12 +119,14 @@ class UpdateService:
     def __init__(self, workers: int = MAX_WORKERS, days: int = 30, api_key=None, stdout=None):
         self.fetcher = FeedFetcher(workers=workers, stdout=stdout)
         self.extractor = ContentExtractor(workers=workers, days=days, stdout=stdout)
+        self.downloader = ImageDownloader(workers=workers, days=days, stdout=stdout)
         self.embedder = ArticleEmbedder(api_key=api_key, stdout=stdout)
         self.stdout = stdout
 
     def run(
         self,
         skip_extract: bool = False,
+        skip_images: bool = False,
         skip_embed: bool = False,
     ) -> UpdateResult:
         result = UpdateResult()
@@ -139,7 +143,12 @@ class UpdateService:
             result.articles_extracted = extracted
             result.extract_errors = ext_errors
 
-        # Step 3: Embed articles
+        # Step 3: Download images
+        if not skip_images:
+            _processed, downloaded = self.downloader.download_new()
+            result.images_downloaded = downloaded
+
+        # Step 4: Embed articles
         if not skip_embed:
             articles, chunks, tokens = self.embedder.embed_new()
             result.articles_embedded = articles

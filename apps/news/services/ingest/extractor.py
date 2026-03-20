@@ -1,9 +1,11 @@
 import logging
 import random
+import re
 import time
 from collections import Counter, defaultdict, deque
 from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
+from html import unescape
 from urllib.parse import urlparse
 
 import requests
@@ -11,7 +13,8 @@ from django.db.models import Q
 from django.utils import timezone as django_tz
 from readability import Document
 
-from apps.news.models import Article
+from apps.news.models import Article, ArticleImage
+from apps.news.services.ingest.http import BROWSER_UA
 
 logger = logging.getLogger(__name__)
 
@@ -21,11 +24,7 @@ DOMAIN_DELAY = 2.0  # min seconds between requests to same domain
 
 # Real browser headers to avoid bot detection
 HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/131.0.0.0 Safari/537.36"
-    ),
+    "User-Agent": BROWSER_UA,
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
     "Accept-Language": "en-US,en;q=0.9",
     "Accept-Encoding": "gzip, deflate",
@@ -82,9 +81,6 @@ def _classify_error(error: Exception) -> tuple[str, str]:
 
 def _strip_html(text: str) -> str:
     """Remove HTML tags, decode entities, collapse whitespace."""
-    import re
-    from html import unescape
-
     text = re.sub(r"<br\s*/?>", "\n", text, flags=re.IGNORECASE)
     text = re.sub(r"</?p[^>]*>", "\n", text, flags=re.IGNORECASE)
     text = re.sub(r"<[^>]+>", "", text)
@@ -98,15 +94,31 @@ def _strip_html(text: str) -> str:
 
 def _clean_for_xml(text: str) -> str:
     """Remove NULL bytes and XML-incompatible control characters."""
-    import re
-    # Remove NULL bytes and control chars except \t \n \r
     return re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", text)
 
 
-def _fetch_and_extract(article_id: int, url: str) -> tuple[int, str, str | None, str | None]:
+def _extract_og_image(html: str) -> str:
+    """Extract og:image URL from HTML meta tags."""
+    match = re.search(
+        r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']',
+        html, re.IGNORECASE,
+    )
+    if match:
+        return match.group(1)
+    # Try reversed attribute order: content before property
+    match = re.search(
+        r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\']',
+        html, re.IGNORECASE,
+    )
+    if match:
+        return match.group(1)
+    return ""
+
+
+def _fetch_and_extract(article_id: int, url: str) -> tuple[int, str, str, str | None, str | None]:
     """Download page and extract main content. Runs in a thread.
 
-    Returns (article_id, clean_text, error_category, error_message).
+    Returns (article_id, clean_text, og_image, error_category, error_message).
     """
     try:
         resp = requests.get(url, timeout=TIMEOUT, headers=HEADERS)
@@ -114,18 +126,21 @@ def _fetch_and_extract(article_id: int, url: str) -> tuple[int, str, str | None,
 
         html = _clean_for_xml(resp.text).strip()
         if not html:
-            return article_id, "", ERR_TOO_SHORT, "Empty response body"
+            return article_id, "", "", ERR_TOO_SHORT, "Empty response body"
+
+        og_image = _extract_og_image(html)
+
         doc = Document(html)
         html_content = doc.summary(html_partial=True)
         clean_text = _strip_html(html_content)
 
         if len(clean_text) < 50:
-            return article_id, "", ERR_TOO_SHORT, f"Content too short ({len(clean_text)} chars)"
+            return article_id, "", og_image, ERR_TOO_SHORT, f"Content too short ({len(clean_text)} chars)"
 
-        return article_id, clean_text, None, None
+        return article_id, clean_text, og_image, None, None
     except Exception as e:
         category, message = _classify_error(e)
-        return article_id, "", category, message
+        return article_id, "", "", category, message
 
 
 class ContentExtractor:
@@ -215,26 +230,36 @@ class ContentExtractor:
                     active_domains.discard(domain)
                     domain_last_req[domain] = time.monotonic()
 
-                    article_id, clean_text, err_category, err_message = future.result()
+                    article_id, clean_text, og_image, err_category, err_message = future.result()
                     rss_content = rss_lookup.get(article_id, "")
                     done_count += 1
 
+                    # og:image → create ArticleImage if not duplicate
+                    if og_image:
+                        ArticleImage.objects.get_or_create(
+                            article_id=article_id,
+                            source_url=og_image[:2000],
+                        )
+
+                    # Determine content and error fields
                     if err_category:
-                        if rss_content and len(rss_content) >= 50:
-                            Article.objects.filter(id=article_id).update(
-                                content=rss_content,
-                                content_fetched=True,
-                                extract_error=f"[{err_category}] {err_message} (rss fallback)"[:500],
-                            )
+                        use_fallback = rss_content and len(rss_content) >= 50
+                        if use_fallback:
+                            content = rss_content
+                            error_msg = f"[{err_category}] {err_message} (rss fallback)"[:500]
                             extracted += 1
                             fallback_count += 1
                         else:
+                            content = ""
+                            error_msg = f"[{err_category}] {err_message}"[:500]
                             errors.append(f"[{err_category}] {err_message}")
                             error_counts[err_category] += 1
-                            Article.objects.filter(id=article_id).update(
-                                content_fetched=True,
-                                extract_error=f"[{err_category}] {err_message}"[:500],
-                            )
+
+                        Article.objects.filter(id=article_id).update(
+                            content=content,
+                            content_fetched=True,
+                            extract_error=error_msg,
+                        )
                     else:
                         Article.objects.filter(id=article_id).update(
                             content=clean_text,
@@ -249,11 +274,8 @@ class ContentExtractor:
                             f"({extracted} ok, {len(errors)} failed)\n"
                         )
 
-                # If nothing finished and we couldn't submit, sleep briefly
-                if not finished and len(in_flight) > 0:
-                    time.sleep(0.1)
-                elif not finished and not in_flight:
-                    # All domains on cooldown, wait for shortest one
+                # If nothing finished, sleep briefly to avoid busy-waiting
+                if not finished:
                     time.sleep(0.1)
 
         self._write(
