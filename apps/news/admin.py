@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.utils.html import format_html
+from django.utils.safestring import mark_safe
 from unfold.admin import ModelAdmin, TabularInline
 
 from .models import (
@@ -69,8 +70,18 @@ class ArticleAdmin(ModelAdmin):
 
     @admin.display(description="")
     def image_preview(self, obj):
-        primary = next((i for i in obj.images.all() if i.is_primary and i.image), None)
-        return _img_thumbnail(primary.image.url if primary else None)
+        imgs = [i for i in obj.images.all() if i.image]
+        if not imgs:
+            return ""
+        parts = [
+            format_html(
+                '<img src="{}" style="width:40px;height:40px;object-fit:cover;border-radius:3px;{}" />',
+                i.image.url,
+                "border:2px solid var(--primary-color,#1e88e5);" if i.is_primary else "opacity:0.6;",
+            )
+            for i in imgs
+        ]
+        return mark_safe(" ".join(parts))
 
 
 @admin.register(ArticleChunk)
