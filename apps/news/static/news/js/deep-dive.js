@@ -3,34 +3,26 @@
  *
  * Marks digest items that have a ready deep dive, handles generation
  * requests via the WS client, and shows per-item progress in a panel.
+ * Non-blocking: user can continue browsing while deep dives generate.
  *
- * Depends on: ws.js, orbit-animation.js
+ * Depends on: ws.js
  */
 (function () {
     'use strict';
 
     /* ── State ────────────────────────────────────────── */
 
-    // pending: { itemId: { topic, step, totalSteps, stepId, detail, url, error } }
     var pending = {};
     var progressPanel = null;
 
-    var STEP_DEFS = [
-        { id: 'queries',   icon: '\u2049' },
-        { id: 'embedding', icon: '\u27A4' },
-        { id: 'search',    icon: '\u25CE' },
-        { id: 'grouping',  icon: '\u25A6' },
-        { id: 'synthesis', icon: '\u270E' },
-        { id: 'saving',    icon: '\u2713' },
-    ];
-
-    function pendingCount() {
-        var n = 0;
-        for (var k in pending) {
-            if (pending.hasOwnProperty(k) && !pending[k].url && !pending[k].error) n++;
-        }
-        return n;
-    }
+    var STEP_ICONS = {
+        queries:   '\u2049',
+        embedding: '\u27A4',
+        search:    '\u25CE',
+        grouping:  '\u25A6',
+        synthesis: '\u270E',
+        saving:    '\u2713',
+    };
 
     function hasPending(itemId) {
         return pending.hasOwnProperty(itemId);
@@ -56,6 +48,53 @@
         return 'Deep Dive #' + itemId;
     }
 
+    /* ── Toast notification ────────────────────────────── */
+
+    function showToast(topic, url) {
+        var toast = document.createElement('div');
+        toast.className = 'dd-toast';
+
+        function dismiss() {
+            toast.classList.remove('dd-toast-visible');
+            setTimeout(function () { toast.remove(); }, 300);
+        }
+
+        var text = document.createElement('div');
+        text.className = 'dd-toast-text';
+
+        var label = document.createElement('div');
+        label.className = 'dd-toast-label';
+        label.textContent = document.body.dataset.ddReady || 'Deep dive ready';
+        text.appendChild(label);
+
+        var topicEl = document.createElement('div');
+        topicEl.className = 'dd-toast-topic';
+        topicEl.textContent = topic;
+        text.appendChild(topicEl);
+
+        toast.appendChild(text);
+
+        var link = document.createElement('a');
+        link.className = 'dd-toast-link';
+        link.href = url;
+        link.textContent = document.body.dataset.ddRead || 'Read \u2192';
+        toast.appendChild(link);
+
+        var close = document.createElement('button');
+        close.className = 'dd-toast-close';
+        close.textContent = '\u00d7';
+        close.onclick = dismiss;
+        toast.appendChild(close);
+
+        document.body.appendChild(toast);
+        void toast.offsetHeight; /* trigger reflow for transition */
+        toast.classList.add('dd-toast-visible');
+
+        setTimeout(function () {
+            if (toast.parentNode) dismiss();
+        }, 15000);
+    }
+
     /* ── Progress panel rendering ────────────────────── */
 
     function getPanel() {
@@ -79,14 +118,10 @@
         }
 
         panel.classList.add('active');
-
-        // Clear
-        while (container.firstChild) container.removeChild(container.firstChild);
+        container.textContent = '';
 
         for (var i = 0; i < keys.length; i++) {
-            var itemId = keys[i];
-            var p = pending[itemId];
-            container.appendChild(buildItemRow(itemId, p));
+            container.appendChild(buildItemRow(keys[i], pending[keys[i]]));
         }
     }
 
@@ -100,7 +135,6 @@
             row.classList.add('errored');
         }
 
-        // Header: topic + status
         var header = document.createElement('div');
         header.className = 'dd-item-header';
 
@@ -113,7 +147,7 @@
             var link = document.createElement('a');
             link.className = 'dd-item-link';
             link.href = p.url;
-            link.textContent = '\u2192';
+            link.textContent = document.body.dataset.ddRead || 'Read \u2192';
             header.appendChild(link);
         } else if (p.error) {
             var errSpan = document.createElement('span');
@@ -129,7 +163,6 @@
 
         row.appendChild(header);
 
-        // Progress bar (only for in-progress)
         if (!p.url && !p.error) {
             var barWrap = document.createElement('div');
             barWrap.className = 'dd-item-bar';
@@ -140,16 +173,12 @@
             barWrap.appendChild(barFill);
             row.appendChild(barWrap);
 
-            // Current step indicator
             if (p.step && p.stepId) {
                 var stepRow = document.createElement('div');
                 stepRow.className = 'dd-item-step';
 
-                var def = null;
-                for (var i = 0; i < STEP_DEFS.length; i++) {
-                    if (STEP_DEFS[i].id === p.stepId) { def = STEP_DEFS[i]; break; }
-                }
-                stepRow.textContent = (def ? def.icon + ' ' : '') + (p.label || p.stepId);
+                var icon = STEP_ICONS[p.stepId];
+                stepRow.textContent = (icon ? icon + ' ' : '') + (p.label || p.stepId);
                 if (p.detail) {
                     var det = document.createElement('span');
                     det.className = 'dd-item-detail';
@@ -164,19 +193,14 @@
     }
 
     function cleanupFinished() {
-        // Remove ready/errored items after a delay
-        var keys = Object.keys(pending);
-        for (var i = 0; i < keys.length; i++) {
-            if (pending[keys[i]].url || pending[keys[i]].error) {
-                (function(k) {
-                    setTimeout(function () {
-                        delete pending[k];
-                        renderPanel();
-                        if (pendingCount() === 0) OrbitAnimation.stop();
-                    }, 4000);
-                })(keys[i]);
+        Object.keys(pending).forEach(function (k) {
+            if (pending[k].error) {
+                setTimeout(function () {
+                    delete pending[k];
+                    renderPanel();
+                }, 5000);
             }
-        }
+        });
     }
 
     /* ── WS handlers ─────────────────────────────────── */
@@ -220,28 +244,21 @@
         markReady(msg.item_id);
 
         if (!hasPending(msg.item_id)) return;
-        pending[msg.item_id].url = msg.url;
-        pending[msg.item_id].step = pending[msg.item_id].totalSteps || 6;
+        var p = pending[msg.item_id];
+        p.url = msg.url;
+        p.step = p.totalSteps || 6;
         renderPanel();
 
-        // If this was the only pending item, redirect directly
-        if (pendingCount() === 0 && Object.keys(pending).length === 1) {
-            window.location.href = msg.url;
-            return;
-        }
-
+        showToast(p.topic, msg.url);
         cleanupFinished();
     });
 
     WS.on('deep_dive.error', function (msg) {
         if (!hasPending(msg.item_id)) return;
-        pending[msg.item_id].error = msg.message;
+        pending[msg.item_id].error =
+            msg.message || document.body.dataset.errorGeneration || 'Error';
         renderPanel();
         cleanupFinished();
-
-        if (pendingCount() === 0) {
-            OrbitAnimation.stop();
-        }
     });
 
     /* ── Click handlers ──────────────────────────────── */
@@ -279,7 +296,6 @@
             };
 
             renderPanel();
-            OrbitAnimation.start();
         });
     });
 })();

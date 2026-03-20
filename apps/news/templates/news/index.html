@@ -219,59 +219,57 @@
     }
 
     .deep-dive-ready .deep-dive-hint {
-        color: var(--accent);
-        opacity: 0.7;
-    }
-
-    .deep-dive-ready .deep-dive-hint:hover {
+        color: #fff;
+        background: var(--accent);
+        padding: 0.15em 0.5em;
+        border-radius: 3px;
+        font-weight: 600;
         opacity: 1;
     }
 
-    /* Loading overlay */
-    .loading-overlay {
-        display: none;
-        position: fixed;
-        inset: 0;
-        background: rgba(0, 0, 0, 0.3);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        z-index: 9998;
-        justify-content: center;
-        align-items: center;
-        flex-direction: column;
-    }
-    .loading-overlay.active {
-        display: flex;
-    }
-    .loading-overlay canvas {
-        display: block;
-    }
-    .loading-overlay .loading-label {
-        font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
-        font-size: 0.8rem;
-        color: rgba(255,255,255,0.6);
-        letter-spacing: 0.05em;
-        margin-top: 1.5rem;
-        text-align: center;
+    .deep-dive-ready .deep-dive-hint:hover {
+        opacity: 0.85;
     }
 
-    /* Deep Dive progress panel (multi-item) */
-    .dd-progress {
-        display: none;
+    /* Shared glass-panel base for progress panel and toast */
+    .dd-progress,
+    .dd-toast {
         position: fixed;
         bottom: 1.5rem;
+        background: rgba(20, 20, 20, 0.9);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(255,255,255,0.1);
+        padding: 0.8rem;
+        font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    }
+
+    /* Shared CTA button for panel and toast */
+    .dd-item-link,
+    .dd-toast-link {
+        font-size: 0.7rem;
+        color: #fff;
+        background: var(--accent, #6b1520);
+        text-decoration: none;
+        font-weight: 600;
+        flex-shrink: 0;
+        transition: opacity 0.2s;
+    }
+    .dd-item-link:hover,
+    .dd-toast-link:hover {
+        opacity: 0.85;
+        color: #fff;
+    }
+
+    /* Deep Dive progress panel */
+    .dd-progress {
+        display: none;
         right: 1.5rem;
         width: 280px;
         max-height: 60vh;
         overflow-y: auto;
-        background: rgba(20, 20, 20, 0.88);
-        backdrop-filter: blur(16px);
-        -webkit-backdrop-filter: blur(16px);
-        border: 1px solid rgba(255,255,255,0.1);
         border-radius: 12px;
-        padding: 0.8rem;
         z-index: 9999;
-        font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
     }
     .dd-progress.active { display: block; }
 
@@ -281,7 +279,6 @@
     }
     .dd-item:last-child { border-bottom: none; }
 
-    .dd-item.ready { opacity: 0.7; }
     .dd-item.errored { opacity: 0.5; }
 
     .dd-item-header {
@@ -307,17 +304,9 @@
         font-variant-numeric: tabular-nums;
     }
     .dd-item-link {
-        font-size: 0.8rem;
-        color: var(--accent, #6b1520);
-        text-decoration: none;
-        font-weight: 700;
-        flex-shrink: 0;
-        padding: 0.1rem 0.3rem;
+        padding: 0.25rem 0.6rem;
         border-radius: 4px;
-        transition: background 0.2s;
-    }
-    .dd-item-link:hover {
-        background: rgba(255,255,255,0.1);
+        letter-spacing: 0.02em;
     }
     .dd-item-error {
         color: #c44;
@@ -353,6 +342,71 @@
 
     .dd-item.ready .dd-item-topic {
         color: rgba(120, 200, 120, 0.9);
+    }
+
+    /* Toast notification */
+    .dd-toast {
+        left: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        border-radius: 10px;
+        padding: 0.8rem 1rem;
+        z-index: 9998;
+        max-width: 380px;
+        transform: translateY(120%);
+        opacity: 0;
+        transition: transform 0.35s ease, opacity 0.35s ease;
+    }
+    .dd-toast-visible {
+        transform: translateY(0);
+        opacity: 1;
+    }
+    .dd-toast-text {
+        flex: 1;
+        min-width: 0;
+    }
+    .dd-toast-label {
+        font-size: 0.6rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: rgba(120, 200, 120, 0.9);
+        margin-bottom: 0.15rem;
+        font-weight: 600;
+    }
+    .dd-toast-topic {
+        font-size: 0.8rem;
+        color: rgba(255,255,255,0.9);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .dd-toast-link {
+        padding: 0.35rem 0.8rem;
+        border-radius: 5px;
+        white-space: nowrap;
+    }
+    .dd-toast-close {
+        background: none;
+        border: none;
+        color: rgba(255,255,255,0.3);
+        font-size: 1.1rem;
+        cursor: pointer;
+        padding: 0 0.2rem;
+        flex-shrink: 0;
+        transition: color 0.2s;
+    }
+    .dd-toast-close:hover {
+        color: rgba(255,255,255,0.7);
+    }
+
+    @media (max-width: 599px) {
+        .dd-toast {
+            left: 0.8rem;
+            right: 0.8rem;
+            max-width: none;
+            bottom: 0.8rem;
+        }
     }
 
     .empty {
@@ -504,16 +558,11 @@
     {% endfor %}
     </div>
 
-    <div class="loading-overlay" id="loadingOverlay">
-        <canvas id="orbitCanvas"></canvas>
-        <div class="loading-label">{% trans "Gathering information from sources..." %}</div>
-    </div>
     <div class="dd-progress" id="deepDiveProgress">
         <div class="dd-progress-items"></div>
     </div>
 
     {% load static %}
-    <script src="{% static 'news/js/orbit-animation.js' %}"></script>
     <script src="{% static 'news/js/ws.js' %}"></script>
     <script src="{% static 'news/js/deep-dive.js' %}"></script>
 {% else %}
