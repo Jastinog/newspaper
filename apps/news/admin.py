@@ -79,14 +79,14 @@ class ArticleChunkAdmin(ModelAdmin):
 
 @admin.register(ArticleImage)
 class ArticleImageAdmin(ModelAdmin):
-    list_display = ("image_preview", "article", "is_primary", "width", "height", "file_size_display", "created_at")
-    list_filter = ("is_primary",)
+    list_display = ("image_preview", "article", "is_primary", "downloaded", "width", "height", "file_size_display", "created_at")
+    list_filter = ("is_primary", "downloaded")
     raw_id_fields = ("article",)
     readonly_fields = ("image_tag", "source_url", "width", "height", "file_size")
 
     @admin.display(description="")
     def image_preview(self, obj):
-        return _img_thumbnail(obj.image.url if obj.image else None)
+        return _img_thumbnail(obj.image.url if obj.image else None, w=120, h=80)
 
     @admin.display(description="Image")
     def image_tag(self, obj):

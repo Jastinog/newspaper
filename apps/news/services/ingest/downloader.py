@@ -1,6 +1,6 @@
-import hashlib
 import io
 import logging
+import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import timedelta
 
@@ -89,10 +89,8 @@ def _download_and_resize(source_url: str) -> tuple[bytes, int, int] | None:
         return None
 
 
-def _stable_filename(source_url: str) -> str:
-    """Generate a stable filename from the source URL."""
-    url_hash = hashlib.md5(source_url.encode()).hexdigest()[:12]
-    return f"img_{url_hash}.webp"
+def _unique_filename() -> str:
+    return f"{uuid.uuid4().hex}.webp"
 
 
 class ImageDownloader:
@@ -140,7 +138,7 @@ class ImageDownloader:
 
                 if result is not None:
                     webp_bytes, width, height = result
-                    filename = _stable_filename(source_url)
+                    filename = _unique_filename()
 
                     try:
                         img_obj = ArticleImage.objects.get(id=img_id)
