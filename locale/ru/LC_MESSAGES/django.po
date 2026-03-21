@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Newspaper 1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-03-18 18:00+0000\n"
+"POT-Creation-Date: 2026-03-21 08:21+0000\n"
 "PO-Revision-Date: 2026-03-18 18:00+0000\n"
 "Last-Translator: \n"
 "Language-Team: Russian\n"
@@ -14,7 +14,9 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=4; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<12 || n%100>14) ? 1 : n%10==0 || (n%10>=5 && n%10<=9) || (n%100>=11 && n%100<=14)? 2 : 3);\n"
+"Plural-Forms: nplurals=4; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
+"n%10<=4 && (n%100<12 || n%100>14) ? 1 : n%10==0 || (n%10>=5 && n%10<=9) || "
+"(n%100>=11 && n%100<=14)? 2 : 3);\n"
 
 msgid "Analytics"
 msgstr "Аналитика"
@@ -28,17 +30,52 @@ msgstr "30 дней"
 msgid "90 days"
 msgstr "90 дней"
 
+msgid "Today"
+msgstr "Сегодня"
+
 msgid "Page Views"
 msgstr "Просмотры"
 
-msgid "Unique Visitors"
+#, fuzzy
+#| msgid "Unique Visitors"
+msgid "Unique Clients"
 msgstr "Уникальные посетители"
 
-msgid "Articles Viewed"
-msgstr "Просмотрено статей"
+msgid "Sessions"
+msgstr ""
+
+msgid "Confirmed Humans"
+msgstr ""
 
 msgid "Top Country"
 msgstr "Топ страна"
+
+msgid "Today — Hourly Traffic"
+msgstr "Сегодня — почасовой трафик"
+
+msgid "Total Sessions"
+msgstr ""
+
+msgid "Human Sessions"
+msgstr ""
+
+msgid "Bounce Rate"
+msgstr ""
+
+msgid "Avg Pages/Session"
+msgstr ""
+
+msgid "Avg Active Time"
+msgstr ""
+
+msgid "Avg Duration"
+msgstr ""
+
+msgid "Live Sessions"
+msgstr ""
+
+msgid "Period Overview"
+msgstr "Обзор за период"
 
 msgid "Views Over Time"
 msgstr "Просмотры за период"
@@ -46,8 +83,20 @@ msgstr "Просмотры за период"
 msgid "Top Articles"
 msgstr "Популярные статьи"
 
+msgid "Top Pages"
+msgstr "Популярные страницы"
+
+msgid "Recent Page Views"
+msgstr "Последние просмотры"
+
 msgid "Top Referrers"
 msgstr "Источники трафика"
+
+msgid "Countries"
+msgstr "Страны"
+
+msgid "Devices & Tech"
+msgstr "Устройства и технологии"
 
 msgid "Devices"
 msgstr "Устройства"
@@ -55,11 +104,32 @@ msgstr "Устройства"
 msgid "Browsers"
 msgstr "Браузеры"
 
-msgid "Countries"
-msgstr "Страны"
+msgid "Operating Systems"
+msgstr "Операционные системы"
+
+msgid "Content"
+msgstr "Контент"
 
 msgid "Categories"
 msgstr "Категории"
+
+msgid "Left"
+msgstr "Левый"
+
+msgid "Center-Left"
+msgstr "Левоцентристский"
+
+msgid "Center"
+msgstr "Центристский"
+
+msgid "Center-Right"
+msgstr "Правоцентристский"
+
+msgid "Right"
+msgstr "Правый"
+
+msgid "Sources"
+msgstr "Источники"
 
 msgid "Back to digest"
 msgstr "Назад к дайджесту"
@@ -84,6 +154,15 @@ msgstr "Читать оригинал"
 
 msgid "Generation error"
 msgstr "Ошибка генерации"
+
+msgid "Deep dive ready"
+msgstr "Анализ готов"
+
+msgid "Read"
+msgstr "Читать"
+
+msgid "Close"
+msgstr "Закрыть"
 
 msgid "Newspaper"
 msgstr "Newspaper"
@@ -117,8 +196,14 @@ msgstr[1] "Синтезировано из %(num_sources)s источников"
 msgstr[2] "Синтезировано из %(num_sources)s источников"
 msgstr[3] "Синтезировано из %(num_sources)s источников"
 
-msgid "Sources"
-msgstr "Источники"
+msgid "AI-powered deep analysis of this topic based on collected sources."
+msgstr "Глубокий AI-анализ темы на основе собранных источников."
+
+msgid "Generate analysis"
+msgstr "Сгенерировать анализ"
+
+msgid "Uses AI tokens for generation"
+msgstr "Для генерации используются AI-токены"
 
 msgid "Gathering information from sources..."
 msgstr "Собираем информацию из источников..."
@@ -132,77 +217,29 @@ msgstr "подробнее"
 msgid "No digest yet. Run the digest command to generate one."
 msgstr "Дайджест ещё не создан. Запустите команду генерации дайджеста."
 
+msgid "Unknown"
+msgstr "Неизвестно"
+
+msgid "Neutral"
+msgstr "Нейтральный"
+
 msgid "Daily AI-curated news digest from 100+ RSS sources worldwide"
 msgstr "Ежедневный AI-дайджест новостей из 100+ RSS-источников по всему миру"
 
-msgid "Deep dive ready"
-msgstr "Анализ готов"
+#~ msgid "Articles Viewed"
+#~ msgstr "Просмотрено статей"
 
-msgid "Read"
-msgstr "Читать"
+#~ msgid "Views Today"
+#~ msgstr "Просмотры сегодня"
 
-msgid "Close"
-msgstr "Закрыть"
+#~ msgid "Visitors Today"
+#~ msgstr "Посетители сегодня"
 
-msgid "AI-powered deep analysis of this topic based on collected sources."
-msgstr "Глубокий AI-анализ темы на основе собранных источников."
+#~ msgid "Period Views"
+#~ msgstr "Просмотры за период"
 
-msgid "Generate analysis"
-msgstr "Сгенерировать анализ"
+#~ msgid "Period Visitors"
+#~ msgstr "Посетители за период"
 
-msgid "Uses AI tokens for generation"
-msgstr "Для генерации используются AI-токены"
-
-msgid "Recent Page Views"
-msgstr "Последние просмотры"
-
-msgid "Today"
-msgstr "Сегодня"
-
-msgid "Views Today"
-msgstr "Просмотры сегодня"
-
-msgid "Visitors Today"
-msgstr "Посетители сегодня"
-
-msgid "Period Views"
-msgstr "Просмотры за период"
-
-msgid "Period Visitors"
-msgstr "Посетители за период"
-
-msgid "Today — Hourly Traffic"
-msgstr "Сегодня — почасовой трафик"
-
-msgid "Period Overview"
-msgstr "Обзор за период"
-
-msgid "Top Pages"
-msgstr "Популярные страницы"
-
-msgid "Operating Systems"
-msgstr "Операционные системы"
-
-msgid "Devices & Tech"
-msgstr "Устройства и технологии"
-
-msgid "Content"
-msgstr "Контент"
-
-msgid "sources"
-msgstr "источников"
-
-msgid "Left"
-msgstr "Левый"
-
-msgid "Center-Left"
-msgstr "Левоцентристский"
-
-msgid "Center"
-msgstr "Центристский"
-
-msgid "Center-Right"
-msgstr "Правоцентристский"
-
-msgid "Right"
-msgstr "Правый"
+#~ msgid "sources"
+#~ msgstr "источников"

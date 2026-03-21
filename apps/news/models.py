@@ -1,6 +1,7 @@
 from django.db import models
 from django.urls import reverse
 from django.utils.text import slugify
+from django.utils.translation import gettext_lazy as _
 from pgvector.django import HnswIndex, VectorField
 
 
@@ -22,11 +23,11 @@ class Category(models.Model):
 
 class Feed(models.Model):
     class Lean(models.TextChoices):
-        LEFT = "left", "Left"
-        CENTER_LEFT = "center_left", "Center-Left"
-        CENTER = "center", "Center"
-        CENTER_RIGHT = "center_right", "Center-Right"
-        RIGHT = "right", "Right"
+        LEFT = "left", _("Left")
+        CENTER_LEFT = "center_left", _("Center-Left")
+        CENTER = "center", _("Center")
+        CENTER_RIGHT = "center_right", _("Center-Right")
+        RIGHT = "right", _("Right")
 
     class Factuality(models.TextChoices):
         HIGH = "high", "High"

@@ -1,4 +1,5 @@
 from django import template
+from django.utils.translation import gettext as _
 
 from apps.news.models import Feed
 
@@ -35,7 +36,7 @@ def bias_spectrum(item):
             feed_map[fid] = {
                 "title": article.feed.title,
                 "url": article.url,
-                "label": lean_labels.get(lean, "Unknown"),
+                "label": lean_labels.get(lean, _("Unknown")),
                 "color": LEAN_COLORS.get(lean, NEUTRAL_COLOR),
                 "article_count": 1,
             }
@@ -59,7 +60,7 @@ def bias_spectrum(item):
     else:
         segments = [
             {
-                "label": "Neutral",
+                "label": _("Neutral"),
                 "lean": "neutral",
                 "color": NEUTRAL_COLOR,
                 "pct": 100,
