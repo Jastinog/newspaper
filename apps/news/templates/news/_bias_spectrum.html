@@ -1,11 +1,27 @@
 {% load i18n %}
-{% if show %}
 <span class="bias-spectrum">
-    <span class="bias-bar">
+    {% if has_lean_data %}
+    <span class="bias-legend">
         {% for seg in segments %}
-        <span class="bias-seg" style="width:{{ seg.pct }}%;background:{{ seg.color }}" title="{{ seg.label }}: {{ seg.count }}"></span>
+        <span class="bias-legend-item" style="color:{{ seg.color }}">{{ seg.label }}</span>
         {% endfor %}
     </span>
-    <span class="bias-count">{{ total }} {% trans "sources" %}</span>
+    {% endif %}
+    <span class="bias-bar">
+        {% for seg in segments %}
+        <span class="bias-seg" style="width:{{ seg.pct }}%;background:{{ seg.color }}" title="{{ seg.label }}: {{ seg.count }}">
+            {% if seg.pct >= 15 %}<span class="bias-pct">{{ seg.pct }}%</span>{% endif %}
+        </span>
+        {% endfor %}
+    </span>
+    <span class="bias-tooltip">
+        <span class="bias-tooltip-title">{% trans "Sources" %} ({{ total }})</span>
+        {% for src in tooltip_sources %}
+        <a class="bias-tooltip-src" href="{{ src.url }}" target="_blank" rel="noopener">
+            <span class="bias-tooltip-dot" style="background:{{ src.color }}"></span>
+            <span class="bias-tooltip-src-title">{{ src.title }}{% if src.article_count > 1 %} <span class="bias-tooltip-src-count">({{ src.article_count }})</span>{% endif %}</span>
+            <span class="bias-tooltip-src-lean" style="color:{{ src.color }}">{{ src.label }}</span>
+        </a>
+        {% endfor %}
+    </span>
 </span>
-{% endif %}
