@@ -195,6 +195,10 @@
         background: #e67e22;
         box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
     }
+    .importance-bar.low {
+        background: #999;
+        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
 
     .deep-dive-hint-wrap {
         display: flex;
@@ -548,6 +552,7 @@
                         <span class="deep-dive-hint-wrap">
                             {% if item.importance >= 7 %}<span class="importance-bar high"></span>
                             {% elif item.importance >= 4 %}<span class="importance-bar medium"></span>
+                            {% else %}<span class="importance-bar low"></span>
                             {% endif %}
                             <a href="{% url 'deep_dive' item.id %}" class="deep-dive-hint deep-dive-link" data-item-id="{{ item.id }}">{% trans "details" %} &rarr;</a>
                         </span>
