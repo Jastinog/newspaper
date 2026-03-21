@@ -222,13 +222,44 @@
         if (bar) bar.style.width = Math.round((current / total) * 100) + '%';
     }
 
-    function startGeneration() {
+    var generating = false;
+
+    function showGeneratingUI() {
         document.getElementById('generatePrompt').style.display = 'none';
         document.getElementById('generatingState').style.display = 'block';
-        WS.send('deep_dive.generate', { item_id: itemId });
+    }
+
+    function startGeneration() {
+        if (generating) return;
+        generating = true;
+        showGeneratingUI();
+        if (!WS.send('deep_dive.generate', { item_id: itemId })) {
+            // WS not connected yet — will retry in deep_dive.state handler
+        }
     }
 
     document.getElementById('generateBtn').addEventListener('click', startGeneration);
+
+    // On WS connect, consumer sends current state — auto-detect ready/in-progress
+    WS.on('deep_dive.state', function (msg) {
+        var ready = msg.ready || [];
+        var inProgress = msg.generating || [];
+
+        if (ready.indexOf(itemId) !== -1) {
+            window.location.href = '/deep-dive/' + itemId + '/';
+            return;
+        }
+
+        if (inProgress.indexOf(itemId) !== -1) {
+            startGeneration();
+            return;
+        }
+
+        // Retry send if user clicked Generate before WS was connected
+        if (generating) {
+            WS.send('deep_dive.generate', { item_id: itemId });
+        }
+    });
 
     WS.on('deep_dive.progress', function (msg) {
         if (msg.item_id === itemId) showProgress(msg);
@@ -240,6 +271,7 @@
 
     WS.on('deep_dive.error', function (msg) {
         if (msg.item_id === itemId) {
+            generating = false;
             document.getElementById('generatingState').style.display = 'none';
             document.getElementById('loadingError').style.display = 'block';
         }

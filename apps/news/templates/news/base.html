@@ -308,6 +308,8 @@
     </header>
     <main>
         <div class="container">
+            {% load static %}
+            <script src="{% static 'websockets/js/ws.js' %}"></script>
             {% block content %}{% endblock %}
         </div>
     </main>
@@ -329,7 +331,5 @@
         }
         applyTheme(getTheme());
     </script>
-    {% load static %}
-    <script src="{% static 'websockets/js/ws.js' %}" defer></script>
 </body>
 </html>
