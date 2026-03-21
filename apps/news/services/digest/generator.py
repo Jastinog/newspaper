@@ -47,8 +47,9 @@ class TopicDigestGenerator:
             '  - "topic": {"en": "...", "ru": "...", "uk": "..."} — short event label (2-5 words)\n'
             '  - "summary": {"en": "...", "ru": "...", "uk": "..."} — what happened, context, '
             "why it matters (2-3 sentences)\n"
-            '  - "importance": integer 0-9 (0=mundane, 1-3=minor, 4-6=notable, 7-8=major, 9=extreme). '
-            "Most items should be 2-5, only extraordinary events deserve 7+.\n"
+            '  - "importance": integer 1-9 (1-3=minor/routine, 4-5=notable, 6=significant, 7-9=major/breaking). '
+            "Use the FULL range: ~15% should be 1-3, ~40% should be 4-5, ~25% should be 6, ~20% should be 7+. "
+            "Only truly extraordinary events deserve 8-9.\n"
             '  - "article_ids": array of [ID:N] numbers from the input. Include ALL relevant IDs.\n'
             "- Do NOT reference article IDs in topic or summary text — only in article_ids.\n"
             "- Output ONLY valid JSON, no markdown fences.\n\n"
