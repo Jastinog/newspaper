@@ -1,12 +1,5 @@
 {% load i18n %}
 <span class="bias-spectrum">
-    {% if has_lean_data %}
-    <span class="bias-legend">
-        {% for seg in segments %}
-        <span class="bias-legend-item" style="color:{{ seg.color }}">{{ seg.label }}</span>
-        {% endfor %}
-    </span>
-    {% endif %}
     <span class="bias-bar">
         {% for seg in segments %}
         <span class="bias-seg" style="width:{{ seg.pct }}%;background:{{ seg.color }}" title="{{ seg.label }}: {{ seg.count }}">
