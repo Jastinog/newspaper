@@ -38,11 +38,11 @@ class CategoryAdmin(ModelAdmin):
 
 @admin.register(Feed)
 class FeedAdmin(ModelAdmin):
-    list_display = ("id", "title", "category", "enabled", "last_fetched")
+    list_display = ("id", "title", "category", "lean", "factuality", "enabled", "last_fetched")
     list_display_links = ("id", "title")
-    list_filter = ("category", "enabled")
+    list_filter = ("category", "enabled", "lean", "factuality")
     search_fields = ("title", "url")
-    list_editable = ("enabled",)
+    list_editable = ("enabled", "lean", "factuality")
 
 
 class ArticleImageInline(TabularInline):

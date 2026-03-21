@@ -188,3 +188,21 @@ msgstr "Устройства и технологии"
 
 msgid "Content"
 msgstr "Контент"
+
+msgid "sources"
+msgstr "источников"
+
+msgid "Left"
+msgstr "Левый"
+
+msgid "Center-Left"
+msgstr "Левоцентристский"
+
+msgid "Center"
+msgstr "Центристский"
+
+msgid "Center-Right"
+msgstr "Правоцентристский"
+
+msgid "Right"
+msgstr "Правый"

@@ -187,3 +187,21 @@ msgstr "Devices & Tech"
 
 msgid "Content"
 msgstr "Content"
+
+msgid "sources"
+msgstr "sources"
+
+msgid "Left"
+msgstr "Left"
+
+msgid "Center-Left"
+msgstr "Center-Left"
+
+msgid "Center"
+msgstr "Center"
+
+msgid "Center-Right"
+msgstr "Center-Right"
+
+msgid "Right"
+msgstr "Right"

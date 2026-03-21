@@ -1,0 +1,11 @@
+{% load i18n %}
+{% if show %}
+<span class="bias-spectrum">
+    <span class="bias-bar">
+        {% for seg in segments %}
+        <span class="bias-seg" style="width:{{ seg.pct }}%;background:{{ seg.color }}" title="{{ seg.label }}: {{ seg.count }}"></span>
+        {% endfor %}
+    </span>
+    <span class="bias-count">{{ total }} {% trans "sources" %}</span>
+</span>
+{% endif %}

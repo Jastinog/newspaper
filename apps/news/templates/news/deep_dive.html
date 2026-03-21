@@ -184,6 +184,25 @@
         color: var(--fg-faint);
     }
 
+    .lean-badge {
+        display: inline-block;
+        font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+        font-size: 0.55rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        padding: 0.1rem 0.35rem;
+        border-radius: 2px;
+        vertical-align: middle;
+        margin-left: 0.3rem;
+        color: #fff;
+    }
+    .lean-badge.lean-left { background: #2962ff; }
+    .lean-badge.lean-center_left { background: #42a5f5; }
+    .lean-badge.lean-center { background: #9e9e9e; }
+    .lean-badge.lean-center_right { background: #ef6c00; }
+    .lean-badge.lean-right { background: #c62828; }
+
     .source-relevance {
         flex-shrink: 0;
         display: flex;
@@ -265,7 +284,7 @@
             <li>
                 <span class="source-text">
                     <a href="{{ source.article.get_absolute_url }}">{{ source.article.title }}</a>
-                    <span class="source-feed">&mdash; {{ source.article.feed.title }}</span>
+                    <span class="source-feed">&mdash; {{ source.article.feed.title }}{% if source.article.feed.lean %} <span class="lean-badge lean-{{ source.article.feed.lean }}">{{ source.article.feed.get_lean_display }}</span>{% endif %}</span>
                 </span>
                 <span class="source-relevance">
                     <span class="relevance-bar" style="--fill:{{ source.relevance_pct }}%"></span>

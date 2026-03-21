@@ -21,6 +21,18 @@ class Category(models.Model):
 
 
 class Feed(models.Model):
+    class Lean(models.TextChoices):
+        LEFT = "left", "Left"
+        CENTER_LEFT = "center_left", "Center-Left"
+        CENTER = "center", "Center"
+        CENTER_RIGHT = "center_right", "Center-Right"
+        RIGHT = "right", "Right"
+
+    class Factuality(models.TextChoices):
+        HIGH = "high", "High"
+        MIXED = "mixed", "Mixed"
+        LOW = "low", "Low"
+
     title = models.CharField(max_length=500)
     url = models.URLField(max_length=2000, unique=True)
     category = models.ForeignKey(
@@ -29,6 +41,8 @@ class Feed(models.Model):
     )
     last_fetched = models.DateTimeField(null=True, blank=True)
     enabled = models.BooleanField(default=True)
+    lean = models.CharField(max_length=20, choices=Lean.choices, blank=True, default="", db_index=True)
+    factuality = models.CharField(max_length=10, choices=Factuality.choices, blank=True, default="", db_index=True)
 
     class Meta:
         ordering = ["category", "title"]

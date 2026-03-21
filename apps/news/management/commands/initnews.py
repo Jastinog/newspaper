@@ -1,8 +1,26 @@
+import json
+
 from django.core.management.base import BaseCommand
 
 from apps.news.feeds import DEFAULT_CATEGORIES, DEFAULT_FEEDS
 from apps.news.models import Category, DigestTopic, Feed, TopicEmbedding
 from apps.news.services.ai import EmbeddingClient, EmbeddingError
+from apps.news.services.ai.client import OpenAIClient, OpenAIError, fix_truncated_json
+
+
+BIAS_SYSTEM_PROMPT = """\
+You are a media bias analyst. Given a list of RSS feed sources (title, URL, category), \
+classify each one by editorial lean and factuality.
+
+Rules:
+- Only classify news/media/politics feeds. For tech, dev, science, gaming, or other \
+non-political feeds, return {"lean": "", "factuality": ""}.
+- lean must be one of: "left", "center_left", "center", "center_right", "right", or "" (non-political).
+- factuality must be one of: "high", "mixed", "low", or "" (non-political).
+- Base your assessment on the publication's well-known editorial positioning.
+
+Return a JSON object mapping feed title to {"lean": "...", "factuality": "..."} for every feed.\
+"""
 
 DEFAULT_TOPICS = [
     {
@@ -145,6 +163,7 @@ class Command(BaseCommand):
         self._seed_categories()
         self._seed_feeds()
         self._seed_topics()
+        self._classify_feeds()
 
     def _seed_categories(self):
         cat_created = 0
@@ -222,4 +241,71 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS(
             f"Embeddings: {len(vectors)} generated ({total_tokens} tokens)"
+        ))
+
+    def _classify_feeds(self):
+        feeds = list(
+            Feed.objects.filter(enabled=True, lean="", factuality="")
+            .select_related("category")
+        )
+        if not feeds:
+            self.stdout.write("Feed bias: all feeds already classified")
+            return
+
+        feed_lines = []
+        for f in feeds:
+            cat = f.category.name if f.category else "Uncategorized"
+            feed_lines.append(f"- {f.title} | {f.url} | Category: {cat}")
+
+        user_prompt = (
+            f"Classify these {len(feed_lines)} feeds:\n\n"
+            + "\n".join(feed_lines)
+        )
+
+        self.stdout.write(f"Feed bias: classifying {len(feeds)} feeds via LLM...")
+
+        try:
+            client = OpenAIClient()
+            content, usage = client.chat(
+                system=BIAS_SYSTEM_PROMPT,
+                user=user_prompt,
+                max_tokens=4000,
+                temperature=0.1,
+            )
+        except OpenAIError as e:
+            self.stdout.write(self.style.WARNING(f"Feed bias: LLM error — {e}"))
+            return
+
+        content = fix_truncated_json(content)
+        try:
+            classifications = json.loads(content)
+        except json.JSONDecodeError as e:
+            self.stdout.write(self.style.WARNING(f"Feed bias: bad JSON — {e}"))
+            return
+
+        lean_choices = {c.value for c in Feed.Lean}
+        fact_choices = {c.value for c in Feed.Factuality}
+
+        to_update = []
+        for feed in feeds:
+            data = classifications.get(feed.title, {})
+            lean = data.get("lean", "")
+            factuality = data.get("factuality", "")
+
+            if lean not in lean_choices:
+                lean = ""
+            if factuality not in fact_choices:
+                factuality = ""
+
+            if lean != feed.lean or factuality != feed.factuality:
+                feed.lean = lean
+                feed.factuality = factuality
+                to_update.append(feed)
+
+        if to_update:
+            Feed.objects.bulk_update(to_update, fields=["lean", "factuality"])
+
+        tokens = usage.get("total_tokens", 0)
+        self.stdout.write(self.style.SUCCESS(
+            f"Feed bias: {len(to_update)} classified ({tokens} tokens)"
         ))
