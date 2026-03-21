@@ -46,7 +46,7 @@
     /* ── Summary cards ───────────────────────── */
     .summary-cards {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
         gap: 1rem;
         margin-bottom: 2rem;
     }
@@ -75,6 +75,19 @@
     .delta.up { color: #2d6a4f; }
     .delta.down { color: #c1121f; }
     .delta.flat { opacity: 0.5; }
+
+    /* ── Verdict badge ───────────────────────── */
+    .badge {
+        display: inline-block;
+        padding: 0.15rem 0.5rem;
+        border-radius: 3px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+    }
+    .badge-human { background: #2d6a4f22; color: #2d6a4f; border: 1px solid #2d6a4f44; }
+    .badge-bot { background: #c1121f22; color: #c1121f; border: 1px solid #c1121f44; }
+    .badge-unknown { background: #66666622; color: #666; border: 1px solid #66666644; }
 
     /* ── Section heading ─────────────────────── */
     .section-title {
@@ -142,6 +155,20 @@
     .data-table tr:hover { background: rgba(0,0,0,0.02); }
 
     .loading { text-align: center; padding: 2rem; opacity: 0.5; font-style: italic; }
+
+    /* ── Live indicator ──────────────────────── */
+    .live-dot {
+        display: inline-block;
+        width: 8px; height: 8px;
+        background: #2d6a4f;
+        border-radius: 50%;
+        margin-right: 0.4rem;
+        animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.3; }
+    }
 </style>
 {% endblock %}
 
@@ -161,21 +188,21 @@
 <div class="summary-cards">
     <div class="summary-card">
         <div class="value" id="today-views">&mdash;</div>
-        <div class="label">{% trans "Views Today" %}</div>
+        <div class="label">{% trans "Page Views" %}</div>
         <div class="delta flat" id="today-views-delta"></div>
     </div>
     <div class="summary-card">
-        <div class="value" id="today-visitors">&mdash;</div>
-        <div class="label">{% trans "Visitors Today" %}</div>
-        <div class="delta flat" id="today-visitors-delta"></div>
+        <div class="value" id="today-clients">&mdash;</div>
+        <div class="label">{% trans "Unique Clients" %}</div>
+        <div class="delta flat" id="today-clients-delta"></div>
     </div>
     <div class="summary-card">
-        <div class="value" id="period-views">&mdash;</div>
-        <div class="label">{% trans "Period Views" %}</div>
+        <div class="value" id="today-sessions">&mdash;</div>
+        <div class="label">{% trans "Sessions" %}</div>
     </div>
     <div class="summary-card">
-        <div class="value" id="period-visitors">&mdash;</div>
-        <div class="label">{% trans "Period Visitors" %}</div>
+        <div class="value" id="today-humans">&mdash;</div>
+        <div class="label">{% trans "Confirmed Humans" %}</div>
     </div>
     <div class="summary-card">
         <div class="value" id="top-country">&mdash;</div>
@@ -183,12 +210,48 @@
     </div>
 </div>
 
-<!-- Hourly chart for today -->
+<!-- Hourly chart -->
 <div class="chart-section">
     <h2>{% trans "Today — Hourly Traffic" %}</h2>
     <div class="chart-container-sm">
         <canvas id="chart-hourly"></canvas>
     </div>
+</div>
+
+<!-- ── Sessions ─────────────────────────────────────── -->
+<div class="section-title">{% trans "Sessions" %}</div>
+
+<div class="summary-cards">
+    <div class="summary-card">
+        <div class="value" id="sessions-total">&mdash;</div>
+        <div class="label">{% trans "Total Sessions" %}</div>
+    </div>
+    <div class="summary-card">
+        <div class="value" id="sessions-humans">&mdash;</div>
+        <div class="label">{% trans "Human Sessions" %}</div>
+    </div>
+    <div class="summary-card">
+        <div class="value" id="sessions-bounce">&mdash;</div>
+        <div class="label">{% trans "Bounce Rate" %}</div>
+    </div>
+    <div class="summary-card">
+        <div class="value" id="sessions-avg-pages">&mdash;</div>
+        <div class="label">{% trans "Avg Pages/Session" %}</div>
+    </div>
+    <div class="summary-card">
+        <div class="value" id="sessions-avg-time">&mdash;</div>
+        <div class="label">{% trans "Avg Active Time" %}</div>
+    </div>
+    <div class="summary-card">
+        <div class="value" id="sessions-avg-duration">&mdash;</div>
+        <div class="label">{% trans "Avg Duration" %}</div>
+    </div>
+</div>
+
+<!-- ── Live sessions ────────────────────────────────── -->
+<div class="chart-section">
+    <h2><span class="live-dot"></span>{% trans "Live Sessions" %}</h2>
+    <div id="table-live-sessions"><div class="loading">Loading...</div></div>
 </div>
 
 <!-- ── Period stats ──────────────────────────────────── -->
@@ -296,8 +359,16 @@
         return n.toString();
     }
 
+    function formatTime(seconds) {
+        if (!seconds) return '0s';
+        var m = Math.floor(seconds / 60);
+        var s = Math.round(seconds % 60);
+        if (m > 0) return m + 'm ' + s + 's';
+        return s + 's';
+    }
+
     function pctChange(current, previous) {
-        if (!previous) return current > 0 ? '+100%' : '—';
+        if (!previous) return current > 0 ? '+100%' : '\u2014';
         var pct = Math.round(((current - previous) / previous) * 100);
         if (pct > 0) return '+' + pct + '%';
         if (pct < 0) return pct + '%';
@@ -332,6 +403,13 @@
         return el;
     }
 
+    function makeBadge(isHuman) {
+        var span = document.createElement('span');
+        span.className = 'badge ' + (isHuman ? 'badge-human' : 'badge-unknown');
+        span.textContent = isHuman ? 'Human' : '?';
+        return span;
+    }
+
     function buildTable(headers, rows) {
         var table = createEl('table', {'class': 'data-table'});
         var thead = createEl('thead');
@@ -345,7 +423,9 @@
             var tr = createEl('tr');
             cells.forEach(function(cell) {
                 var td = createEl('td');
-                if (cell.href) {
+                if (cell.node) {
+                    td.appendChild(cell.node);
+                } else if (cell.href) {
                     var a = createEl('a', {'href': cell.href}, cell.text);
                     td.appendChild(a);
                 } else {
@@ -359,6 +439,20 @@
         return table;
     }
 
+    function truncate(str, max) {
+        return str.length > max ? str.substring(0, max) + '\u2026' : str;
+    }
+
+    function renderTable(elementId, headers, data, rowMapper) {
+        var el = document.getElementById(elementId);
+        clearChildren(el);
+        if (!data.length) {
+            el.appendChild(createEl('div', {'class': 'loading'}, 'No data'));
+            return;
+        }
+        el.appendChild(buildTable(headers, data.map(rowMapper)));
+    }
+
     /* ── Today ──────────────────────────────── */
 
     function loadToday() {
@@ -366,17 +460,18 @@
             var t = r.today, y = r.yesterday;
 
             document.getElementById('today-views').textContent = formatNum(t.views);
-            document.getElementById('today-visitors').textContent = formatNum(t.visitors);
+            document.getElementById('today-clients').textContent = formatNum(t.clients);
+            document.getElementById('today-sessions').textContent = formatNum(t.sessions);
+            document.getElementById('today-humans').textContent = formatNum(t.humans);
 
             var vd = document.getElementById('today-views-delta');
             vd.textContent = pctChange(t.views, y.views) + ' vs yesterday';
             vd.className = deltaClass(t.views, y.views);
 
-            var vv = document.getElementById('today-visitors-delta');
-            vv.textContent = pctChange(t.visitors, y.visitors) + ' vs yesterday';
-            vv.className = deltaClass(t.visitors, y.visitors);
+            var cd = document.getElementById('today-clients-delta');
+            cd.textContent = pctChange(t.clients, y.clients) + ' vs yesterday';
+            cd.className = deltaClass(t.clients, y.clients);
 
-            // Hourly bar chart
             loadHourlyChart(r.hourly);
         });
     }
@@ -407,13 +502,41 @@
         });
     }
 
-    /* ── Period summary ─────────────────────── */
+    /* ── Sessions ───────────────────────────── */
 
-    function loadPeriodSummary(viewsData) {
-        var totalViews = 0, totalVisitors = 0;
-        viewsData.forEach(function(d) { totalViews += d.views; totalVisitors += d.visitors; });
-        document.getElementById('period-views').textContent = formatNum(totalViews);
-        document.getElementById('period-visitors').textContent = formatNum(totalVisitors);
+    function loadSessions() {
+        api('sessions/').then(function(r) {
+            document.getElementById('sessions-total').textContent = formatNum(r.total);
+            document.getElementById('sessions-humans').textContent = formatNum(r.humans);
+            document.getElementById('sessions-bounce').textContent = r.bounce_rate + '%';
+            document.getElementById('sessions-avg-pages').textContent = r.avg_pages;
+            document.getElementById('sessions-avg-time').textContent = formatTime(r.avg_active_time);
+            document.getElementById('sessions-avg-duration').textContent = formatTime(r.avg_duration);
+        });
+    }
+
+    /* ── Live sessions ──────────────────────── */
+
+    function loadLiveSessions() {
+        api('live-sessions/', false).then(function(r) {
+            renderTable('table-live-sessions',
+                ['Started', 'Device', 'Browser', 'Location', 'Pages', 'Active', 'Status'],
+                r.data,
+                function(s) {
+                    var flag = countryFlag(s.country);
+                    var loc = (flag ? flag + ' ' : '') + (s.city || s.country_name || s.country || '\u2014');
+                    return [
+                        {text: s.started_at},
+                        {text: s.device_type || '\u2014'},
+                        {text: s.browser || '\u2014'},
+                        {text: loc},
+                        {text: s.page_count.toString()},
+                        {text: formatTime(s.active_time)},
+                        {node: makeBadge(s.is_human)}
+                    ];
+                }
+            );
+        });
     }
 
     /* ── Views over time ────────────────────── */
@@ -427,7 +550,7 @@
                 labels: data.map(function(d) { return d.date; }),
                 datasets: [
                     {
-                        label: 'Views',
+                        label: 'Page Views',
                         data: data.map(function(d) { return d.views; }),
                         borderColor: ACCENT,
                         backgroundColor: ACCENT + '22',
@@ -436,8 +559,8 @@
                         yAxisID: 'y'
                     },
                     {
-                        label: 'Visitors',
-                        data: data.map(function(d) { return d.visitors; }),
+                        label: 'Clients',
+                        data: data.map(function(d) { return d.clients; }),
                         borderColor: '#2d6a4f',
                         borderDash: [5, 5],
                         fill: false,
@@ -462,20 +585,6 @@
 
     /* ── Tables ─────────────────────────────── */
 
-    function truncate(str, max) {
-        return str.length > max ? str.substring(0, max) + '\u2026' : str;
-    }
-
-    function renderTable(elementId, headers, data, rowMapper) {
-        var el = document.getElementById(elementId);
-        clearChildren(el);
-        if (!data.length) {
-            el.appendChild(createEl('div', {'class': 'loading'}, 'No data'));
-            return;
-        }
-        el.appendChild(buildTable(headers, data.map(rowMapper)));
-    }
-
     function loadArticlesTable(data) {
         renderTable('table-articles', ['Article', 'Views'], data.slice(0, 15), function(r) {
             return [{href: '/article/' + r.id + '/', text: truncate(r.title, 60)}, {text: formatNum(r.views)}];
@@ -489,16 +598,22 @@
     }
 
     function loadReferrersTable(data) {
-        renderTable('table-referrers', ['Domain', 'Views'], data.slice(0, 15), function(r) {
-            return [{text: r.referrer_domain}, {text: formatNum(r.views)}];
+        renderTable('table-referrers', ['Domain', 'Sessions'], data.slice(0, 15), function(r) {
+            return [{text: r.referrer_domain}, {text: formatNum(r.sessions)}];
         });
     }
 
     function loadRecentViews(data) {
-        renderTable('table-recent-views', ['Time', 'Path', 'Location', 'Browser'], data, function(r) {
+        renderTable('table-recent-views', ['Time', 'Path', 'Location', 'Browser', 'Verdict'], data, function(r) {
             var flag = countryFlag(r.country);
             var location = (flag ? flag + ' ' : '') + (r.city || r.country_name || r.country || '\u2014');
-            return [{text: r.timestamp}, {text: truncate(r.path, 45)}, {text: location}, {text: r.browser || '\u2014'}];
+            return [
+                {text: r.timestamp},
+                {text: truncate(r.path, 45)},
+                {text: location},
+                {text: r.browser || '\u2014'},
+                {node: makeBadge(r.is_human)}
+            ];
         });
     }
 
@@ -547,9 +662,10 @@
 
     function loadAll() {
         loadToday();
+        loadSessions();
+        loadLiveSessions();
 
         api('views-over-time/').then(function(r) {
-            loadPeriodSummary(r.data);
             loadViewsChart(r.data);
         });
 
@@ -578,7 +694,7 @@
                 var name = d.country_name || d.country;
                 return flag ? flag + ' ' + name : name;
             });
-            var values = r.data.map(function(d) { return d.views; });
+            var values = r.data.map(function(d) { return d.clients; });
             makeBar('chart-geo', labels.slice(0, 10), values.slice(0, 10), 'geo');
             if (r.data.length > 0) {
                 var top = r.data[0];
@@ -604,6 +720,17 @@
     };
 
     loadAll();
+
+    // Auto-refresh live sessions every 30s, pause when tab is hidden
+    var liveTimer = setInterval(loadLiveSessions, 30000);
+    document.addEventListener('visibilitychange', function() {
+        if (document.hidden) {
+            clearInterval(liveTimer);
+        } else {
+            loadLiveSessions();
+            liveTimer = setInterval(loadLiveSessions, 30000);
+        }
+    });
 })();
 </script>
 {% endblock %}

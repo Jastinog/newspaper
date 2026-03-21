@@ -15,4 +15,6 @@ urlpatterns = [
     path("api/devices/", views.api_devices, name="api_devices"),
     path("api/categories/", views.api_categories, name="api_categories"),
     path("api/recent-views/", views.api_recent_views, name="api_recent_views"),
+    path("api/sessions/", views.api_sessions, name="api_sessions"),
+    path("api/live-sessions/", views.api_live_sessions, name="api_live_sessions"),
 ]

@@ -1,6 +1,6 @@
 from django.conf import settings
 
-from apps.analytics.middleware import _get_client_ip, _resolve_geo
+from apps.analytics.utils import get_client_ip, resolve_geo
 
 LANGUAGE_COOKIE_NAME = settings.LANGUAGE_COOKIE_NAME
 
@@ -22,8 +22,8 @@ class GeoLanguageMiddleware:
     def __call__(self, request):
         # If user already has a language cookie, skip
         if LANGUAGE_COOKIE_NAME not in request.COOKIES:
-            ip = _get_client_ip(request)
-            geo = _resolve_geo(ip)
+            ip = get_client_ip(request)
+            geo = resolve_geo(ip)
             country = geo.get("country", "")
             lang = COUNTRY_LANGUAGE_MAP.get(country, settings.LANGUAGE_CODE)
             request.COOKIES[LANGUAGE_COOKIE_NAME] = lang

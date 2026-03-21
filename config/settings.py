@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "apps.news",
     "apps.analytics",
+    "apps.websockets",
 ]
 
 ASGI_APPLICATION = "config.asgi.application"
@@ -49,7 +50,6 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "apps.analytics.middleware.AnalyticsMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"

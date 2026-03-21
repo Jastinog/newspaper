@@ -1,27 +1,38 @@
 from datetime import timedelta
 
 from django.contrib.admin.views.decorators import staff_member_required
-from django.db.models import Count, Q
+from django.db.models import Avg, Count, F, Q
 from django.db.models.functions import ExtractHour, TruncDate
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.utils import timezone
 
-from .models import PageView
+from .models import Activity, Client, Session
 
 
 def _parse_days(request, default=30, maximum=365):
-    """Parse the 'days' query parameter, clamped to a safe maximum."""
     try:
         return min(int(request.GET.get("days", default)), maximum)
     except (ValueError, TypeError):
         return default
 
 
-def _base_qs(request):
-    """Base queryset: non-bot views within the requested period."""
+def _base_sessions(request):
+    """Base queryset: sessions within the requested period."""
     since = timezone.now() - timedelta(days=_parse_days(request))
-    return PageView.objects.filter(is_bot=False, timestamp__gte=since)
+    return Session.objects.filter(started_at__gte=since)
+
+
+def _base_activities(request, activity_type=None):
+    """Base queryset: activities within the requested period."""
+    since = timezone.now() - timedelta(days=_parse_days(request))
+    qs = Activity.objects.filter(timestamp__gte=since)
+    if activity_type:
+        qs = qs.filter(type=activity_type)
+    return qs
+
+
+PAGE_VIEW = Activity.ActivityType.PAGE_VIEW
 
 
 # ── Dashboard page ─────────────────────────────────────────
@@ -37,29 +48,43 @@ def dashboard(request):
 
 @staff_member_required
 def api_today(request):
-    """Today vs yesterday stats + hourly breakdown for today."""
+    """Today vs yesterday stats + hourly breakdown."""
     now = timezone.now()
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     yesterday_start = today_start - timedelta(days=1)
-    base = PageView.objects.filter(is_bot=False)
 
-    today_qs = base.filter(timestamp__gte=today_start)
-    yesterday_qs = base.filter(timestamp__gte=yesterday_start, timestamp__lt=today_start)
+    today_sessions = Session.objects.filter(started_at__gte=today_start)
+    yesterday_sessions = Session.objects.filter(
+        started_at__gte=yesterday_start, started_at__lt=today_start
+    )
 
-    today_views = today_qs.count()
-    today_visitors = today_qs.values("session_hash").distinct().count()
-    yesterday_views = yesterday_qs.count()
-    yesterday_visitors = yesterday_qs.values("session_hash").distinct().count()
+    today_page_views = Activity.objects.filter(
+        type=PAGE_VIEW, timestamp__gte=today_start
+    )
+    yesterday_page_views = Activity.objects.filter(
+        type=PAGE_VIEW, timestamp__gte=yesterday_start, timestamp__lt=today_start
+    )
 
-    # Hourly breakdown for today
+    today_stats = today_sessions.aggregate(
+        sessions=Count("id"),
+        clients=Count("client", distinct=True),
+        humans=Count("id", filter=Q(is_human=True)),
+    )
+    today_views = today_page_views.count()
+    yesterday_stats = yesterday_sessions.aggregate(
+        views=Count("id"),
+        clients=Count("client", distinct=True),
+    )
+    yesterday_views = yesterday_page_views.count()
+
+    # Hourly breakdown (page views)
     hourly = list(
-        today_qs
+        today_page_views
         .annotate(hour=ExtractHour("timestamp"))
         .values("hour")
         .annotate(views=Count("id"))
         .order_by("hour")
     )
-    # Fill missing hours
     hourly_map = {r["hour"]: r["views"] for r in hourly}
     current_hour = now.hour
     hourly_full = [
@@ -68,23 +93,38 @@ def api_today(request):
     ]
 
     return JsonResponse({
-        "today": {"views": today_views, "visitors": today_visitors},
-        "yesterday": {"views": yesterday_views, "visitors": yesterday_visitors},
+        "today": {
+            "views": today_views,
+            "clients": today_stats["clients"],
+            "humans": today_stats["humans"],
+            "sessions": today_stats["sessions"],
+        },
+        "yesterday": {
+            "views": yesterday_views,
+            "clients": yesterday_stats["clients"],
+        },
         "hourly": hourly_full,
     })
 
 
 @staff_member_required
 def api_views_over_time(request):
-    qs = _base_qs(request)
+    qs = _base_activities(request, activity_type=PAGE_VIEW)
     rows = (
         qs.annotate(date=TruncDate("timestamp"))
         .values("date")
-        .annotate(views=Count("id"), visitors=Count("session_hash", distinct=True))
+        .annotate(
+            views=Count("id"),
+            clients=Count("session__client", distinct=True),
+        )
         .order_by("date")
     )
     data = [
-        {"date": r["date"].isoformat(), "views": r["views"], "visitors": r["visitors"]}
+        {
+            "date": r["date"].isoformat(),
+            "views": r["views"],
+            "clients": r["clients"],
+        }
         for r in rows
     ]
     return JsonResponse({"data": data})
@@ -92,7 +132,7 @@ def api_views_over_time(request):
 
 @staff_member_required
 def api_top_pages(request):
-    qs = _base_qs(request)
+    qs = _base_activities(request, activity_type=PAGE_VIEW)
     rows = (
         qs.values("path", "view_name")
         .annotate(views=Count("id"))
@@ -102,35 +142,10 @@ def api_top_pages(request):
 
 
 @staff_member_required
-def api_recent_views(request):
-    """Most recent individual page views with location data."""
-    try:
-        limit = min(int(request.GET.get("limit", 50)), 200)
-    except (ValueError, TypeError):
-        limit = 50
-    rows = (
-        PageView.objects.filter(is_bot=False)
-        .order_by("-timestamp")
-        .values("path", "country", "country_name", "city", "device_type", "browser", "timestamp")[:limit]
-    )
-    data = [
-        {
-            "path": r["path"],
-            "country": r["country"],
-            "country_name": r["country_name"],
-            "city": r["city"],
-            "device_type": r["device_type"],
-            "browser": r["browser"],
-            "timestamp": r["timestamp"].strftime("%H:%M:%S") if r["timestamp"] else "",
-        }
-        for r in rows
-    ]
-    return JsonResponse({"data": data})
-
-
-@staff_member_required
 def api_top_articles(request):
-    qs = _base_qs(request).filter(article__isnull=False)
+    qs = _base_activities(request, activity_type=PAGE_VIEW).filter(
+        article__isnull=False
+    )
     rows = (
         qs.values("article__id", "article__title")
         .annotate(views=Count("id"))
@@ -145,29 +160,39 @@ def api_top_articles(request):
 
 @staff_member_required
 def api_top_referrers(request):
-    qs = _base_qs(request).exclude(Q(referrer_domain="") | Q(referrer_domain__isnull=True))
+    qs = _base_sessions(request).exclude(
+        Q(referrer_domain="") | Q(referrer_domain__isnull=True)
+    )
     rows = (
         qs.values("referrer_domain")
-        .annotate(views=Count("id"))
-        .order_by("-views")[:15]
+        .annotate(sessions=Count("id"))
+        .order_by("-sessions")[:15]
     )
-    return JsonResponse({"data": list(rows)})
+    data = [
+        {"referrer_domain": r["referrer_domain"], "sessions": r["sessions"]}
+        for r in rows
+    ]
+    return JsonResponse({"data": data})
 
 
 @staff_member_required
 def api_geo(request):
-    qs = _base_qs(request).exclude(country="")
+    since = timezone.now() - timedelta(days=_parse_days(request))
+    qs = Client.objects.filter(
+        last_seen__gte=since, is_bot=False
+    ).exclude(country="")
     rows = (
         qs.values("country", "country_name")
-        .annotate(views=Count("id"))
-        .order_by("-views")[:20]
+        .annotate(clients=Count("id"))
+        .order_by("-clients")[:20]
     )
     return JsonResponse({"data": list(rows)})
 
 
 @staff_member_required
 def api_devices(request):
-    qs = _base_qs(request)
+    since = timezone.now() - timedelta(days=_parse_days(request))
+    qs = Client.objects.filter(last_seen__gte=since, is_bot=False)
     devices = list(
         qs.values("device_type").annotate(count=Count("id")).order_by("-count")
     )
@@ -188,11 +213,108 @@ def api_devices(request):
 
 @staff_member_required
 def api_categories(request):
-    qs = _base_qs(request).filter(category__isnull=False)
+    qs = _base_activities(request, activity_type=PAGE_VIEW).filter(
+        category__isnull=False
+    )
     rows = (
         qs.values("category__name")
         .annotate(views=Count("id"))
         .order_by("-views")[:20]
     )
     data = [{"name": r["category__name"], "views": r["views"]} for r in rows]
+    return JsonResponse({"data": data})
+
+
+@staff_member_required
+def api_sessions(request):
+    """Session-level analytics: humans vs bots, avg duration, etc."""
+    qs = _base_sessions(request)
+
+    # Single aggregate query for all counts
+    counts = qs.aggregate(
+        total=Count("id"),
+        humans=Count("id", filter=Q(is_human=True)),
+        bounced=Count("id", filter=Q(page_count__lte=1)),
+    )
+    total = counts["total"]
+    bounce_rate = round(counts["bounced"] / total * 100, 1) if total else 0
+
+    # Average stats (only completed sessions)
+    avg_stats = qs.filter(ended_at__isnull=False).aggregate(
+        avg_pages=Avg("page_count"),
+        avg_active_time=Avg("active_time"),
+        avg_duration=Avg(F("ended_at") - F("started_at")),
+    )
+
+    # Handle avg_duration: timedelta on PostgreSQL, float on SQLite
+    avg_duration = avg_stats["avg_duration"]
+    if avg_duration is not None:
+        avg_duration_secs = avg_duration.total_seconds() if hasattr(avg_duration, "total_seconds") else float(avg_duration)
+    else:
+        avg_duration_secs = 0
+
+    return JsonResponse({
+        "total": total,
+        "humans": counts["humans"],
+        "bounce_rate": bounce_rate,
+        "avg_pages": round(avg_stats["avg_pages"] or 0, 1),
+        "avg_active_time": round(avg_stats["avg_active_time"] or 0, 0),
+        "avg_duration": avg_duration_secs,
+    })
+
+
+@staff_member_required
+def api_recent_views(request):
+    """Most recent page views with client info."""
+    try:
+        limit = min(int(request.GET.get("limit", 50)), 200)
+    except (ValueError, TypeError):
+        limit = 50
+
+    rows = (
+        Activity.objects.filter(type=PAGE_VIEW)
+        .select_related("session__client")
+        .order_by("-timestamp")[:limit]
+    )
+    data = [
+        {
+            "path": r.path,
+            "country": r.session.client.country if r.session else "",
+            "country_name": r.session.client.country_name if r.session else "",
+            "city": r.session.client.city if r.session else "",
+            "device_type": r.session.client.device_type if r.session else "",
+            "browser": r.session.client.browser if r.session else "",
+            "is_human": r.session.is_human if r.session else False,
+            "timestamp": r.timestamp.strftime("%H:%M:%S") if r.timestamp else "",
+        }
+        for r in rows
+    ]
+    return JsonResponse({"data": data})
+
+
+@staff_member_required
+def api_live_sessions(request):
+    """Currently active sessions (no ended_at)."""
+    active = (
+        Session.objects.filter(ended_at__isnull=True)
+        .select_related("client")
+        .order_by("-started_at")[:50]
+    )
+    data = [
+        {
+            "session_id": str(s.session_id),
+            "client_id": str(s.client.client_id),
+            "device_type": s.client.device_type,
+            "browser": s.client.browser,
+            "country": s.client.country,
+            "country_name": s.client.country_name,
+            "city": s.client.city,
+            "page_count": s.page_count,
+            "active_time": s.active_time,
+            "has_interaction": s.has_interaction,
+            "is_human": s.is_human,
+            "started_at": s.started_at.strftime("%H:%M:%S"),
+        }
+        for s in active
+    ]
     return JsonResponse({"data": data})

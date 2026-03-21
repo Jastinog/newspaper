@@ -6,8 +6,9 @@ from django.db.models import Count, Sum
 from django.db.models.functions import ExtractHour
 from django.utils import timezone
 
-from apps.analytics.models import PageView
 import re
+
+from apps.analytics.models import Activity, Client, Session
 
 from apps.news.models import APIUsage, Article, DeepDive, Digest, Feed
 
@@ -237,15 +238,15 @@ def dashboard_callback(request, context):
     # === Traffic analytics ===
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     yesterday_start = today_start - timedelta(days=1)
-    base_pv = PageView.objects.filter(is_bot=False)
+    base_pv = Activity.objects.filter(type=Activity.ActivityType.PAGE_VIEW)
 
     today_pv = base_pv.filter(timestamp__gte=today_start)
     yesterday_pv = base_pv.filter(timestamp__gte=yesterday_start, timestamp__lt=today_start)
 
     today_views = today_pv.count()
-    today_visitors = today_pv.values("session_hash").distinct().count()
+    today_visitors = today_pv.values("session__client").distinct().count()
     yesterday_views = yesterday_pv.count()
-    yesterday_visitors = yesterday_pv.values("session_hash").distinct().count()
+    yesterday_visitors = yesterday_pv.values("session__client").distinct().count()
 
     # Hourly traffic for today
     hourly_qs = list(
@@ -277,7 +278,7 @@ def dashboard_callback(request, context):
         base_pv.filter(timestamp__gte=thirty_days_ago)
         .extra(select={"day": "DATE(timestamp)"})
         .values("day")
-        .annotate(views=Count("id"), visitors=Count("session_hash", distinct=True))
+        .annotate(views=Count("id"), visitors=Count("session__client", distinct=True))
         .order_by("day")
     )
     views_map = {str(r["day"]): {"views": r["views"], "visitors": r["visitors"]} for r in daily_views}
@@ -295,7 +296,7 @@ def dashboard_callback(request, context):
                 "tension": 0.3,
             },
             {
-                "label": "Visitors",
+                "label": "Clients",
                 "data": [views_map.get(str(d), {}).get("visitors", 0) for d in dates],
                 "borderColor": "rgb(59, 130, 246)",
                 "backgroundColor": "rgba(59, 130, 246, 0.1)",
@@ -309,7 +310,7 @@ def dashboard_callback(request, context):
 
     # Top OS
     top_os = list(
-        base_pv.filter(timestamp__gte=thirty_days_ago)
+        Client.objects.filter(last_seen__gte=thirty_days_ago, is_bot=False)
         .exclude(os="")
         .values("os")
         .annotate(count=Count("id"))
@@ -322,7 +323,7 @@ def dashboard_callback(request, context):
     os_chart = json.dumps({
         "labels": [r["os"] for r in top_os],
         "datasets": [{
-            "label": "Views",
+            "label": "Clients",
             "data": [r["count"] for r in top_os],
             "backgroundColor": os_palette[:len(top_os)],
             "borderWidth": 0,
@@ -332,11 +333,11 @@ def dashboard_callback(request, context):
 
     # Top referrers
     top_referrers = list(
-        base_pv.filter(timestamp__gte=thirty_days_ago)
+        Session.objects.filter(started_at__gte=thirty_days_ago)
         .exclude(referrer_domain="")
         .values("referrer_domain")
-        .annotate(views=Count("id"))
-        .order_by("-views")[:8]
+        .annotate(sessions=Count("id"))
+        .order_by("-sessions")[:8]
     )
 
     # === Top Deep Dives by views ===

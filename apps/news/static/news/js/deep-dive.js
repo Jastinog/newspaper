@@ -207,9 +207,8 @@
 
     /* ── WS handlers ─────────────────────────────────── */
 
-    WS.on('init', function (msg) {
-        var dives = msg.deep_dives || {};
-        var readyIds = dives.ready || [];
+    WS.on('deep_dive.state', function (msg) {
+        var readyIds = msg.ready || [];
         readyIds.forEach(markReady);
 
         var keys = Object.keys(pending);

@@ -5,6 +5,8 @@ import logging
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 
+from apps.analytics.services import SessionService
+
 logger = logging.getLogger(__name__)
 
 # In-progress deep dive generations: item_id -> {event, url, error, waiters}
@@ -12,34 +14,53 @@ _generations = {}
 
 
 class SiteConsumer(AsyncWebsocketConsumer):
-    """Main WebSocket endpoint for the site.
+    """Single WebSocket endpoint for the entire site.
 
-    Single connection at /ws/ handles all real-time features via actions.
+    Handles analytics tracking and deep dive generation over one /ws/ connection.
+    Action routing via ACTIONS dict — each action maps to a handler method.
 
-    Protocol
+    Protocol (dot-namespaced)
     --------
     Client -> Server:
-        {"action": "deep_dive.generate", "item_id": 123}
+        {"action": "analytics.init",       "client_id": "uuid", "referrer": "..."}
+        {"action": "analytics.page_view",  "path": "/...", "referrer": "..."}
+        {"action": "analytics.activity",   "type": "scroll|click", "path": "/...", "meta": {...}}
+        {"action": "analytics.heartbeat",  "active_time": 120, "has_interaction": true}
+        {"action": "deep_dive.generate",   "item_id": 123}
 
     Server -> Client:
-        {"type": "init", "deep_dives": {"ready": [1,2], "generating": [3]}}
-        {"type": "deep_dive.generating", "item_id": 123}
-        {"type": "deep_dive.progress",   "item_id": 123, "step": 1, "total_steps": 6, "step_id": "queries", "label": "...", "detail": "..."}
-        {"type": "deep_dive.ready",      "item_id": 123, "url": "/deep-dive/123/"}
-        {"type": "deep_dive.error",      "item_id": 123, "message": "..."}
+        {"type": "analytics.session",      "session_id": "uuid"}
+        {"type": "deep_dive.state",        "ready": [...], "generating": [...]}
+        {"type": "deep_dive.generating",   "item_id": 123}
+        {"type": "deep_dive.progress",     "item_id": 123, "step": 1, ...}
+        {"type": "deep_dive.ready",        "item_id": 123, "url": "..."}
+        {"type": "deep_dive.error",        "item_id": 123, "message": "..."}
     """
 
     ACTIONS = {
+        # Analytics
+        "analytics.init": "_on_analytics_init",
+        "analytics.page_view": "_on_analytics_page_view",
+        "analytics.activity": "_on_analytics_activity",
+        "analytics.heartbeat": "_on_analytics_heartbeat",
+        # Deep Dive
         "deep_dive.generate": "_on_deep_dive_generate",
     }
 
-    # ── Lifecycle ──────────────────────────────────────
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.analytics = None
+
+    # ── Lifecycle ───────────────────────────────────
 
     async def connect(self):
         await self.accept()
+        self.analytics = SessionService(self.scope)
+        state = await self._deep_dive_state()
         await self.send(json.dumps({
-            "type": "init",
-            "deep_dives": await self._deep_dive_state(),
+            "type": "deep_dive.state",
+            "ready": state["ready"],
+            "generating": state["generating"],
         }))
 
     async def receive(self, text_data=None, bytes_data=None):
@@ -54,14 +75,60 @@ class SiteConsumer(AsyncWebsocketConsumer):
         if handler_name:
             await getattr(self, handler_name)(data)
 
-    # ── Deep Dive actions ──────────────────────────────
+    async def disconnect(self, code):
+        for gen in _generations.values():
+            gen["waiters"].discard(self)
+        if self.analytics and self.analytics.is_active:
+            await database_sync_to_async(self.analytics.close)()
+
+    # ── Analytics actions ───────────────────────────
+
+    async def _on_analytics_init(self, data):
+        client, session = await database_sync_to_async(self.analytics.open)(
+            raw_client_id=data.get("client_id", ""),
+            referrer=data.get("referrer", ""),
+        )
+        # Record the initial page view atomically with session creation
+        path = data.get("path", "")
+        if path:
+            await database_sync_to_async(self.analytics.page_view)(
+                path=path,
+                referrer=data.get("referrer", ""),
+            )
+        await self.send(json.dumps({
+            "type": "analytics.session",
+            "session_id": str(session.session_id),
+        }))
+
+    async def _on_analytics_page_view(self, data):
+        await database_sync_to_async(self.analytics.page_view)(
+            path=data.get("path", ""),
+            referrer=data.get("referrer", ""),
+        )
+
+    async def _on_analytics_activity(self, data):
+        meta = data.get("meta") or {}
+        if not isinstance(meta, dict):
+            meta = {}
+        await database_sync_to_async(self.analytics.activity)(
+            activity_type=data.get("type", ""),
+            path=data.get("path", ""),
+            meta=meta,
+        )
+
+    async def _on_analytics_heartbeat(self, data):
+        await database_sync_to_async(self.analytics.heartbeat)(
+            active_time=int(data.get("active_time", 0)),
+            has_interaction=bool(data.get("has_interaction", False)),
+        )
+
+    # ── Deep Dive actions ───────────────────────────
 
     async def _on_deep_dive_generate(self, data):
         item_id = data.get("item_id")
         if not item_id:
             return
 
-        # Already exists — instant response
         url = await self._deep_dive_url(item_id)
         if url:
             await self.send(json.dumps({
@@ -76,7 +143,6 @@ class SiteConsumer(AsyncWebsocketConsumer):
             "item_id": item_id,
         }))
 
-        # Start generation if nobody else is doing it
         if item_id not in _generations:
             _generations[item_id] = {
                 "event": asyncio.Event(),
@@ -87,16 +153,13 @@ class SiteConsumer(AsyncWebsocketConsumer):
             asyncio.create_task(self._run_deep_dive(item_id))
 
         _generations[item_id]["waiters"].add(self)
-
-        # Wait for result in a non-blocking task
         asyncio.create_task(self._await_deep_dive(item_id))
 
     async def _run_deep_dive(self, item_id):
         gen = _generations[item_id]
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
 
         def progress_callback(step, total, step_id, label, detail=None):
-            """Called from sync thread — schedules WS sends on the event loop."""
             msg = json.dumps({
                 "type": "deep_dive.progress",
                 "item_id": item_id,
@@ -117,11 +180,10 @@ class SiteConsumer(AsyncWebsocketConsumer):
             gen["error"] = str(e)
         finally:
             gen["event"].set()
-            await asyncio.sleep(5)  # let waiters read the result
+            await asyncio.sleep(5)
             _generations.pop(item_id, None)
 
     async def _broadcast_progress(self, item_id, msg):
-        """Send progress message to all waiting clients."""
         gen = _generations.get(item_id)
         if not gen:
             return
@@ -158,29 +220,25 @@ class SiteConsumer(AsyncWebsocketConsumer):
                 "message": gen.get("error", "Unknown error"),
             }))
 
-    # ── DB helpers ─────────────────────────────────────
+    # ── Deep Dive DB helpers ────────────────────────
 
     @database_sync_to_async
     def _deep_dive_state(self):
-        from apps.news.models import DeepDive, Digest
+        from apps.news.models import DeepDive, Digest, DigestItem
 
-        # Return state for the most recent digest of each language
-        digests = Digest.objects.order_by("-date")[:3]
-        if not digests:
+        digest_ids = list(Digest.objects.order_by("-date").values_list("id", flat=True)[:3])
+        if not digest_ids:
             return {"ready": [], "generating": []}
 
-        item_ids = set()
-        for digest in digests:
-            item_ids.update(
-                digest.sections.values_list("items__id", flat=True)
-            )
+        item_ids = set(
+            DigestItem.objects.filter(section__digest_id__in=digest_ids)
+            .values_list("id", flat=True)
+        )
         ready = list(
             DeepDive.objects.filter(item_id__in=item_ids)
             .values_list("item_id", flat=True)
         )
-        generating = [
-            iid for iid in _generations if iid in item_ids
-        ]
+        generating = [iid for iid in _generations if iid in item_ids]
         return {"ready": ready, "generating": generating}
 
     @database_sync_to_async

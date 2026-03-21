@@ -1,8 +1,89 @@
+import uuid
+
 from django.db import models
 
 
-class PageView(models.Model):
-    # Request info
+class Client(models.Model):
+    """A recognized visitor device/browser. Persists across sessions via localStorage."""
+
+    client_id = models.UUIDField(unique=True, db_index=True)
+    first_seen = models.DateTimeField(auto_now_add=True)
+    last_seen = models.DateTimeField(auto_now=True)
+
+    # Device info (updated each session)
+    device_type = models.CharField(max_length=20, blank=True, default="")
+    browser = models.CharField(max_length=50, blank=True, default="")
+    os = models.CharField(max_length=50, blank=True, default="")
+    user_agent = models.CharField(max_length=500, blank=True, default="")
+
+    # Privacy-safe identity
+    ip_hash = models.CharField(max_length=64, blank=True, default="")
+
+    # Geo (updated each session)
+    country = models.CharField(max_length=2, blank=True, default="")
+    country_name = models.CharField(max_length=100, blank=True, default="")
+    city = models.CharField(max_length=200, blank=True, default="")
+
+    # Bot classification
+    is_bot = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ["-last_seen"]
+        indexes = [
+            models.Index(fields=["-last_seen"]),
+            models.Index(fields=["is_bot", "-last_seen"]),
+            models.Index(fields=["country", "-last_seen"]),
+        ]
+
+    def __str__(self):
+        return f"Client {self.client_id} ({self.device_type or 'unknown'})"
+
+
+class Session(models.Model):
+    """One visit session = lifecycle of a WebSocket connection."""
+
+    session_id = models.UUIDField(default=uuid.uuid4, unique=True, db_index=True)
+    client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name="sessions")
+
+    started_at = models.DateTimeField(auto_now_add=True)
+    ended_at = models.DateTimeField(null=True, blank=True)
+
+    # Aggregated stats (updated on disconnect / heartbeat)
+    page_count = models.PositiveIntegerField(default=0)
+    active_time = models.PositiveIntegerField(default=0, help_text="Seconds of active time")
+    has_interaction = models.BooleanField(default=False)
+
+    # Referrer of the first page
+    referrer = models.URLField(max_length=2000, blank=True, default="")
+    referrer_domain = models.CharField(max_length=253, blank=True, default="")
+
+    # Human verdict: WS connected (JS ran) + had real interaction
+    is_human = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ["-started_at"]
+        indexes = [
+            models.Index(fields=["-started_at"]),
+            models.Index(fields=["client", "-started_at"]),
+            models.Index(fields=["is_human", "-started_at"]),
+        ]
+
+    def __str__(self):
+        return f"Session {self.session_id} ({self.started_at:%Y-%m-%d %H:%M})"
+
+
+class Activity(models.Model):
+    """Individual action within a session."""
+
+    class ActivityType(models.TextChoices):
+        PAGE_VIEW = "page_view", "Page View"
+        SCROLL = "scroll", "Scroll"
+        CLICK = "click", "Click"
+        HEARTBEAT = "heartbeat", "Heartbeat"
+
+    session = models.ForeignKey(Session, on_delete=models.CASCADE, related_name="activities")
+
+    type = models.CharField(max_length=20, choices=ActivityType.choices)
     path = models.CharField(max_length=2000)
     view_name = models.CharField(max_length=100, blank=True, default="")
     article = models.ForeignKey(
@@ -10,48 +91,26 @@ class PageView(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="page_views",
+        related_name="activities",
     )
     category = models.ForeignKey(
         "news.Category",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="page_views",
+        related_name="activities",
     )
-
-    # Visitor (privacy-safe)
-    ip_hash = models.CharField(max_length=64, blank=True, default="")
-    session_hash = models.CharField(max_length=64, blank=True, default="")
-
-    # User-Agent
-    user_agent = models.CharField(max_length=500, blank=True, default="")
-    is_bot = models.BooleanField(default=False)
-    device_type = models.CharField(max_length=20, blank=True, default="")
-    browser = models.CharField(max_length=50, blank=True, default="")
-    os = models.CharField(max_length=50, blank=True, default="")
-
-    # Referrer
-    referrer = models.URLField(max_length=2000, blank=True, default="")
-    referrer_domain = models.CharField(max_length=253, blank=True, default="")
-
-    # Geo
-    country = models.CharField(max_length=2, blank=True, default="")
-    country_name = models.CharField(max_length=100, blank=True, default="")
-    city = models.CharField(max_length=200, blank=True, default="")
-
-    # Time
     timestamp = models.DateTimeField(auto_now_add=True, db_index=True)
+    meta = models.JSONField(default=dict, blank=True)
 
     class Meta:
         ordering = ["-timestamp"]
         indexes = [
-            models.Index(fields=["timestamp", "is_bot"]),
-            models.Index(fields=["view_name", "timestamp"]),
-            models.Index(fields=["article", "timestamp"]),
-            models.Index(fields=["referrer_domain", "timestamp"]),
-            models.Index(fields=["country", "timestamp"]),
+            models.Index(fields=["session", "-timestamp"]),
+            models.Index(fields=["type", "-timestamp"]),
+            models.Index(fields=["article", "-timestamp"]),
+            models.Index(fields=["path", "-timestamp"]),
         ]
 
     def __str__(self):
-        return f"{self.path} @ {self.timestamp:%Y-%m-%d %H:%M}"
+        return f"{self.type} {self.path} @ {self.timestamp:%H:%M:%S}"
