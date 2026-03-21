@@ -10,10 +10,17 @@ from django.utils import timezone
 from .models import PageView
 
 
+def _parse_days(request, default=30, maximum=365):
+    """Parse the 'days' query parameter, clamped to a safe maximum."""
+    try:
+        return min(int(request.GET.get("days", default)), maximum)
+    except (ValueError, TypeError):
+        return default
+
+
 def _base_qs(request):
     """Base queryset: non-bot views within the requested period."""
-    days = min(int(request.GET.get("days", 30)), 365)
-    since = timezone.now() - timedelta(days=days)
+    since = timezone.now() - timedelta(days=_parse_days(request))
     return PageView.objects.filter(is_bot=False, timestamp__gte=since)
 
 
@@ -92,6 +99,33 @@ def api_top_pages(request):
         .order_by("-views")[:20]
     )
     return JsonResponse({"data": list(rows)})
+
+
+@staff_member_required
+def api_recent_views(request):
+    """Most recent individual page views with location data."""
+    try:
+        limit = min(int(request.GET.get("limit", 50)), 200)
+    except (ValueError, TypeError):
+        limit = 50
+    rows = (
+        PageView.objects.filter(is_bot=False)
+        .order_by("-timestamp")
+        .values("path", "country", "country_name", "city", "device_type", "browser", "timestamp")[:limit]
+    )
+    data = [
+        {
+            "path": r["path"],
+            "country": r["country"],
+            "country_name": r["country_name"],
+            "city": r["city"],
+            "device_type": r["device_type"],
+            "browser": r["browser"],
+            "timestamp": r["timestamp"].strftime("%H:%M:%S") if r["timestamp"] else "",
+        }
+        for r in rows
+    ]
+    return JsonResponse({"data": data})
 
 
 @staff_member_required

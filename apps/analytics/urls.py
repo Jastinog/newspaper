@@ -14,4 +14,5 @@ urlpatterns = [
     path("api/geo/", views.api_geo, name="api_geo"),
     path("api/devices/", views.api_devices, name="api_devices"),
     path("api/categories/", views.api_categories, name="api_categories"),
+    path("api/recent-views/", views.api_recent_views, name="api_recent_views"),
 ]

@@ -97,16 +97,13 @@
         padding-bottom: 0.5rem;
         border-bottom: 1px solid var(--border);
     }
-    .chart-container {
-        position: relative;
-        width: 100%;
-        max-height: 350px;
-    }
+    .chart-container,
     .chart-container-sm {
         position: relative;
         width: 100%;
-        max-height: 220px;
     }
+    .chart-container { max-height: 350px; }
+    .chart-container-sm { max-height: 220px; }
 
     /* ── Grid layouts ────────────────────────── */
     .grid-2 {
@@ -215,6 +212,11 @@
     </div>
 </div>
 
+<div class="chart-section">
+    <h2>{% trans "Recent Page Views" %}</h2>
+    <div id="table-recent-views"><div class="loading">Loading...</div></div>
+</div>
+
 <div class="grid-2">
     <div class="chart-section">
         <h2>{% trans "Top Referrers" %}</h2>
@@ -306,6 +308,15 @@
         if (current > previous) return 'delta up';
         if (current < previous) return 'delta down';
         return 'delta flat';
+    }
+
+    function countryFlag(code) {
+        if (!code || code.length !== 2) return '';
+        var c = code.toUpperCase();
+        return String.fromCodePoint(
+            0x1F1E6 + c.charCodeAt(0) - 65,
+            0x1F1E6 + c.charCodeAt(1) - 65
+        );
     }
 
     function clearChildren(el) {
@@ -451,37 +462,44 @@
 
     /* ── Tables ─────────────────────────────── */
 
-    function loadArticlesTable(data) {
-        var el = document.getElementById('table-articles');
+    function truncate(str, max) {
+        return str.length > max ? str.substring(0, max) + '\u2026' : str;
+    }
+
+    function renderTable(elementId, headers, data, rowMapper) {
+        var el = document.getElementById(elementId);
         clearChildren(el);
-        if (!data.length) { el.appendChild(createEl('div', {'class': 'loading'}, 'No data')); return; }
-        var rows = data.slice(0, 15).map(function(r) {
-            var title = r.title.length > 60 ? r.title.substring(0, 60) + '\u2026' : r.title;
-            return [{href: '/article/' + r.id + '/', text: title}, {text: formatNum(r.views)}];
+        if (!data.length) {
+            el.appendChild(createEl('div', {'class': 'loading'}, 'No data'));
+            return;
+        }
+        el.appendChild(buildTable(headers, data.map(rowMapper)));
+    }
+
+    function loadArticlesTable(data) {
+        renderTable('table-articles', ['Article', 'Views'], data.slice(0, 15), function(r) {
+            return [{href: '/article/' + r.id + '/', text: truncate(r.title, 60)}, {text: formatNum(r.views)}];
         });
-        el.appendChild(buildTable(['Article', 'Views'], rows));
     }
 
     function loadPagesTable(data) {
-        var el = document.getElementById('table-pages');
-        clearChildren(el);
-        if (!data.length) { el.appendChild(createEl('div', {'class': 'loading'}, 'No data')); return; }
-        var rows = data.slice(0, 15).map(function(r) {
-            var path = r.path.length > 50 ? r.path.substring(0, 50) + '\u2026' : r.path;
-            var name = r.view_name || '—';
-            return [{text: path}, {text: name}, {text: formatNum(r.views)}];
+        renderTable('table-pages', ['Path', 'View', 'Views'], data.slice(0, 15), function(r) {
+            return [{text: truncate(r.path, 50)}, {text: r.view_name || '\u2014'}, {text: formatNum(r.views)}];
         });
-        el.appendChild(buildTable(['Path', 'View', 'Views'], rows));
     }
 
     function loadReferrersTable(data) {
-        var el = document.getElementById('table-referrers');
-        clearChildren(el);
-        if (!data.length) { el.appendChild(createEl('div', {'class': 'loading'}, 'No data')); return; }
-        var rows = data.slice(0, 15).map(function(r) {
+        renderTable('table-referrers', ['Domain', 'Views'], data.slice(0, 15), function(r) {
             return [{text: r.referrer_domain}, {text: formatNum(r.views)}];
         });
-        el.appendChild(buildTable(['Domain', 'Views'], rows));
+    }
+
+    function loadRecentViews(data) {
+        renderTable('table-recent-views', ['Time', 'Path', 'Location', 'Browser'], data, function(r) {
+            var flag = countryFlag(r.country);
+            var location = (flag ? flag + ' ' : '') + (r.city || r.country_name || r.country || '\u2014');
+            return [{text: r.timestamp}, {text: truncate(r.path, 45)}, {text: location}, {text: r.browser || '\u2014'}];
+        });
     }
 
     /* ── Doughnut / Bar charts ──────────────── */
@@ -538,6 +556,7 @@
         api('top-articles/').then(function(r) { loadArticlesTable(r.data); });
         api('top-pages/').then(function(r) { loadPagesTable(r.data); });
         api('top-referrers/').then(function(r) { loadReferrersTable(r.data); });
+        api('recent-views/', false).then(function(r) { loadRecentViews(r.data); });
 
         api('devices/').then(function(r) {
             var devLabels = r.devices.map(function(d) { return d.device_type || 'unknown'; });
@@ -554,11 +573,18 @@
         });
 
         api('geo/').then(function(r) {
-            var labels = r.data.map(function(d) { return d.country_name || d.country; });
+            var labels = r.data.map(function(d) {
+                var flag = countryFlag(d.country);
+                var name = d.country_name || d.country;
+                return flag ? flag + ' ' + name : name;
+            });
             var values = r.data.map(function(d) { return d.views; });
             makeBar('chart-geo', labels.slice(0, 10), values.slice(0, 10), 'geo');
             if (r.data.length > 0) {
-                document.getElementById('top-country').textContent = r.data[0].country_name || r.data[0].country || '\u2014';
+                var top = r.data[0];
+                var topFlag = countryFlag(top.country);
+                var topName = top.country_name || top.country || '\u2014';
+                document.getElementById('top-country').textContent = topFlag ? topFlag + ' ' + topName : topName;
             }
         });
 

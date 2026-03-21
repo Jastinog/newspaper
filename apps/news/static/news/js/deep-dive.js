@@ -51,26 +51,49 @@
         if (link) link.closest('li').classList.add('deep-dive-ready');
     }
 
-    /** Get truncated topic text for an item from the DOM. */
-    function getTopicText(itemId) {
-        var link = document.querySelector(
-            'a.item-topic[data-item-id="' + itemId + '"]'
+    /** Extract full item data from the DOM for display in panel/modal. */
+    function getItemData(itemId) {
+        var hint = document.querySelector(
+            '.deep-dive-link[data-item-id="' + itemId + '"]'
         );
-        if (!link) return 'Deep Dive #' + itemId;
+        var li = hint ? hint.closest('li') : null;
+        if (!li) return { topic: 'Deep Dive #' + itemId, summary: '', imageUrl: '' };
 
-        var text = link.textContent.trim();
-        return text.length > 40 ? text.substring(0, 37) + '...' : text;
+        var topicEl = li.querySelector('.item-topic');
+        var summaryEl = li.querySelector('.item-summary');
+        var imageEl = li.querySelector('.item-image');
+
+        return {
+            topic: topicEl ? topicEl.textContent.trim() : 'Deep Dive #' + itemId,
+            summary: summaryEl ? summaryEl.textContent.trim() : '',
+            imageUrl: imageEl ? imageEl.src : '',
+        };
     }
 
     /* ── Modal ─────────────────────────────────────────── */
 
-    function showModal(topic, url) {
+    function img(className, src) {
+        var node = el('img', className);
+        node.src = src;
+        node.alt = '';
+        return node;
+    }
+
+    function showModal(p, url) {
         var overlay = el('div', 'dd-modal-overlay');
         var modal = el('div', 'dd-modal');
 
+        if (p.imageUrl) {
+            modal.appendChild(img('dd-modal-image', p.imageUrl));
+        }
+
         modal.appendChild(el('div', 'dd-modal-check', '\u2713'));
         modal.appendChild(el('div', 'dd-modal-title', bodyData('ddReady', 'Deep dive ready')));
-        modal.appendChild(el('div', 'dd-modal-topic', topic));
+        modal.appendChild(el('div', 'dd-modal-topic', p.topic));
+
+        if (p.summary) {
+            modal.appendChild(el('div', 'dd-modal-summary', p.summary));
+        }
 
         var actions = el('div', 'dd-modal-actions');
 
@@ -134,8 +157,17 @@
         if (p.url) row.classList.add('ready');
         else if (p.error) row.classList.add('errored');
 
+        if (p.imageUrl) {
+            row.appendChild(img('dd-item-image', p.imageUrl));
+        }
+
+        row.appendChild(el('div', 'dd-item-topic', p.topic));
+
+        if (p.summary) {
+            row.appendChild(el('div', 'dd-item-summary', p.summary));
+        }
+
         var header = el('div', 'dd-item-header');
-        header.appendChild(el('span', 'dd-item-topic', p.topic));
         header.appendChild(buildStatusIndicator(p));
         row.appendChild(header);
 
@@ -162,7 +194,9 @@
 
     function cleanupFinished() {
         Object.keys(pending).forEach(function (k) {
-            if (pending[k].url || pending[k].error) {
+            var p = pending[k];
+            if ((p.url || p.error) && !p._cleaning) {
+                p._cleaning = true;
                 setTimeout(function () {
                     delete pending[k];
                     renderPanel();
@@ -215,7 +249,7 @@
         p.step = p.totalSteps || 6;
         renderPanel();
 
-        showModal(p.topic, msg.url);
+        showModal(p, msg.url);
         cleanupFinished();
     });
 
@@ -246,8 +280,11 @@
                 return;
             }
 
+            var data = getItemData(itemId);
             pending[itemId] = {
-                topic: getTopicText(itemId),
+                topic: data.topic,
+                summary: data.summary,
+                imageUrl: data.imageUrl,
                 step: 0,
                 totalSteps: 6,
                 stepId: null,

@@ -133,3 +133,57 @@ msgstr "No digest yet. Run the digest command to generate one."
 
 msgid "Daily AI-curated news digest from 100+ RSS sources worldwide"
 msgstr "Daily AI-curated news digest from 100+ RSS sources worldwide"
+
+msgid "Deep dive ready"
+msgstr "Deep dive ready"
+
+msgid "Read"
+msgstr "Read"
+
+msgid "Close"
+msgstr "Close"
+
+msgid "AI-powered deep analysis of this topic based on collected sources."
+msgstr "AI-powered deep analysis of this topic based on collected sources."
+
+msgid "Generate analysis"
+msgstr "Generate analysis"
+
+msgid "Uses AI tokens for generation"
+msgstr "Uses AI tokens for generation"
+
+msgid "Recent Page Views"
+msgstr "Recent Page Views"
+
+msgid "Today"
+msgstr "Today"
+
+msgid "Views Today"
+msgstr "Views Today"
+
+msgid "Visitors Today"
+msgstr "Visitors Today"
+
+msgid "Period Views"
+msgstr "Period Views"
+
+msgid "Period Visitors"
+msgstr "Period Visitors"
+
+msgid "Today — Hourly Traffic"
+msgstr "Today — Hourly Traffic"
+
+msgid "Period Overview"
+msgstr "Period Overview"
+
+msgid "Top Pages"
+msgstr "Top Pages"
+
+msgid "Operating Systems"
+msgstr "Operating Systems"
+
+msgid "Devices & Tech"
+msgstr "Devices & Tech"
+
+msgid "Content"
+msgstr "Content"

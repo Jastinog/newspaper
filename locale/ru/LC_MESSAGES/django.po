@@ -134,3 +134,57 @@ msgstr "Дайджест ещё не создан. Запустите коман
 
 msgid "Daily AI-curated news digest from 100+ RSS sources worldwide"
 msgstr "Ежедневный AI-дайджест новостей из 100+ RSS-источников по всему миру"
+
+msgid "Deep dive ready"
+msgstr "Анализ готов"
+
+msgid "Read"
+msgstr "Читать"
+
+msgid "Close"
+msgstr "Закрыть"
+
+msgid "AI-powered deep analysis of this topic based on collected sources."
+msgstr "Глубокий AI-анализ темы на основе собранных источников."
+
+msgid "Generate analysis"
+msgstr "Сгенерировать анализ"
+
+msgid "Uses AI tokens for generation"
+msgstr "Для генерации используются AI-токены"
+
+msgid "Recent Page Views"
+msgstr "Последние просмотры"
+
+msgid "Today"
+msgstr "Сегодня"
+
+msgid "Views Today"
+msgstr "Просмотры сегодня"
+
+msgid "Visitors Today"
+msgstr "Посетители сегодня"
+
+msgid "Period Views"
+msgstr "Просмотры за период"
+
+msgid "Period Visitors"
+msgstr "Посетители за период"
+
+msgid "Today — Hourly Traffic"
+msgstr "Сегодня — почасовой трафик"
+
+msgid "Period Overview"
+msgstr "Обзор за период"
+
+msgid "Top Pages"
+msgstr "Популярные страницы"
+
+msgid "Operating Systems"
+msgstr "Операционные системы"
+
+msgid "Devices & Tech"
+msgstr "Устройства и технологии"
+
+msgid "Content"
+msgstr "Контент"

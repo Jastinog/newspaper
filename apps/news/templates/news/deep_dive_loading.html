@@ -45,16 +45,14 @@
     }
     .dd-progress-loading .dd-progress-bar {
         height: 3px;
-        background: rgba(128,128,128,0.2);
-        border-radius: 2px;
+        background: var(--border-faint);
         margin-bottom: 0.9rem;
         overflow: hidden;
     }
     .dd-progress-loading .dd-progress-bar-fill {
         height: 100%;
         width: 0;
-        background: var(--accent, #6b1520);
-        border-radius: 2px;
+        background: var(--accent);
         transition: width 0.5s ease;
     }
     .dd-step {
@@ -90,20 +88,77 @@
         0%, 100% { opacity: 1; }
         50% { opacity: 0.5; }
     }
+
+    .generate-description {
+        font-family: "PT Serif", Georgia, serif;
+        font-size: 0.95rem;
+        color: var(--fg-muted);
+        max-width: 400px;
+        line-height: 1.5;
+        margin-bottom: 1.5rem;
+    }
+    .generate-btn {
+        font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+        font-size: 0.95rem;
+        font-weight: 600;
+        padding: 0.7rem 2rem;
+        border: none;
+        cursor: pointer;
+        background: var(--accent);
+        color: #fff;
+        transition: opacity 0.2s;
+    }
+    .generate-btn:hover { opacity: 0.85; }
+    .generate-note {
+        font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+        font-size: 0.72rem;
+        color: var(--fg-faint);
+        margin-top: 0.7rem;
+    }
+    .back-link {
+        display: inline-block;
+        margin-top: 1.2rem;
+        font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+        font-size: 0.8rem;
+        color: var(--fg-muted);
+        text-decoration: none;
+    }
+    .back-link:hover { color: var(--fg); }
+
+    .generating-state { display: none; }
+    .loading-overlay-inline {
+        position: static;
+        background: none;
+        backdrop-filter: none;
+        display: flex;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="loading-container">
     <div class="loading-topic">{{ item.topic }}</div>
-    <div id="loadingOverlay" class="active" style="position:static;background:none;backdrop-filter:none;display:flex">
-        <canvas id="orbitCanvas"></canvas>
+
+    <!-- Pre-generation state: button to start -->
+    <div id="generatePrompt">
+        <p class="generate-description">{% trans "AI-powered deep analysis of this topic based on collected sources." %}</p>
+        <button class="generate-btn" id="generateBtn">{% trans "Generate analysis" %}</button>
+        <p class="generate-note">{% trans "Uses AI tokens for generation" %}</p>
+        <a href="{% url 'index' %}" class="back-link">&larr; {% trans "Back to digest" %}</a>
     </div>
-    <div class="loading-label" id="loadingLabel">{% trans "Gathering information from sources..." %}</div>
-    <div class="dd-progress-loading" id="deepDiveProgress" style="display:none">
-        <div class="dd-progress-bar"><div class="dd-progress-bar-fill"></div></div>
-        <div class="dd-progress-steps"></div>
+
+    <!-- Generation in progress state -->
+    <div id="generatingState" class="generating-state">
+        <div id="loadingOverlay" class="loading-overlay-inline">
+            <canvas id="orbitCanvas"></canvas>
+        </div>
+        <div class="loading-label" id="loadingLabel">{% trans "Gathering information from sources..." %}</div>
+        <div class="dd-progress-loading" id="deepDiveProgress" style="display:none">
+            <div class="dd-progress-bar"><div class="dd-progress-bar-fill"></div></div>
+            <div class="dd-progress-steps"></div>
+        </div>
     </div>
+
     <div class="loading-error" id="loadingError">
         {% trans "Generation error." %} <a href="{% url 'index' %}">{% trans "Back to digest" %}</a>
     </div>
@@ -133,13 +188,17 @@
         var total = msg.total_steps || 6;
         var current = msg.step || 1;
 
-        while (stepsEl.firstChild) stepsEl.removeChild(stepsEl.firstChild);
+        stepsEl.textContent = '';
 
         for (var i = 0; i < STEP_DEFS.length && i < total; i++) {
             var s = STEP_DEFS[i];
             var num = i + 1;
+            var state = '';
+            if (num < current) state = ' done';
+            else if (num === current) state = ' active';
+
             var div = document.createElement('div');
-            div.className = 'dd-step' + (num < current ? ' done' : num === current ? ' active' : '');
+            div.className = 'dd-step' + state;
 
             var icon = document.createElement('span');
             icon.className = 'dd-step-icon';
@@ -164,9 +223,13 @@
         if (bar) bar.style.width = Math.round((current / total) * 100) + '%';
     }
 
-    WS.on('init', function () {
+    function startGeneration() {
+        document.getElementById('generatePrompt').style.display = 'none';
+        document.getElementById('generatingState').style.display = 'block';
         WS.send('deep_dive.generate', { item_id: itemId });
-    });
+    }
+
+    document.getElementById('generateBtn').addEventListener('click', startGeneration);
 
     WS.on('deep_dive.progress', function (msg) {
         if (msg.item_id === itemId) showProgress(msg);
@@ -178,8 +241,7 @@
 
     WS.on('deep_dive.error', function (msg) {
         if (msg.item_id === itemId) {
-            document.getElementById('loadingLabel').style.display = 'none';
-            document.getElementById('deepDiveProgress').style.display = 'none';
+            document.getElementById('generatingState').style.display = 'none';
             document.getElementById('loadingError').style.display = 'block';
         }
     });
