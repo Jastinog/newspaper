@@ -539,6 +539,9 @@
             font-size: 0.7rem;
             opacity: 0.7;
         }
+        .digest-section h3.stuck {
+            border-radius: 0 0 3px 3px;
+        }
 
         /* Section dropdown */
         .section-dropdown {
@@ -693,6 +696,14 @@
         var dropdown = document.getElementById('sectionDropdown');
         var items = dropdown.querySelectorAll('.section-dropdown-item');
         var backBtn = document.getElementById('backToTop');
+
+        /* Detect stuck headings */
+        var observer = new IntersectionObserver(function(entries) {
+            entries.forEach(function(e) {
+                e.target.classList.toggle('stuck', e.intersectionRatio < 1);
+            });
+        }, { threshold: 1, rootMargin: '-1px 0px 0px 0px' });
+        headings.forEach(function(h) { observer.observe(h); });
 
         /* Find which section is currently at the top of the viewport */
         function getCurrentIndex() {
