@@ -771,7 +771,7 @@
                     if (sections[i].getBoundingClientRect().top <= 80) { current = i; break; }
                 }
                 navItems.forEach(function(it, i) {
-                    if (i === 0) return;
+                    if (i === 0) { it.classList.remove('active'); return; }
                     it.classList.toggle('active', i - 1 === current);
                 });
             }
