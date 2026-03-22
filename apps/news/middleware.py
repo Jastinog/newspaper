@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.shortcuts import redirect
 
 from apps.analytics.utils import get_client_ip, resolve_geo
 
@@ -29,3 +30,33 @@ class GeoLanguageMiddleware:
             request.COOKIES[LANGUAGE_COOKIE_NAME] = lang
 
         return self.get_response(request)
+
+
+# Prefixes where 404 should NOT redirect (APIs, static, admin, etc.)
+_NO_REDIRECT_PREFIXES = (
+    "/admin/",
+    "/api/",
+    "/static/",
+    "/media/",
+    "/ws/",
+    "/analytics/",
+    "/sitemap",
+    "/robots.txt",
+    "/favicon.",
+)
+
+
+class Redirect404Middleware:
+    """Redirect 404 responses to the homepage for public pages."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        response = self.get_response(request)
+        if (
+            response.status_code == 404
+            and not any(request.path.startswith(p) for p in _NO_REDIRECT_PREFIXES)
+        ):
+            return redirect("/")
+        return response
