@@ -154,16 +154,21 @@ def search(request):
         }
         return render(request, "news/search.html", {"query": "", "seo": seo})
 
+    sort = request.GET.get("sort", "date")
+    if sort not in ("date", "relevance"):
+        sort = "date"
+
     service = SearchService()
-    results = service.search_articles(query, top_k=30)
+    results = service.search_articles(query, top_k=30, sort=sort)
 
     seo = {
         "title": f"{query} — {_('Search')} — {SITE_NAME}",
-        "description": f"Search results for: {query}",
+        "description": f"{_('Search results for')} {query}",
     }
 
     return render(request, "news/search.html", {
         "query": query,
+        "sort": sort,
         "results": results.get("articles", []),
         "queries": results.get("queries", []),
         "elapsed_ms": results.get("elapsed_ms", 0),

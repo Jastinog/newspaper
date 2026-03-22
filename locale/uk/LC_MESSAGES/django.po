@@ -227,6 +227,36 @@ msgstr "Нейтральний"
 msgid "Daily AI-curated news digest from 100+ RSS sources worldwide"
 msgstr "Щоденний AI-дайджест новин з 100+ RSS-джерел з усього світу"
 
+msgid "Search"
+msgstr "Пошук"
+
+msgid "Search news..."
+msgstr "Пошук новин..."
+
+msgid "results"
+msgstr "результатів"
+
+msgid "ms"
+msgstr "мс"
+
+msgid "New"
+msgstr "Нові"
+
+msgid "Relevant"
+msgstr "Релевантні"
+
+msgid "No articles found for your query."
+msgstr "За вашим запитом нічого не знайдено."
+
+msgid "Try different keywords or a broader topic."
+msgstr "Спробуйте інші ключові слова або ширшу тему."
+
+msgid "Enter a topic to search across all news sources."
+msgstr "Введіть тему для пошуку по всіх джерелах новин."
+
+msgid "Search results for"
+msgstr "Результати пошуку за запитом"
+
 #~ msgid "Articles Viewed"
 #~ msgstr "Переглянуто статей"
 

@@ -1,6 +1,7 @@
 import json
 import logging
 import time
+from datetime import datetime
 
 from django.db.models import Prefetch
 
@@ -66,7 +67,10 @@ class SearchService:
         self.embedder = EmbeddingClient()
         self.search = SimilaritySearch(days=30)
 
-    def search_articles(self, user_query: str, top_k: int = 30) -> dict:
+    SORT_DATE = "date"
+    SORT_RELEVANCE = "relevance"
+
+    def search_articles(self, user_query: str, top_k: int = 30, sort: str = "date") -> dict:
         start = time.time()
 
         queries, _ = self.query_gen.generate(user_query)
@@ -107,14 +111,8 @@ class SearchService:
                 else:
                     article_snippets[article_id] = text
 
-        sorted_article_ids = sorted(
-            article_scores.keys(),
-            key=lambda aid: article_scores[aid],
-            reverse=True,
-        )
-
         articles = Article.objects.filter(
-            id__in=sorted_article_ids,
+            id__in=list(article_scores.keys()),
         ).select_related("feed", "feed__category").prefetch_related(
             Prefetch(
                 "images",
@@ -125,15 +123,20 @@ class SearchService:
         article_map = {a.id: a for a in articles}
 
         results = []
-        for aid in sorted_article_ids:
+        for aid, score in article_scores.items():
             article = article_map.get(aid)
             if not article:
                 continue
             results.append({
                 "article": article,
-                "score": round(article_scores[aid] * 100, 1),
+                "score": round(score * 100, 1),
                 "snippet": article_snippets.get(aid, ""),
             })
+
+        if sort == self.SORT_DATE:
+            results.sort(key=lambda r: r["article"].published or datetime.min, reverse=True)
+        else:
+            results.sort(key=lambda r: r["score"], reverse=True)
 
         return {
             "articles": results,
