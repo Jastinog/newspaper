@@ -63,11 +63,11 @@
         font-size: 0.95rem;
         font-weight: 700;
         letter-spacing: 0.02em;
-        color: var(--accent);
+        color: var(--section-heading-fg);
+        background: var(--accent);
         margin-bottom: 0.7rem;
-        padding-bottom: 0.4rem;
-        border-bottom: 2px solid var(--accent);
-        text-shadow: var(--emboss-subtle);
+        padding: 0.35rem 0.6rem;
+        border-radius: 3px;
     }
 
     .digest-section .summary {
@@ -526,6 +526,81 @@
 
         .digest-section h3 {
             font-size: 0.85rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .digest-section h3::after {
+            content: "▾";
+            font-size: 0.7rem;
+            opacity: 0.7;
+        }
+
+        /* Section dropdown */
+        .section-dropdown {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 200;
+            background: rgba(0,0,0,0.4);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+        }
+        .section-dropdown.open { display: flex; align-items: flex-start; justify-content: center; }
+        .section-dropdown-list {
+            margin-top: 2.5rem;
+            width: 85%;
+            max-width: 320px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.5rem 0;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        .section-dropdown-item {
+            display: block;
+            padding: 0.6rem 1rem;
+            font-family: "PT Serif", Georgia, serif;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--fg);
+            text-decoration: none;
+            border-bottom: 1px solid var(--border-faint);
+        }
+        .section-dropdown-item:last-child { border-bottom: none; }
+        .section-dropdown-item:active { background: var(--accent); color: #fff; }
+        .section-dropdown-item.current {
+            color: var(--accent);
+        }
+
+        /* Back to top */
+        .back-to-top {
+            display: none;
+            position: fixed;
+            bottom: 1.2rem;
+            right: 1.2rem;
+            z-index: 150;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--accent);
+            color: var(--section-heading-fg);
+            border: none;
+            font-size: 1.1rem;
+            line-height: 1;
+            cursor: pointer;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        .back-to-top.visible {
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .digest-section .summary {
@@ -596,7 +671,73 @@
     {% endfor %}
     </div>
 
+    <!-- Section dropdown (mobile) -->
+    <div class="section-dropdown" id="sectionDropdown">
+        <div class="section-dropdown-list" id="sectionDropdownList">
+        {% for section in digest.sections.all %}
+            <a class="section-dropdown-item" data-index="{{ forloop.counter0 }}">{{ section.title }}</a>
+        {% endfor %}
+        </div>
+    </div>
+
+    <!-- Back to top (mobile) -->
+    <button class="back-to-top" id="backToTop" aria-label="Back to top">&uarr;</button>
+
     <script src="{% static 'news/js/deep-dive.js' %}"></script>
+    <script>
+    (function() {
+        if (window.innerWidth >= 600) return;
+
+        var sections = document.querySelectorAll('.digest-section');
+        var headings = document.querySelectorAll('.digest-section h3');
+        var dropdown = document.getElementById('sectionDropdown');
+        var items = dropdown.querySelectorAll('.section-dropdown-item');
+        var backBtn = document.getElementById('backToTop');
+
+        /* Find which section is currently at the top of the viewport */
+        function getCurrentIndex() {
+            for (var i = sections.length - 1; i >= 0; i--) {
+                if (sections[i].getBoundingClientRect().top <= 40) return i;
+            }
+            return 0;
+        }
+
+        /* Open dropdown from any section heading */
+        headings.forEach(function(h) {
+            h.addEventListener('click', function(e) {
+                e.preventDefault();
+                var idx = getCurrentIndex();
+                items.forEach(function(it, i) {
+                    it.classList.toggle('current', i === idx);
+                });
+                dropdown.classList.add('open');
+            });
+        });
+
+        /* Select section from dropdown */
+        items.forEach(function(item) {
+            item.addEventListener('click', function() {
+                var idx = parseInt(this.dataset.index, 10);
+                dropdown.classList.remove('open');
+                sections[idx].scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+        });
+
+        /* Close on backdrop tap */
+        dropdown.addEventListener('click', function(e) {
+            if (e.target === dropdown) dropdown.classList.remove('open');
+        });
+
+        /* Back to top */
+        window.addEventListener('scroll', function() {
+            backBtn.classList.toggle('visible', window.scrollY > 400);
+        }, { passive: true });
+
+        backBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+    })();
+    </script>
 {% else %}
     <div class="empty">
         <p>{% trans "No digest yet. Run the digest command to generate one." %}</p>
