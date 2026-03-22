@@ -9,6 +9,7 @@ urlpatterns = [
     path("digest/<str:date>/", views.index, name="digest_by_date"),
     path("article/<int:pk>/<slug:slug>/", views.article_detail, name="article_detail"),
     path("article/<int:pk>/", views.article_detail_redirect, name="article_detail_redirect"),
+    path("search/", views.search, name="search"),
     path("deep-dive/<int:item_id>/", views.deep_dive, name="deep_dive"),
     path("category/<slug:slug>/", views.category_detail, name="category_detail"),
     path("robots.txt", views.robots_txt, name="robots_txt"),

@@ -7,6 +7,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 from .models import Article, Category, DeepDive, Digest, DigestItem, Feed
+from .services.search import SearchService
 from .serializers import (
     ArticleDetailSerializer,
     ArticleListSerializer,
@@ -139,6 +140,33 @@ def deep_dive(request, item_id):
         "dive": dive,
         "section": item.section,
         "sources": sources,
+        "seo": seo,
+    })
+
+
+def search(request):
+    query = request.GET.get("q", "").strip()
+
+    if not query:
+        seo = {
+            "title": f"{_('Search')} — {SITE_NAME}",
+            "description": SITE_DESCRIPTION,
+        }
+        return render(request, "news/search.html", {"query": "", "seo": seo})
+
+    service = SearchService()
+    results = service.search_articles(query, top_k=30)
+
+    seo = {
+        "title": f"{query} — {_('Search')} — {SITE_NAME}",
+        "description": f"Search results for: {query}",
+    }
+
+    return render(request, "news/search.html", {
+        "query": query,
+        "results": results.get("articles", []),
+        "queries": results.get("queries", []),
+        "elapsed_ms": results.get("elapsed_ms", 0),
         "seo": seo,
     })
 

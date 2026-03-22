@@ -9,6 +9,8 @@ from apps.news.services.ai import (
     MODEL_MINI, OpenAIClient, calculate_cost, fix_truncated_json,
 )
 
+from apps.news.services.utils import deduplicate_queries
+
 from .search import SimilaritySearch
 
 logger = logging.getLogger(__name__)
@@ -72,14 +74,7 @@ class QueryGenerator:
         all_queries.extend(entities)
         llm_queries, chat_usage = self._generate_llm_queries(topic, summary)
         all_queries.extend(llm_queries)
-        seen = set()
-        unique = []
-        for q in all_queries:
-            q_lower = q.lower().strip()
-            if q_lower not in seen:
-                seen.add(q_lower)
-                unique.append(q)
-        return unique[:9], chat_usage
+        return deduplicate_queries(all_queries, limit=9), chat_usage
 
 
 class ArticleSynthesizer:

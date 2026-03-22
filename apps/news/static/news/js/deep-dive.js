@@ -57,20 +57,10 @@
 
     /* ── Inline progress rendering ───────────────────── */
 
-    /** Inject progress bar + step label into the card. */
+    /** Inject step label into the card. */
     function injectProgress(itemId) {
         var c = getCardEls(itemId);
         if (!c.li) return;
-
-        c.li.classList.add('dd-generating');
-
-        // Progress bar at bottom of li
-        if (!c.li.querySelector('.dd-inline-bar')) {
-            var bar = el('div', 'dd-inline-bar');
-            var fill = el('div', 'dd-inline-bar-fill');
-            bar.appendChild(fill);
-            c.li.appendChild(bar);
-        }
 
         // Hide the original link, show step label
         if (c.link && !c.link._ddHidden) {

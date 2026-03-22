@@ -1,0 +1,265 @@
+{% extends "news/base.html" %}
+{% load i18n %}
+
+{% block extra_css %}
+<style>
+    .search-meta {
+        font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+        font-size: 0.72rem;
+        color: var(--fg-faint);
+        text-align: center;
+        margin-bottom: 1.5rem;
+        letter-spacing: 0.02em;
+    }
+
+    .search-queries {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+        justify-content: center;
+        margin-bottom: 1.5rem;
+    }
+    .search-query-tag {
+        font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+        font-size: 0.65rem;
+        color: var(--fg-muted);
+        background: var(--border-faint);
+        padding: 0.2rem 0.5rem;
+        border-radius: 2px;
+        letter-spacing: 0.02em;
+    }
+
+    .search-rule {
+        border-top: 2px solid var(--border-heavy);
+        margin-bottom: 1.5rem;
+    }
+
+    .search-results {
+        display: grid;
+        gap: 1.5rem;
+    }
+
+    .search-result {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 0.8rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid var(--border-faint);
+    }
+    .search-result:last-child {
+        border-bottom: none;
+    }
+
+    .result-visual {
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        border-radius: 3px;
+        overflow: hidden;
+        display: block;
+    }
+
+    .result-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+
+    .result-placeholder {
+        width: 100%;
+        height: 100%;
+        background: var(--border-faint);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        overflow: hidden;
+    }
+    .result-placeholder::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        opacity: 0.08;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Ctext x='50%25' y='55%25' text-anchor='middle' dominant-baseline='middle' font-family='Georgia,serif' font-size='8' fill='%23000' opacity='0.5'%3ENEWS%3C/text%3E%3C/svg%3E");
+        background-size: 60px 60px;
+    }
+    .result-placeholder-letter {
+        font-family: "Libre Baskerville", Georgia, serif;
+        font-size: 3.5rem;
+        font-weight: 700;
+        color: var(--fg-faint);
+        opacity: 0.5;
+        text-shadow: var(--emboss-subtle);
+        line-height: 1;
+        z-index: 1;
+    }
+
+    .result-content {
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+    }
+
+    .result-source {
+        font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+        font-size: 0.65rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--fg-faint);
+    }
+    .result-source .source-category {
+        color: var(--accent);
+    }
+
+    .result-title {
+        font-family: "PT Serif", Georgia, serif;
+        font-size: 1.05rem;
+        font-weight: 700;
+        line-height: 1.3;
+        color: var(--fg);
+        text-decoration: none;
+    }
+    .result-title:hover {
+        color: var(--accent);
+    }
+
+    .result-snippet {
+        font-family: "PT Serif", Georgia, serif;
+        font-size: 0.85rem;
+        line-height: 1.55;
+        color: var(--fg-muted);
+    }
+
+    .result-footer {
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        margin-top: 0.2rem;
+    }
+
+    .result-date {
+        font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+        font-size: 0.65rem;
+        color: var(--fg-faint);
+    }
+
+    .result-score {
+        font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+        font-size: 0.6rem;
+        color: var(--fg-faint);
+        letter-spacing: 0.03em;
+    }
+    .result-score-bar {
+        display: inline-block;
+        width: 40px;
+        height: 3px;
+        background: var(--border-faint);
+        border-radius: 2px;
+        overflow: hidden;
+        vertical-align: middle;
+        margin-left: 0.3rem;
+    }
+    .result-score-fill {
+        height: 100%;
+        background: var(--accent);
+        border-radius: 2px;
+    }
+
+    .search-empty {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: var(--fg-muted);
+        font-family: "PT Serif", Georgia, serif;
+    }
+    .search-empty p {
+        margin-bottom: 0.5rem;
+    }
+
+    @media (min-width: 600px) {
+        .search-result {
+            grid-template-columns: 200px 1fr;
+        }
+        .result-visual {
+            aspect-ratio: 4 / 3;
+        }
+    }
+
+    @media (min-width: 900px) {
+        .search-result {
+            grid-template-columns: 260px 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% with autofocus=True %}
+    {% include "news/_search_bar.html" %}
+{% endwith %}
+
+{% if query %}
+    {% if queries %}
+    <div class="search-queries">
+        {% for q in queries %}
+            <span class="search-query-tag">{{ q }}</span>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if results %}
+        <div class="search-meta">
+            {{ results|length }} {% trans "results" %} &middot; {{ elapsed_ms }} {% trans "ms" %}
+        </div>
+
+        <div class="search-rule"></div>
+
+        <div class="search-results">
+            {% for r in results %}
+                {% with article=r.article score=r.score snippet=r.snippet %}
+                <div class="search-result">
+                    <a href="{{ article.get_absolute_url }}" class="result-visual">
+                        {% if article.primary_images and article.primary_images.0.image %}
+                            <img class="result-image" src="{{ article.primary_images.0.image.url }}" alt="" loading="lazy">
+                        {% else %}
+                            <div class="result-placeholder">
+                                <span class="result-placeholder-letter">{{ article.title|first }}</span>
+                            </div>
+                        {% endif %}
+                    </a>
+                    <div class="result-content">
+                        <div class="result-source">
+                            {{ article.feed.title }}
+                            {% if article.feed.category %}
+                                &middot; <span class="source-category">{{ article.feed.category.name }}</span>
+                            {% endif %}
+                        </div>
+                        <a href="{{ article.get_absolute_url }}" class="result-title">{{ article.title }}</a>
+                        <div class="result-snippet">{{ snippet }}</div>
+                        <div class="result-footer">
+                            {% if article.published %}
+                                <span class="result-date">{{ article.published|timesince }} {% trans "ago" %}</span>
+                            {% endif %}
+                            <span class="result-score">
+                                {{ score|floatformat:0 }}%
+                                <span class="result-score-bar">
+                                    <span class="result-score-fill" style="width: {{ score|floatformat:0 }}%"></span>
+                                </span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                {% endwith %}
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="search-empty">
+            <p>{% trans "No articles found for your query." %}</p>
+            <p style="font-size: 0.8rem; color: var(--fg-faint);">{% trans "Try different keywords or a broader topic." %}</p>
+        </div>
+    {% endif %}
+{% else %}
+    <div class="search-empty">
+        <p>{% trans "Enter a topic to search across all news sources." %}</p>
+    </div>
+{% endif %}
+{% endblock %}

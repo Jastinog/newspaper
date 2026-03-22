@@ -223,39 +223,6 @@
     }
 
     /* Deep Dive inline card progress */
-    .dd-generating {
-        position: relative;
-    }
-    .dd-generating::before {
-        content: '';
-        position: absolute;
-        inset: 0;
-        border: 1px solid var(--accent);
-        border-radius: 4px;
-        opacity: 0.4;
-        animation: dd-border-pulse 2s ease-in-out infinite;
-        pointer-events: none;
-    }
-    @keyframes dd-border-pulse {
-        0%, 100% { opacity: 0.2; }
-        50%      { opacity: 0.6; }
-    }
-
-    /* Progress bar at bottom of card */
-    .dd-inline-bar {
-        height: 2px;
-        background: var(--border-faint);
-        margin-top: 0.5rem;
-        overflow: hidden;
-        border-radius: 1px;
-    }
-    .dd-inline-bar-fill {
-        height: 100%;
-        width: 0;
-        background: var(--accent);
-        transition: width 0.5s ease;
-    }
-
     /* Step label replacing "details →" */
     .dd-inline-step {
         font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
@@ -578,6 +545,8 @@
 {% endblock %}
 
 {% block content %}
+{% include "news/_search_bar.html" %}
+
 {% if digest %}
     <div class="digest-date-nav">
         {% if prev_date %}
