@@ -14,6 +14,140 @@ BOT_KEYWORDS = [
 ]
 BOT_PATTERN = re.compile("|".join(BOT_KEYWORDS), re.I)
 
+# ── Known bot signatures: (regex_pattern, display_name) ────────────
+# Order matters: first match wins. More specific patterns go first.
+_BOT_SIGNATURE_DEFS = [
+    # Search engines
+    ("Googlebot-Image", "Googlebot Image"),
+    ("Googlebot-News", "Googlebot News"),
+    ("Googlebot-Video", "Googlebot Video"),
+    ("Google-InspectionTool", "Google Inspection Tool"),
+    ("Storebot-Google", "Storebot Google"),
+    ("Google-Extended", "Google Extended (AI)"),
+    ("Googlebot", "Googlebot"),
+    ("AdsBot-Google", "Google AdsBot"),
+    ("Mediapartners-Google", "Google Mediapartners"),
+    ("APIs-Google", "Google APIs"),
+    ("bingbot", "Bingbot"),
+    ("BingPreview", "Bing Preview"),
+    ("msnbot", "MSN Bot"),
+    ("YandexBot", "YandexBot"),
+    ("YandexImages", "Yandex Images"),
+    ("YandexMetrika", "Yandex Metrika"),
+    ("YandexDirect", "Yandex Direct"),
+    ("YandexWebmaster", "Yandex Webmaster"),
+    ("YandexMedia", "Yandex Media"),
+    ("YandexTurbo", "Yandex Turbo"),
+    ("Yandex", "Yandex"),
+    ("Baiduspider", "Baidu Spider"),
+    ("DuckDuckBot", "DuckDuckBot"),
+    (r"Yahoo!?\s*Slurp", "Yahoo Slurp"),
+    ("Sogou", "Sogou Spider"),
+    ("Applebot", "Applebot"),
+    ("Qwantify", "Qwant Bot"),
+    ("ia_archiver", "Alexa Crawler"),
+    (r"archive\.org_bot", "Internet Archive"),
+    # AI / LLM crawlers
+    ("GPTBot", "GPTBot (OpenAI)"),
+    ("ChatGPT-User", "ChatGPT User"),
+    ("OAI-SearchBot", "OpenAI SearchBot"),
+    ("ClaudeBot", "ClaudeBot (Anthropic)"),
+    ("Claude-Web", "Claude Web"),
+    ("anthropic-ai", "Anthropic AI"),
+    ("PerplexityBot", "PerplexityBot"),
+    ("Cohere-ai", "Cohere AI"),
+    ("CCBot", "Common Crawl"),
+    ("Bytespider", "Bytespider (ByteDance)"),
+    ("Diffbot", "Diffbot"),
+    # Social media / messaging
+    ("facebookexternalhit", "Facebook"),
+    ("Facebot", "Facebook"),
+    ("TelegramBot", "Telegram"),
+    ("Twitterbot", "Twitter/X"),
+    ("LinkedInBot", "LinkedIn"),
+    ("WhatsApp", "WhatsApp"),
+    ("Discordbot", "Discord"),
+    ("Pinterest", "Pinterest"),
+    ("Slackbot", "Slack"),
+    ("Viber", "Viber"),
+    ("Snapchat", "Snapchat"),
+    ("vkShare", "VKontakte"),
+    (r"Rocket\.Chat", "Rocket.Chat"),
+    # SEO / analytics bots
+    ("AhrefsBot", "Ahrefs"),
+    ("SemrushBot", "Semrush"),
+    ("MJ12bot", "Majestic"),
+    ("DotBot", "Moz DotBot"),
+    ("BLEXBot", "BLEXBot"),
+    ("PetalBot", "PetalBot"),
+    ("DataForSeoBot", "DataForSEO"),
+    ("serpstatbot", "Serpstat"),
+    ("Screaming Frog", "Screaming Frog"),
+    ("Rogerbot", "Moz Rogerbot"),
+    # Monitoring / uptime
+    ("UptimeRobot", "UptimeRobot"),
+    ("Pingdom", "Pingdom"),
+    ("NewRelicPinger", "New Relic"),
+    ("StatusCake", "StatusCake"),
+    ("Datadog", "Datadog"),
+    ("Site24x7", "Site24x7"),
+    ("Zabbix", "Zabbix"),
+    # Feed readers
+    ("Feedly", "Feedly"),
+    ("Feedbin", "Feedbin"),
+    ("NewsBlur", "NewsBlur"),
+    ("Inoreader", "Inoreader"),
+    ("Tiny Tiny RSS", "Tiny Tiny RSS"),
+    # Dev / HTTP tools
+    ("curl/", "curl"),
+    ("wget/", "wget"),
+    ("python-requests", "Python Requests"),
+    ("python-urllib", "Python urllib"),
+    ("aiohttp", "Python aiohttp"),
+    ("httpx", "Python HTTPX"),
+    ("Go-http-client", "Go HTTP Client"),
+    ("Java/", "Java"),
+    ("Apache-HttpClient", "Apache HttpClient"),
+    ("okhttp", "OkHttp"),
+    ("node-fetch", "Node Fetch"),
+    ("axios/", "Axios"),
+    ("libwww-perl", "Perl LWP"),
+    ("Ruby", "Ruby"),
+    ("PHP/", "PHP"),
+    ("HeadlessChrome", "Headless Chrome"),
+    ("PhantomJS", "PhantomJS"),
+    ("Selenium", "Selenium"),
+    ("Puppeteer", "Puppeteer"),
+    ("Playwright", "Playwright"),
+    # Security scanners
+    ("Nmap", "Nmap"),
+    ("Nikto", "Nikto"),
+    ("sqlmap", "SQLMap"),
+    ("Wapiti", "Wapiti"),
+    ("ZAP", "OWASP ZAP"),
+    ("Nuclei", "Nuclei"),
+    # Other crawlers
+    ("Turnitin", "Turnitin"),
+    ("Grammarly", "Grammarly"),
+    ("W3C_Validator", "W3C Validator"),
+    (r"validator\.nu", "Validator.nu"),
+]
+
+BOT_SIGNATURES = [
+    (re.compile(pattern, re.I), name) for pattern, name in _BOT_SIGNATURE_DEFS
+]
+
+
+def identify_bot(ua_string: str) -> str:
+    """Return a human-readable bot name from the User-Agent, or '' if unknown."""
+    if not ua_string:
+        return ""
+    for pattern, name in BOT_SIGNATURES:
+        if pattern.search(ua_string):
+            return name
+    return ""
+
+
 # GeoIP reader (lazy init)
 _geoip_reader = None
 _geoip_init_attempted = False
@@ -72,31 +206,42 @@ def country_flag(code: str) -> str:
     return chr(0x1F1E6 + ord(c[0]) - 65) + chr(0x1F1E6 + ord(c[1]) - 65)
 
 
+def _empty_result(is_bot: bool, bot_name: str) -> dict:
+    return {
+        "is_bot": is_bot,
+        "device_type": "bot" if is_bot else "",
+        "browser": "",
+        "os": "",
+        "bot_name": bot_name,
+    }
+
+
 def parse_ua(ua_string: str) -> dict:
-    """Parse User-Agent string into device/browser/os info."""
+    """Parse User-Agent string into device/browser/os info + bot identification."""
+    bot_name = identify_bot(ua_string)
+    has_bot_signal = bool(BOT_PATTERN.search(ua_string)) or bool(bot_name)
+
     try:
         from user_agents import parse
         ua = parse(ua_string)
-        is_bot = ua.is_bot or bool(BOT_PATTERN.search(ua_string))
-        if is_bot:
-            device_type = "bot"
-        elif ua.is_mobile:
-            device_type = "mobile"
-        elif ua.is_tablet:
-            device_type = "tablet"
-        else:
-            device_type = "desktop"
-        return {
-            "is_bot": is_bot,
-            "device_type": device_type,
-            "browser": ua.browser.family[:50],
-            "os": ua.os.family[:50],
-        }
     except Exception:
-        is_bot = bool(BOT_PATTERN.search(ua_string))
-        return {
-            "is_bot": is_bot,
-            "device_type": "bot" if is_bot else "",
-            "browser": "",
-            "os": "",
-        }
+        return _empty_result(has_bot_signal, bot_name)
+
+    is_bot = ua.is_bot or has_bot_signal
+
+    if is_bot:
+        device_type = "bot"
+    elif ua.is_mobile:
+        device_type = "mobile"
+    elif ua.is_tablet:
+        device_type = "tablet"
+    else:
+        device_type = "desktop"
+
+    return {
+        "is_bot": is_bot,
+        "device_type": device_type,
+        "browser": ua.browser.family[:50],
+        "os": ua.os.family[:50],
+        "bot_name": bot_name,
+    }

@@ -26,6 +26,7 @@ class Client(models.Model):
 
     # Bot classification
     is_bot = models.BooleanField(default=False)
+    bot_name = models.CharField(max_length=100, blank=True, default="")
 
     class Meta:
         ordering = ["-last_seen"]
@@ -40,10 +41,15 @@ class Client(models.Model):
 
 
 class Session(models.Model):
-    """One visit session = lifecycle of a WebSocket connection."""
+    """One visit session = lifecycle of a WebSocket connection or HTTP request."""
+
+    class Source(models.TextChoices):
+        WEBSOCKET = "websocket", "WebSocket"
+        HTTP = "http", "HTTP"
 
     session_id = models.UUIDField(default=uuid.uuid4, unique=True, db_index=True)
     client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name="sessions")
+    source = models.CharField(max_length=10, choices=Source.choices, default=Source.WEBSOCKET)
 
     started_at = models.DateTimeField(auto_now_add=True)
     ended_at = models.DateTimeField(null=True, blank=True)

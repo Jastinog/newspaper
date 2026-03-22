@@ -5,11 +5,52 @@ from django.db.models import F
 from django.urls import Resolver404, resolve
 from django.utils import timezone
 
+from .models import Activity, Client, Session
+from .utils import hash_with_salt, parse_ua, resolve_geo
+
 MAX_META_KEYS = 10
 MAX_META_VALUE_LEN = 500
 
-from .models import Activity, Client, Session
-from .utils import hash_with_salt, parse_ua, resolve_geo
+
+def resolve_path(path: str):
+    """Resolve Django URL name and extract article/category FK."""
+    view_name = ""
+    article = None
+    category = None
+    try:
+        match = resolve(path)
+        view_name = match.url_name or ""
+        if view_name in ("article_detail", "article_detail_redirect"):
+            from apps.news.models import Article
+            article = (
+                Article.objects.filter(pk=match.kwargs.get("pk"))
+                .select_related("feed__category")
+                .first()
+            )
+            if article and article.feed_id:
+                category = article.feed.category
+        elif view_name == "category_detail":
+            from apps.news.models import Category
+            category = Category.objects.filter(slug=match.kwargs.get("slug")).first()
+    except Resolver404:
+        pass
+    return view_name, article, category
+
+
+def build_client_defaults(ua_info: dict, ua_string: str, ip_hash: str, geo: dict) -> dict:
+    """Build the defaults dict for Client.objects.update_or_create."""
+    return {
+        "device_type": ua_info.get("device_type", "")[:20],
+        "browser": ua_info.get("browser", ""),
+        "os": ua_info.get("os", ""),
+        "user_agent": ua_string,
+        "ip_hash": ip_hash,
+        "is_bot": ua_info.get("is_bot", False),
+        "bot_name": ua_info.get("bot_name", "")[:100],
+        "country": geo.get("country", ""),
+        "country_name": geo.get("country_name", ""),
+        "city": geo.get("city", ""),
+    }
 
 
 class SessionService:
@@ -62,17 +103,9 @@ class SessionService:
 
         self._client, _ = Client.objects.update_or_create(
             client_id=client_id,
-            defaults={
-                "device_type": self._ua_info.get("device_type", "")[:20],
-                "browser": self._ua_info.get("browser", ""),
-                "os": self._ua_info.get("os", ""),
-                "user_agent": self._ua_string,
-                "ip_hash": ip_hash,
-                "is_bot": self._ua_info.get("is_bot", False),
-                "country": self._geo.get("country", ""),
-                "country_name": self._geo.get("country_name", ""),
-                "city": self._geo.get("city", ""),
-            },
+            defaults=build_client_defaults(
+                self._ua_info, self._ua_string, ip_hash, self._geo
+            ),
         )
 
         referrer_domain = ""
@@ -105,7 +138,7 @@ class SessionService:
         if not self._session:
             return
 
-        view_name, article, category = self._resolve_path(path)
+        view_name, article, category = resolve_path(path)
 
         Activity.objects.create(
             session=self._session,
@@ -194,28 +227,3 @@ class SessionService:
                 val = val[:MAX_META_VALUE_LEN]
             sanitized[str(key)[:100]] = val
         return sanitized
-
-    @staticmethod
-    def _resolve_path(path: str):
-        """Resolve Django URL name and extract article/category FK."""
-        view_name = ""
-        article = None
-        category = None
-        try:
-            match = resolve(path)
-            view_name = match.url_name or ""
-            if view_name in ("article_detail", "article_detail_redirect"):
-                from apps.news.models import Article
-                article = (
-                    Article.objects.filter(pk=match.kwargs.get("pk"))
-                    .select_related("feed__category")
-                    .first()
-                )
-                if article and article.feed_id:
-                    category = article.feed.category
-            elif view_name == "category_detail":
-                from apps.news.models import Category
-                category = Category.objects.filter(slug=match.kwargs.get("slug")).first()
-        except Resolver404:
-            pass
-        return view_name, article, category

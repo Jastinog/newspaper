@@ -78,16 +78,21 @@
 
     /* ── Verdict badge ───────────────────────── */
     .badge {
-        display: inline-block;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
         padding: 0.15rem 0.5rem;
         border-radius: 3px;
         font-size: 0.75rem;
         font-weight: 600;
         letter-spacing: 0.02em;
+        white-space: nowrap;
     }
     .badge-human { background: #2d6a4f22; color: #2d6a4f; border: 1px solid #2d6a4f44; }
     .badge-bot { background: #c1121f22; color: #c1121f; border: 1px solid #c1121f44; }
     .badge-unknown { background: #66666622; color: #666; border: 1px solid #66666644; }
+    .badge-http { background: #e76f5122; color: #e76f51; border: 1px solid #e76f5144; }
+    .badge .badge-icon { font-size: 1em; }
 
     /* ── Section heading ─────────────────────── */
     .section-title {
@@ -403,10 +408,24 @@
         return el;
     }
 
-    function makeBadge(isHuman) {
+    function makeBadge(item) {
         var span = document.createElement('span');
-        span.className = 'badge ' + (isHuman ? 'badge-human' : 'badge-unknown');
-        span.textContent = isHuman ? 'Human' : '?';
+        if (item.is_bot) {
+            span.className = 'badge badge-bot';
+            var botIco = createEl('span', {'class': 'badge-icon'}, '\u{1F916}');
+            span.appendChild(botIco);
+            var name = item.bot_name || 'Bot';
+            var src = item.source === 'http' ? ' (HTTP)' : '';
+            span.appendChild(document.createTextNode(' ' + name + src));
+        } else if (item.is_human) {
+            span.className = 'badge badge-human';
+            var humIco = createEl('span', {'class': 'badge-icon'}, '\u{1F464}');
+            span.appendChild(humIco);
+            span.appendChild(document.createTextNode(' Human'));
+        } else {
+            span.className = 'badge badge-unknown';
+            span.textContent = '?';
+        }
         return span;
     }
 
@@ -532,7 +551,7 @@
                         {text: loc},
                         {text: s.page_count.toString()},
                         {text: formatTime(s.active_time)},
-                        {node: makeBadge(s.is_human)}
+                        {node: makeBadge(s)}
                     ];
                 }
             );
@@ -612,7 +631,7 @@
                 {text: truncate(r.path, 45)},
                 {text: location},
                 {text: r.browser || '\u2014'},
-                {node: makeBadge(r.is_human)}
+                {node: makeBadge(r)}
             ];
         });
     }

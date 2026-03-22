@@ -279,13 +279,16 @@ def api_recent_views(request):
     data = [
         {
             "path": r.path,
-            "country": r.session.client.country if r.session else "",
-            "country_name": r.session.client.country_name if r.session else "",
-            "city": r.session.client.city if r.session else "",
-            "device_type": r.session.client.device_type if r.session else "",
-            "browser": r.session.client.browser if r.session else "",
-            "is_human": r.session.is_human if r.session else False,
-            "timestamp": r.timestamp.strftime("%H:%M:%S") if r.timestamp else "",
+            "country": r.session.client.country,
+            "country_name": r.session.client.country_name,
+            "city": r.session.client.city,
+            "device_type": r.session.client.device_type,
+            "browser": r.session.client.browser,
+            "is_human": r.session.is_human,
+            "is_bot": r.session.client.is_bot,
+            "bot_name": r.session.client.bot_name,
+            "source": r.session.source,
+            "timestamp": r.timestamp.strftime("%H:%M:%S"),
         }
         for r in rows
     ]
@@ -313,6 +316,9 @@ def api_live_sessions(request):
             "active_time": s.active_time,
             "has_interaction": s.has_interaction,
             "is_human": s.is_human,
+            "is_bot": s.client.is_bot,
+            "bot_name": s.client.bot_name,
+            "source": s.source,
             "started_at": s.started_at.strftime("%H:%M:%S"),
         }
         for s in active
