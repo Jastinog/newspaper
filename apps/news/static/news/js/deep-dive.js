@@ -1,9 +1,9 @@
 /**
  * Deep dive feature — supports multiple concurrent generations.
  *
- * Marks digest items that have a ready deep dive, handles generation
- * requests via the WS client, and shows per-item progress in a panel.
- * Non-blocking: user can continue browsing while deep dives generate.
+ * Shows progress inline on the digest card: a pulsing border, a thin
+ * progress bar at the bottom of the <li>, and the current step label
+ * in place of the "details →" link.
  *
  * Depends on: ws.js
  */
@@ -12,7 +12,6 @@
 
     /* ── Helpers ──────────────────────────────────────── */
 
-    /** Create a DOM element with a class name and optional text content. */
     function el(tag, className, text) {
         var node = document.createElement(tag);
         if (className) node.className = className;
@@ -20,7 +19,6 @@
         return node;
     }
 
-    /** Read an i18n data attribute from <body>, with a fallback. */
     function bodyData(key, fallback) {
         return document.body.dataset[key] || fallback;
     }
@@ -28,7 +26,6 @@
     /* ── State ────────────────────────────────────────── */
 
     var pending = {};
-    var progressPanel = null;
 
     var STEP_ICONS = {
         queries:   '\u2049',
@@ -43,31 +40,107 @@
         return pending.hasOwnProperty(itemId);
     }
 
-    /** Add "deep-dive-ready" class to an item's <li>. */
-    function markReady(itemId) {
+    /** Find the <li> and hint link for a given item id. */
+    function getCardEls(itemId) {
         var link = document.querySelector(
             '.deep-dive-link[data-item-id="' + itemId + '"]'
         );
-        if (link) link.closest('li').classList.add('deep-dive-ready');
+        var li = link ? link.closest('li') : null;
+        return { link: link, li: li };
     }
 
-    /** Extract full item data from the DOM for display in panel/modal. */
-    function getItemData(itemId) {
-        var hint = document.querySelector(
-            '.deep-dive-link[data-item-id="' + itemId + '"]'
-        );
-        var li = hint ? hint.closest('li') : null;
-        if (!li) return { topic: 'Deep Dive #' + itemId, summary: '', imageUrl: '' };
+    /** Add "deep-dive-ready" class to an item's <li>. */
+    function markReady(itemId) {
+        var c = getCardEls(itemId);
+        if (c.li) c.li.classList.add('deep-dive-ready');
+    }
 
-        var topicEl = li.querySelector('.item-topic');
-        var summaryEl = li.querySelector('.item-summary');
-        var imageEl = li.querySelector('.item-image');
+    /* ── Inline progress rendering ───────────────────── */
 
-        return {
-            topic: topicEl ? topicEl.textContent.trim() : 'Deep Dive #' + itemId,
-            summary: summaryEl ? summaryEl.textContent.trim() : '',
-            imageUrl: imageEl ? imageEl.src : '',
-        };
+    /** Inject progress bar + step label into the card. */
+    function injectProgress(itemId) {
+        var c = getCardEls(itemId);
+        if (!c.li) return;
+
+        c.li.classList.add('dd-generating');
+
+        // Progress bar at bottom of li
+        if (!c.li.querySelector('.dd-inline-bar')) {
+            var bar = el('div', 'dd-inline-bar');
+            var fill = el('div', 'dd-inline-bar-fill');
+            bar.appendChild(fill);
+            c.li.appendChild(bar);
+        }
+
+        // Hide the original link, show step label
+        if (c.link && !c.link._ddHidden) {
+            c.link._ddHidden = true;
+            c.link.style.display = 'none';
+            var step = el('span', 'dd-inline-step', '0/6');
+            step.setAttribute('data-dd-step', itemId);
+            c.link.parentNode.insertBefore(step, c.link.nextSibling);
+        }
+    }
+
+    /** Update progress bar + step label on the card. */
+    function updateProgress(itemId, p) {
+        var c = getCardEls(itemId);
+        if (!c.li) return;
+
+        // Update bar fill
+        var fill = c.li.querySelector('.dd-inline-bar-fill');
+        if (fill) {
+            var pct = Math.round(((p.step || 0) / (p.totalSteps || 6)) * 100);
+            fill.style.width = pct + '%';
+        }
+
+        // Update step label
+        var stepEl = c.li.querySelector('[data-dd-step="' + itemId + '"]');
+        if (stepEl) {
+            var icon = p.stepId ? (STEP_ICONS[p.stepId] || '') : '';
+            var label = p.label || p.stepId || '';
+            var counter = (p.step || 0) + '/' + (p.totalSteps || 6);
+            stepEl.textContent = (icon ? icon + ' ' : '') + label + ' ' + counter;
+        }
+    }
+
+    /** Stop the generating animation and remove the progress bar. */
+    function stopGenerating(itemId) {
+        var c = getCardEls(itemId);
+        if (!c.li) return c;
+
+        c.li.classList.remove('dd-generating');
+
+        var bar = c.li.querySelector('.dd-inline-bar');
+        if (bar) bar.remove();
+
+        return c;
+    }
+
+    /** Remove inline progress, restore the link. */
+    function cleanupProgress(itemId) {
+        var c = stopGenerating(itemId);
+        if (!c.li) return;
+
+        var stepEl = c.li.querySelector('[data-dd-step="' + itemId + '"]');
+        if (stepEl) stepEl.remove();
+
+        if (c.link) {
+            c.link.style.display = '';
+            c.link._ddHidden = false;
+        }
+    }
+
+    /** Show error state on the card. */
+    function showError(itemId, message) {
+        var c = stopGenerating(itemId);
+        if (!c.li) return;
+
+        var stepEl = c.li.querySelector('[data-dd-step="' + itemId + '"]');
+        if (stepEl) {
+            stepEl.className = 'dd-inline-step dd-error';
+            stepEl.textContent = '\u2717 ' + (message || bodyData('errorGeneration', 'Error'));
+        }
     }
 
     /* ── Modal ─────────────────────────────────────────── */
@@ -115,96 +188,6 @@
         document.body.appendChild(overlay);
     }
 
-    /* ── Progress panel rendering ────────────────────── */
-
-    function getPanel() {
-        if (!progressPanel) {
-            progressPanel = document.getElementById('deepDiveProgress');
-        }
-        return progressPanel;
-    }
-
-    function renderPanel() {
-        var panel = getPanel();
-        if (!panel) return;
-
-        var container = panel.querySelector('.dd-progress-items');
-        if (!container) return;
-
-        var keys = Object.keys(pending);
-        if (keys.length === 0) {
-            panel.classList.remove('active');
-            return;
-        }
-
-        panel.classList.add('active');
-        container.textContent = '';
-
-        for (var i = 0; i < keys.length; i++) {
-            container.appendChild(buildItemRow(pending[keys[i]]));
-        }
-    }
-
-    function buildStatusIndicator(p) {
-        if (p.url) return el('span', 'dd-item-done', '\u2713');
-        if (p.error) return el('span', 'dd-item-error', '\u2717');
-        return el('span', 'dd-item-status', (p.step || 0) + '/' + (p.totalSteps || 6));
-    }
-
-    function buildItemRow(p) {
-        var row = el('div', 'dd-item');
-
-        if (p.url) row.classList.add('ready');
-        else if (p.error) row.classList.add('errored');
-
-        if (p.imageUrl) {
-            row.appendChild(img('dd-item-image', p.imageUrl));
-        }
-
-        row.appendChild(el('div', 'dd-item-topic', p.topic));
-
-        if (p.summary) {
-            row.appendChild(el('div', 'dd-item-summary', p.summary));
-        }
-
-        var header = el('div', 'dd-item-header');
-        header.appendChild(buildStatusIndicator(p));
-        row.appendChild(header);
-
-        if (p.url || p.error) return row;
-
-        var barWrap = el('div', 'dd-item-bar');
-        var barFill = el('div', 'dd-item-bar-fill');
-        var pct = Math.round(((p.step || 0) / (p.totalSteps || 6)) * 100);
-        barFill.style.width = pct + '%';
-        barWrap.appendChild(barFill);
-        row.appendChild(barWrap);
-
-        if (p.step && p.stepId) {
-            var icon = STEP_ICONS[p.stepId];
-            var stepRow = el('div', 'dd-item-step', (icon ? icon + ' ' : '') + (p.label || p.stepId));
-            if (p.detail) {
-                stepRow.appendChild(el('span', 'dd-item-detail', p.detail));
-            }
-            row.appendChild(stepRow);
-        }
-
-        return row;
-    }
-
-    function cleanupFinished() {
-        Object.keys(pending).forEach(function (k) {
-            var p = pending[k];
-            if ((p.url || p.error) && !p._cleaning) {
-                p._cleaning = true;
-                setTimeout(function () {
-                    delete pending[k];
-                    renderPanel();
-                }, 5000);
-            }
-        });
-    }
-
     /* ── WS handlers ─────────────────────────────────── */
 
     WS.on('deep_dive.state', function (msg) {
@@ -218,14 +201,13 @@
                 var id = parseInt(keys[i], 10);
                 if (readyIds.indexOf(id) !== -1) {
                     p.url = '/deep-dive/' + id + '/';
+                    cleanupProgress(id);
                     markReady(id);
                 } else {
                     WS.send('deep_dive.generate', { item_id: id });
                 }
             }
         }
-        renderPanel();
-        cleanupFinished();
     });
 
     WS.on('deep_dive.progress', function (msg) {
@@ -236,7 +218,7 @@
         p.stepId = msg.step_id;
         p.label = msg.label;
         p.detail = msg.detail;
-        renderPanel();
+        updateProgress(msg.item_id, p);
     });
 
     WS.on('deep_dive.ready', function (msg) {
@@ -246,17 +228,24 @@
         var p = pending[msg.item_id];
         p.url = msg.url;
         p.step = p.totalSteps || 6;
-        renderPanel();
 
+        cleanupProgress(msg.item_id);
         showModal(p, msg.url);
-        cleanupFinished();
+
+        delete pending[msg.item_id];
     });
 
     WS.on('deep_dive.error', function (msg) {
         if (!hasPending(msg.item_id)) return;
-        pending[msg.item_id].error = msg.message || bodyData('errorGeneration', 'Error');
-        renderPanel();
-        cleanupFinished();
+        var p = pending[msg.item_id];
+        p.error = msg.message || bodyData('errorGeneration', 'Error');
+
+        showError(msg.item_id, p.error);
+
+        setTimeout(function () {
+            cleanupProgress(msg.item_id);
+            delete pending[msg.item_id];
+        }, 5000);
     });
 
     /* ── Click handlers ──────────────────────────────── */
@@ -266,8 +255,9 @@
             e.preventDefault();
             var itemId = parseInt(this.dataset.itemId, 10);
             var href = this.getAttribute('href');
+            var li = this.closest('li');
 
-            if (this.closest('li').classList.contains('deep-dive-ready')) {
+            if (li.classList.contains('deep-dive-ready')) {
                 window.location.href = href;
                 return;
             }
@@ -279,11 +269,14 @@
                 return;
             }
 
-            var data = getItemData(itemId);
+            var topicEl = li.querySelector('.item-topic');
+            var summaryEl = li.querySelector('.item-summary');
+            var imageEl = li.querySelector('.item-image');
+
             pending[itemId] = {
-                topic: data.topic,
-                summary: data.summary,
-                imageUrl: data.imageUrl,
+                topic: topicEl ? topicEl.textContent.trim() : 'Deep Dive #' + itemId,
+                summary: summaryEl ? summaryEl.textContent.trim() : '',
+                imageUrl: imageEl ? imageEl.src : '',
                 step: 0,
                 totalSteps: 6,
                 stepId: null,
@@ -293,7 +286,7 @@
                 error: null,
             };
 
-            renderPanel();
+            injectProgress(itemId);
         });
     });
 })();
