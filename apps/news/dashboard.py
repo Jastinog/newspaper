@@ -1,16 +1,17 @@
 import json
+import re
 from datetime import timedelta
 from decimal import Decimal
 
-from django.db.models import Count, Sum
+from django.db.models import Count, Q, Sum
 from django.db.models.functions import ExtractHour
 from django.utils import timezone
 
-import re
-
 from apps.analytics.models import Activity, Client, Session
-
 from apps.news.models import APIUsage, Article, DeepDive, Digest, Feed
+
+
+_DEFAULT_COLOR = ("rgb(156, 163, 175)", "rgba(156, 163, 175, 0.5)")
 
 
 def _build_labels(now, days=30):
@@ -20,26 +21,25 @@ def _build_labels(now, days=30):
     ]
 
 
+def _daily_series(day_map, dates, field, default=0):
+    """Extract a single field from a date-keyed dict for each date."""
+    return [day_map.get(str(d), {}).get(field, default) for d in dates]
+
+
 def dashboard_callback(request, context):
     now = timezone.now()
     today = now.date()
     thirty_days_ago = now - timedelta(days=30)
     dates = _build_labels(now, 30)
     labels = [d.strftime("%d.%m") for d in dates]
+    service_choices = dict(APIUsage.Service.choices)
 
     # === KPI cards ===
     total_cost = APIUsage.objects.aggregate(t=Sum("cost_usd"))["t"] or Decimal("0")
     total_tokens = APIUsage.objects.aggregate(t=Sum("total_tokens"))["t"] or 0
-    today_cost = (
-        APIUsage.objects.filter(created_at__date=today)
-        .aggregate(t=Sum("cost_usd"))["t"]
-        or Decimal("0")
-    )
-    today_tokens = (
-        APIUsage.objects.filter(created_at__date=today)
-        .aggregate(t=Sum("total_tokens"))["t"]
-        or 0
-    )
+    today_qs = APIUsage.objects.filter(created_at__date=today)
+    today_cost = today_qs.aggregate(t=Sum("cost_usd"))["t"] or Decimal("0")
+    today_tokens = today_qs.aggregate(t=Sum("total_tokens"))["t"] or 0
 
     # Counts
     total_articles = Article.objects.count()
@@ -59,16 +59,17 @@ def dashboard_callback(request, context):
         )
         .order_by("model")
     )
-    model_stats = []
-    for row in by_model:
-        model_stats.append({
+    model_stats = [
+        {
             "model": row["model"],
             "cost": f"${row['cost']:.4f}",
             "tokens": f"{row['tokens']:,}",
             "prompt": f"{row['prompt']:,}",
             "completion": f"{row['completion']:,}",
             "calls": row["calls"],
-        })
+        }
+        for row in by_model
+    ]
 
     # === Breakdown by service (all time) ===
     by_service = (
@@ -76,15 +77,15 @@ def dashboard_callback(request, context):
         .annotate(cost=Sum("cost_usd"), tokens=Sum("total_tokens"), calls=Count("id"))
         .order_by("service")
     )
-    service_stats = []
-    for row in by_service:
-        label = dict(APIUsage.Service.choices).get(row["service"], row["service"])
-        service_stats.append({
-            "service": label,
+    service_stats = [
+        {
+            "service": service_choices.get(row["service"], row["service"]),
             "cost": f"${row['cost']:.4f}",
             "tokens": f"{row['tokens']:,}",
             "calls": row["calls"],
-        })
+        }
+        for row in by_service
+    ]
 
     # === Breakdown by service + model (all time) ===
     by_service_model = (
@@ -98,18 +99,18 @@ def dashboard_callback(request, context):
         )
         .order_by("service", "model")
     )
-    service_model_stats = []
-    for row in by_service_model:
-        label = dict(APIUsage.Service.choices).get(row["service"], row["service"])
-        service_model_stats.append({
-            "service": label,
+    service_model_stats = [
+        {
+            "service": service_choices.get(row["service"], row["service"]),
             "model": row["model"],
             "cost": f"${row['cost']:.4f}",
             "tokens": f"{row['tokens']:,}",
             "prompt": f"{row['prompt']:,}",
             "completion": f"{row['completion']:,}",
             "calls": row["calls"],
-        })
+        }
+        for row in by_service_model
+    ]
 
     # === Daily cost chart (last 30 days) ===
     daily_usage = (
@@ -125,7 +126,7 @@ def dashboard_callback(request, context):
         "labels": labels,
         "datasets": [{
             "label": "Cost ($)",
-            "data": [days_map.get(str(d), {}).get("cost", 0) for d in dates],
+            "data": _daily_series(days_map, dates, "cost"),
             "backgroundColor": "rgba(99, 102, 241, 0.5)",
             "borderColor": "rgb(99, 102, 241)",
             "borderWidth": 2,
@@ -137,7 +138,7 @@ def dashboard_callback(request, context):
         "labels": labels,
         "datasets": [{
             "label": "Tokens",
-            "data": [days_map.get(str(d), {}).get("tokens", 0) for d in dates],
+            "data": _daily_series(days_map, dates, "tokens"),
             "borderColor": "rgb(234, 179, 8)",
             "backgroundColor": "rgba(234, 179, 8, 0.1)",
             "borderWidth": 2,
@@ -166,18 +167,20 @@ def dashboard_callback(request, context):
         svc = row["service"]
         svc_days.setdefault(svc, {})[str(row["day"])] = float(row["cost"])
 
+    service_chart_datasets = []
+    for svc, data in svc_days.items():
+        border, bg = service_colors.get(svc, _DEFAULT_COLOR)
+        service_chart_datasets.append({
+            "label": service_choices.get(svc, svc),
+            "data": [data.get(str(d), 0) for d in dates],
+            "backgroundColor": bg,
+            "borderColor": border,
+            "borderWidth": 1,
+        })
+
     service_chart = json.dumps({
         "labels": labels,
-        "datasets": [
-            {
-                "label": dict(APIUsage.Service.choices).get(svc, svc),
-                "data": [data.get(str(d), 0) for d in dates],
-                "backgroundColor": service_colors.get(svc, ("rgb(156,163,175)", "rgba(156,163,175,0.5)"))[1],
-                "borderColor": service_colors.get(svc, ("rgb(156,163,175)", "rgba(156,163,175,0.5)"))[0],
-                "borderWidth": 1,
-            }
-            for svc, data in svc_days.items()
-        ],
+        "datasets": service_chart_datasets,
     })
 
     # === Daily cost by model chart (last 30 days) ===
@@ -205,34 +208,38 @@ def dashboard_callback(request, context):
         mdl_cost_days.setdefault(m, {})[str(row["day"])] = float(row["cost"])
         mdl_token_days.setdefault(m, {})[str(row["day"])] = row["tokens"]
 
+    model_cost_datasets = []
+    for mdl, data in mdl_cost_days.items():
+        border, bg = model_colors.get(mdl, _DEFAULT_COLOR)
+        model_cost_datasets.append({
+            "label": mdl,
+            "data": [data.get(str(d), 0) for d in dates],
+            "backgroundColor": bg,
+            "borderColor": border,
+            "borderWidth": 1,
+        })
+
     model_cost_chart = json.dumps({
         "labels": labels,
-        "datasets": [
-            {
-                "label": mdl,
-                "data": [data.get(str(d), 0) for d in dates],
-                "backgroundColor": model_colors.get(mdl, ("rgb(156,163,175)", "rgba(156,163,175,0.5)"))[1],
-                "borderColor": model_colors.get(mdl, ("rgb(156,163,175)", "rgba(156,163,175,0.5)"))[0],
-                "borderWidth": 1,
-            }
-            for mdl, data in mdl_cost_days.items()
-        ],
+        "datasets": model_cost_datasets,
     })
+
+    model_token_datasets = []
+    for mdl, data in mdl_token_days.items():
+        border, bg = model_colors.get(mdl, _DEFAULT_COLOR)
+        model_token_datasets.append({
+            "label": mdl,
+            "data": [data.get(str(d), 0) for d in dates],
+            "borderColor": border,
+            "backgroundColor": bg,
+            "borderWidth": 2,
+            "fill": True,
+            "tension": 0.3,
+        })
 
     model_token_chart = json.dumps({
         "labels": labels,
-        "datasets": [
-            {
-                "label": mdl,
-                "data": [data.get(str(d), 0) for d in dates],
-                "borderColor": model_colors.get(mdl, ("rgb(156,163,175)", "rgba(156,163,175,0.5)"))[0],
-                "backgroundColor": model_colors.get(mdl, ("rgb(156,163,175)", "rgba(156,163,175,0.5)"))[1],
-                "borderWidth": 2,
-                "fill": True,
-                "tension": 0.3,
-            }
-            for mdl, data in mdl_token_days.items()
-        ],
+        "datasets": model_token_datasets,
     })
 
     # === Traffic analytics ===
@@ -243,52 +250,93 @@ def dashboard_callback(request, context):
     today_pv = base_pv.filter(timestamp__gte=today_start)
     yesterday_pv = base_pv.filter(timestamp__gte=yesterday_start, timestamp__lt=today_start)
 
+    bot_pv_filter = Q(session__client__is_bot=True)
+
     today_views = today_pv.count()
+    today_bot_views = today_pv.filter(bot_pv_filter).count()
+    today_human_views = today_views - today_bot_views
     today_visitors = today_pv.values("session__client").distinct().count()
+    today_bot_visitors = today_pv.filter(bot_pv_filter).values("session__client").distinct().count()
+    today_human_visitors = today_visitors - today_bot_visitors
+
     yesterday_views = yesterday_pv.count()
     yesterday_visitors = yesterday_pv.values("session__client").distinct().count()
 
-    # Hourly traffic for today
+    # Hourly traffic for today — split by human/bot
     hourly_qs = list(
         today_pv
         .annotate(hour=ExtractHour("timestamp"))
         .values("hour")
-        .annotate(views=Count("id"))
+        .annotate(
+            views=Count("id"),
+            bot_views=Count("id", filter=bot_pv_filter),
+        )
         .order_by("hour")
     )
-    hourly_map = {r["hour"]: r["views"] for r in hourly_qs}
+    hourly_map = {r["hour"]: r for r in hourly_qs}
     current_hour = now.hour
     hourly_labels = [f"{h}:00" for h in range(current_hour + 1)]
-    hourly_values = [hourly_map.get(h, 0) for h in range(current_hour + 1)]
+
+    hourly_human_data = []
+    hourly_bot_data = []
+    for h in range(current_hour + 1):
+        row = hourly_map.get(h, {})
+        bot = row.get("bot_views", 0)
+        hourly_bot_data.append(bot)
+        hourly_human_data.append(row.get("views", 0) - bot)
 
     hourly_chart = json.dumps({
         "labels": hourly_labels,
-        "datasets": [{
-            "label": "Views",
-            "data": hourly_values,
-            "backgroundColor": "rgba(34, 197, 94, 0.5)",
-            "borderColor": "rgb(34, 197, 94)",
-            "borderWidth": 1,
-            "type": "bar",
-        }],
+        "datasets": [
+            {
+                "label": "Humans",
+                "data": hourly_human_data,
+                "backgroundColor": "rgba(34, 197, 94, 0.5)",
+                "borderColor": "rgb(34, 197, 94)",
+                "borderWidth": 1,
+                "type": "bar",
+            },
+            {
+                "label": "Bots",
+                "data": hourly_bot_data,
+                "backgroundColor": "rgba(193, 18, 31, 0.4)",
+                "borderColor": "rgb(193, 18, 31)",
+                "borderWidth": 1,
+                "type": "bar",
+            },
+        ],
     })
 
-    # Daily views chart (last 30 days)
+    # Daily views chart (last 30 days) — split by human/bot
     daily_views = (
         base_pv.filter(timestamp__gte=thirty_days_ago)
         .extra(select={"day": "DATE(timestamp)"})
         .values("day")
-        .annotate(views=Count("id"), visitors=Count("session__client", distinct=True))
+        .annotate(
+            views=Count("id"),
+            bot_views=Count("id", filter=bot_pv_filter),
+            visitors=Count("session__client", distinct=True),
+        )
         .order_by("day")
     )
-    views_map = {str(r["day"]): {"views": r["views"], "visitors": r["visitors"]} for r in daily_views}
+    views_map = {str(r["day"]): r for r in daily_views}
+
+    daily_human_views = []
+    daily_bot_views = []
+    daily_visitors = []
+    for d in dates:
+        row = views_map.get(str(d), {})
+        bot = row.get("bot_views", 0)
+        daily_bot_views.append(bot)
+        daily_human_views.append(row.get("views", 0) - bot)
+        daily_visitors.append(row.get("visitors", 0))
 
     views_chart = json.dumps({
         "labels": labels,
         "datasets": [
             {
-                "label": "Views",
-                "data": [views_map.get(str(d), {}).get("views", 0) for d in dates],
+                "label": "Human Views",
+                "data": daily_human_views,
                 "borderColor": "rgb(34, 197, 94)",
                 "backgroundColor": "rgba(34, 197, 94, 0.1)",
                 "borderWidth": 2,
@@ -296,8 +344,18 @@ def dashboard_callback(request, context):
                 "tension": 0.3,
             },
             {
+                "label": "Bot Views",
+                "data": daily_bot_views,
+                "borderColor": "rgb(193, 18, 31)",
+                "backgroundColor": "rgba(193, 18, 31, 0.08)",
+                "borderWidth": 2,
+                "borderDash": [4, 4],
+                "fill": True,
+                "tension": 0.3,
+            },
+            {
                 "label": "Clients",
-                "data": [views_map.get(str(d), {}).get("visitors", 0) for d in dates],
+                "data": daily_visitors,
                 "borderColor": "rgb(59, 130, 246)",
                 "backgroundColor": "rgba(59, 130, 246, 0.1)",
                 "borderWidth": 2,
@@ -375,15 +433,16 @@ def dashboard_callback(request, context):
         APIUsage.objects.select_related("digest", "deep_dive")
         .order_by("-created_at")[:15]
     )
-    recent_table = []
-    for u in recent_calls:
-        recent_table.append({
+    recent_table = [
+        {
             "date": u.created_at.strftime("%d.%m %H:%M"),
-            "service": dict(APIUsage.Service.choices).get(u.service, u.service),
+            "service": service_choices.get(u.service, u.service),
             "model": u.model,
             "tokens": f"{u.total_tokens:,}",
             "cost": f"${u.cost_usd:.4f}",
-        })
+        }
+        for u in recent_calls
+    ]
 
     context.update({
         "total_cost": f"${total_cost:.4f}",
@@ -405,7 +464,11 @@ def dashboard_callback(request, context):
         "recent_table": recent_table,
         # Traffic
         "today_views": f"{today_views:,}",
+        "today_human_views": f"{today_human_views:,}",
+        "today_bot_views": f"{today_bot_views:,}",
         "today_visitors": f"{today_visitors:,}",
+        "today_human_visitors": f"{today_human_visitors:,}",
+        "today_bot_visitors": f"{today_bot_visitors:,}",
         "yesterday_views": f"{yesterday_views:,}",
         "yesterday_visitors": f"{yesterday_visitors:,}",
         "hourly_chart": hourly_chart,

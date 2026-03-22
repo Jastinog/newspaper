@@ -7,11 +7,21 @@
 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
     {% component "unfold/components/card.html" with title="Views Today" %}
         <span class="text-3xl font-bold text-green-600 dark:text-green-400">{{ today_views }}</span>
+        <div class="text-xs mt-1">
+            <span class="text-green-700 dark:text-green-400">👤 {{ today_human_views }}</span>
+            <span class="text-gray-400 mx-1">/</span>
+            <span class="text-red-600 dark:text-red-400">🤖 {{ today_bot_views }}</span>
+        </div>
         <div class="text-xs text-gray-500 mt-1">yesterday: {{ yesterday_views }}</div>
     {% endcomponent %}
 
     {% component "unfold/components/card.html" with title="Visitors Today" %}
         <span class="text-3xl font-bold text-green-600 dark:text-green-400">{{ today_visitors }}</span>
+        <div class="text-xs mt-1">
+            <span class="text-green-700 dark:text-green-400">👤 {{ today_human_visitors }}</span>
+            <span class="text-gray-400 mx-1">/</span>
+            <span class="text-red-600 dark:text-red-400">🤖 {{ today_bot_visitors }}</span>
+        </div>
         <div class="text-xs text-gray-500 mt-1">yesterday: {{ yesterday_visitors }}</div>
     {% endcomponent %}
 
@@ -20,7 +30,7 @@
             {% for ref in top_referrers %}
             <div class="flex justify-between">
                 <span class="truncate mr-2">{{ ref.referrer_domain }}</span>
-                <span class="font-mono text-xs text-gray-500">{{ ref.views }}</span>
+                <span class="font-mono text-xs text-gray-500">{{ ref.sessions }}</span>
             </div>
             {% empty %}
             <span class="text-gray-400">&mdash;</span>
@@ -36,7 +46,7 @@
 {# --- Traffic charts --- #}
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
     {% component "unfold/components/card.html" with title="Today — Hourly Traffic" %}
-        {% component "unfold/components/chart/bar.html" with data=hourly_chart height=240 %}{% endcomponent %}
+        {% component "unfold/components/chart/bar.html" with data=hourly_chart height=240 options='{"scales":{"x":{"stacked":true},"y":{"stacked":true}}}' %}{% endcomponent %}
     {% endcomponent %}
 
     {% component "unfold/components/card.html" with title="Views & Visitors (30 days)" %}
