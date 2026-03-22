@@ -730,7 +730,7 @@
             item.addEventListener('click', function() {
                 var idx = parseInt(this.dataset.index, 10);
                 dropdown.classList.remove('open');
-                sections[idx].scrollIntoView({ behavior: 'smooth', block: 'start' });
+                sections[idx].scrollIntoView({ behavior: 'instant', block: 'start' });
             });
         });
 
