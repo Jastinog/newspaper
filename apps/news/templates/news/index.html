@@ -86,7 +86,6 @@
         text-decoration: none;
         padding: 0.3rem 0.7rem;
         white-space: nowrap;
-        cursor: pointer;
         transition: color 0.2s;
         border-right: 1px solid var(--border-faint);
     }
@@ -98,6 +97,21 @@
     }
     .section-nav-item.active {
         color: var(--accent);
+    }
+
+    /* Filtered mode: shares responsive column rules with digest-grid */
+    .filtered-grid {
+        list-style: none;
+        column-gap: 1.5rem;
+    }
+    .digest-item-card {
+        break-inside: avoid;
+        padding-bottom: 1.2rem;
+        margin-bottom: 0.3rem;
+        border-bottom: 1px solid var(--border-faint);
+    }
+    .digest-item-card .item-summary {
+        display: block;
     }
     .section-nav-rule {
         border-top: 1px solid var(--border);
@@ -560,21 +574,24 @@
 
     /* Tablet portrait: 2 columns */
     @media (min-width: 600px) and (max-width: 899px) {
-        .digest-grid {
+        .digest-grid,
+        .filtered-grid {
             columns: 2;
         }
     }
 
     /* Tablet landscape: 3 columns */
     @media (min-width: 900px) and (max-width: 1199px) {
-        .digest-grid {
+        .digest-grid,
+        .filtered-grid {
             columns: 3;
         }
     }
 
     /* Desktop: 5 columns */
     @media (min-width: 1200px) {
-        .digest-grid {
+        .digest-grid,
+        .filtered-grid {
             columns: 5;
         }
     }
@@ -603,6 +620,30 @@
         }
     }
 
+    /* Back to top */
+    .back-to-top {
+        display: none;
+        position: fixed;
+        bottom: 1.2rem;
+        right: 1.2rem;
+        z-index: 150;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: var(--accent);
+        color: var(--section-heading-fg);
+        border: none;
+        font-size: 1rem;
+        line-height: 1;
+        cursor: pointer;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+        align-items: center;
+        justify-content: center;
+    }
+    .back-to-top.visible {
+        display: flex;
+    }
+
 </style>
 {% endblock %}
 
@@ -624,14 +665,14 @@
         {% endif %}
     </div>
 
-    <!-- Section nav bar -->
     <div class="section-nav-rule"></div>
     <div class="section-nav" id="sectionNav">
         <button class="section-nav-arrow hidden" id="sectionNavLeft" aria-label="Scroll left">&lsaquo;</button>
         <div class="section-nav-track">
             <div class="section-nav-list" id="sectionNavList">
+            <a class="section-nav-item {% if not active_section %}active{% endif %}" href="{% url 'index' %}">{% trans "All" %}</a>
             {% for section in digest.sections.all %}
-                <a class="section-nav-item" data-section-index="{{ forloop.counter0 }}">{{ section.title }}</a>
+                <a class="section-nav-item {% if active_section.id == section.id %}active{% endif %}" href="?section={{ section.id }}">{{ section.title }}</a>
             {% endfor %}
             </div>
         </div>
@@ -644,6 +685,25 @@
 
     <div class="digest-headline-rule"></div>
 
+    {% if active_section %}
+    <ul class="digest-grid filtered-grid">
+        {% for item in filtered_items %}
+            <li class="digest-item-card">
+                {% if item.best_image_url %}<div class="item-image-wrap"><img class="item-image" src="{{ item.best_image_url }}" alt="" loading="lazy">{% bias_spectrum item %}</div>{% else %}{% bias_spectrum item %}{% endif %}
+                <span class="item-topic">{{ item.topic }}</span>
+                <span class="item-summary">{{ item.summary }}</span>
+                <span class="deep-dive-hint-wrap">
+                    {% if item.importance >= 7 %}<span class="importance-bar critical" data-label="{% trans 'Breaking news' %}"></span>
+                    {% elif item.importance >= 6 %}<span class="importance-bar high" data-label="{% trans 'Important' %}"></span>
+                    {% elif item.importance >= 4 %}<span class="importance-bar medium" data-label="{% trans 'Worth noting' %}"></span>
+                    {% else %}<span class="importance-bar low" data-label="{% trans 'For context' %}"></span>
+                    {% endif %}
+                    <a href="{% url 'deep_dive' item.id %}" class="deep-dive-hint deep-dive-link" data-item-id="{{ item.id }}">{% trans "details" %} &rarr;</a>
+                </span>
+            </li>
+        {% endfor %}
+    </ul>
+    {% else %}
     <div class="digest-grid">
     {% for section in digest.sections.all %}
         <div class="digest-section">
@@ -670,27 +730,27 @@
         </div>
     {% endfor %}
     </div>
+    {% endif %}
 
     <script src="{% static 'news/js/deep-dive.js' %}"></script>
     <script>
-    /* Section nav bar — arrows & scroll-to-section */
     (function() {
         var list = document.getElementById('sectionNavList');
         var leftBtn = document.getElementById('sectionNavLeft');
         var rightBtn = document.getElementById('sectionNavRight');
-        var items = document.querySelectorAll('.section-nav-item');
-        var sections = document.querySelectorAll('.digest-section');
-        if (!list || !items.length) return;
+        var navItems = document.querySelectorAll('.section-nav-item');
+        if (!list || !navItems.length) return;
 
         var SCROLL_AMOUNT = 200;
+        var isFiltered = document.querySelector('.filtered-grid') !== null;
 
+        /* Arrow visibility */
         function updateArrows() {
             var sl = list.scrollLeft;
             var maxScroll = list.scrollWidth - list.clientWidth;
             leftBtn.classList.toggle('hidden', sl <= 1);
             rightBtn.classList.toggle('hidden', sl >= maxScroll - 1);
         }
-
         list.addEventListener('scroll', updateArrows, { passive: true });
         window.addEventListener('resize', updateArrows);
         updateArrows();
@@ -702,28 +762,40 @@
             list.scrollBy({ left: SCROLL_AMOUNT, behavior: 'smooth' });
         });
 
-        /* Click to scroll to section */
-        items.forEach(function(item) {
-            item.addEventListener('click', function() {
-                var idx = parseInt(this.dataset.sectionIndex, 10);
-                if (sections[idx]) {
-                    sections[idx].scrollIntoView({ behavior: 'smooth', block: 'start' });
+        /* Scroll-based highlight (only in "all" mode) */
+        var sections = document.querySelectorAll('.digest-section');
+        if (!isFiltered && sections.length) {
+            function highlightOnScroll() {
+                var current = 0;
+                for (var i = sections.length - 1; i >= 0; i--) {
+                    if (sections[i].getBoundingClientRect().top <= 80) { current = i; break; }
                 }
-            });
-        });
-
-        /* Highlight active section on scroll */
-        function highlightActive() {
-            var current = 0;
-            for (var i = sections.length - 1; i >= 0; i--) {
-                if (sections[i].getBoundingClientRect().top <= 80) { current = i; break; }
+                navItems.forEach(function(it, i) {
+                    if (i === 0) return;
+                    it.classList.toggle('active', i - 1 === current);
+                });
             }
-            items.forEach(function(it, i) {
-                it.classList.toggle('active', i === current);
-            });
+            window.addEventListener('scroll', highlightOnScroll, { passive: true });
         }
-        window.addEventListener('scroll', highlightActive, { passive: true });
-        highlightActive();
+
+        /* Scroll active nav item into view */
+        var activeItem = list.querySelector('.section-nav-item.active');
+        if (activeItem) {
+            activeItem.scrollIntoView({ inline: 'center', block: 'nearest' });
+        }
+    })();
+    </script>
+
+    <button class="back-to-top" id="backToTop" aria-label="Back to top">&uarr;</button>
+    <script>
+    (function() {
+        var btn = document.getElementById('backToTop');
+        window.addEventListener('scroll', function() {
+            btn.classList.toggle('visible', window.scrollY > 400);
+        }, { passive: true });
+        btn.addEventListener('click', function() {
+            window.scrollTo({ top: 0 });
+        });
     })();
     </script>
 {% else %}

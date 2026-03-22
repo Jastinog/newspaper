@@ -22,28 +22,32 @@ SITE_DESCRIPTION = _("Daily AI-curated news digest from 100+ RSS sources worldwi
 # ── Template Views ────────────────────────────────────────
 
 
+def _latest_digest(qs, date=None):
+    """Return the best-matching digest from a queryset, optionally filtered by date."""
+    prefetches = ("sections__items__image", "sections__items__articles__feed")
+    qs = qs.prefetch_related(*prefetches)
+    if date:
+        return qs.filter(date=date).first()
+    return qs.order_by("-date").first()
+
+
 def index(request, date=None):
     from datetime import datetime as dt
 
     current_lang = get_language() or "en"
-    qs = Digest.objects.filter(language=current_lang)
 
+    parsed = None
     if date:
         try:
             parsed = dt.strptime(date, "%Y-%m-%d").date()
         except ValueError:
             return redirect("index")
-        digest = qs.filter(date=parsed).prefetch_related("sections__items__image", "sections__items__articles__feed").first()
-    else:
-        digest = qs.prefetch_related("sections__items__image", "sections__items__articles__feed").order_by("-date").first()
+
+    digest = _latest_digest(Digest.objects.filter(language=current_lang), date=parsed)
 
     # Fallback to English if no digest for current language
     if not digest and current_lang != "en":
-        qs_en = Digest.objects.filter(language="en")
-        if date:
-            digest = qs_en.filter(date=parsed).prefetch_related("sections__items__image", "sections__items__articles__feed").first()
-        else:
-            digest = qs_en.prefetch_related("sections__items__image", "sections__items__articles__feed").order_by("-date").first()
+        digest = _latest_digest(Digest.objects.filter(language="en"), date=parsed)
 
     # Prev/next navigation
     prev_date = next_date = None
@@ -54,6 +58,17 @@ def index(request, date=None):
             prev_date = prev_digest.date
         if next_digest:
             next_date = next_digest.date
+
+    # Section filter
+    active_section = None
+    filtered_items = None
+    section_id = request.GET.get("section")
+    if digest and section_id:
+        for s in digest.sections.all():
+            if str(s.id) == section_id:
+                active_section = s
+                filtered_items = s.items.all()
+                break
 
     seo = {
         "title": f"{SITE_NAME} — {_('Daily News Digest')}",
@@ -66,6 +81,8 @@ def index(request, date=None):
         "digest": digest,
         "prev_date": prev_date,
         "next_date": next_date,
+        "active_section": active_section,
+        "filtered_items": filtered_items,
         "seo": seo,
     })
 
