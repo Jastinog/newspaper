@@ -65,39 +65,53 @@ def api_today(request):
         type=PAGE_VIEW, timestamp__gte=yesterday_start, timestamp__lt=today_start
     )
 
+    bot_filter = Q(client__is_bot=True)
+
     today_stats = today_sessions.aggregate(
         sessions=Count("id"),
         clients=Count("client", distinct=True),
         humans=Count("id", filter=Q(is_human=True)),
+        bot_sessions=Count("id", filter=bot_filter),
+        bot_clients=Count("client", distinct=True, filter=bot_filter),
     )
     today_views = today_page_views.count()
+    today_bot_views = today_page_views.filter(session__client__is_bot=True).count()
+
     yesterday_stats = yesterday_sessions.aggregate(
-        views=Count("id"),
         clients=Count("client", distinct=True),
     )
     yesterday_views = yesterday_page_views.count()
 
-    # Hourly breakdown (page views)
+    # Hourly breakdown (page views) — split by human/bot
     hourly = list(
         today_page_views
         .annotate(hour=ExtractHour("timestamp"))
         .values("hour")
-        .annotate(views=Count("id"))
+        .annotate(
+            views=Count("id"),
+            bot_views=Count("id", filter=Q(session__client__is_bot=True)),
+        )
         .order_by("hour")
     )
-    hourly_map = {r["hour"]: r["views"] for r in hourly}
-    current_hour = now.hour
-    hourly_full = [
-        {"hour": h, "views": hourly_map.get(h, 0)}
-        for h in range(current_hour + 1)
-    ]
+    hourly_map = {r["hour"]: r for r in hourly}
+    hourly_full = []
+    for h in range(now.hour + 1):
+        row = hourly_map.get(h, {})
+        hourly_full.append({
+            "hour": h,
+            "views": row.get("views", 0),
+            "bot_views": row.get("bot_views", 0),
+        })
 
     return JsonResponse({
         "today": {
             "views": today_views,
+            "bot_views": today_bot_views,
             "clients": today_stats["clients"],
+            "bot_clients": today_stats["bot_clients"],
             "humans": today_stats["humans"],
             "sessions": today_stats["sessions"],
+            "bot_sessions": today_stats["bot_sessions"],
         },
         "yesterday": {
             "views": yesterday_views,
@@ -115,6 +129,7 @@ def api_views_over_time(request):
         .values("date")
         .annotate(
             views=Count("id"),
+            bot_views=Count("id", filter=Q(session__client__is_bot=True)),
             clients=Count("session__client", distinct=True),
         )
         .order_by("date")
@@ -123,6 +138,7 @@ def api_views_over_time(request):
         {
             "date": r["date"].isoformat(),
             "views": r["views"],
+            "bot_views": r["bot_views"],
             "clients": r["clients"],
         }
         for r in rows
@@ -234,6 +250,7 @@ def api_sessions(request):
     counts = qs.aggregate(
         total=Count("id"),
         humans=Count("id", filter=Q(is_human=True)),
+        bots=Count("id", filter=Q(client__is_bot=True)),
         bounced=Count("id", filter=Q(page_count__lte=1)),
     )
     total = counts["total"]
@@ -246,16 +263,19 @@ def api_sessions(request):
         avg_duration=Avg(F("ended_at") - F("started_at")),
     )
 
-    # Handle avg_duration: timedelta on PostgreSQL, float on SQLite
+    # timedelta on PostgreSQL, float on SQLite
     avg_duration = avg_stats["avg_duration"]
-    if avg_duration is not None:
-        avg_duration_secs = avg_duration.total_seconds() if hasattr(avg_duration, "total_seconds") else float(avg_duration)
-    else:
+    if avg_duration is None:
         avg_duration_secs = 0
+    elif hasattr(avg_duration, "total_seconds"):
+        avg_duration_secs = avg_duration.total_seconds()
+    else:
+        avg_duration_secs = float(avg_duration)
 
     return JsonResponse({
         "total": total,
         "humans": counts["humans"],
+        "bots": counts["bots"],
         "bounce_rate": bounce_rate,
         "avg_pages": round(avg_stats["avg_pages"] or 0, 1),
         "avg_active_time": round(avg_stats["avg_active_time"] or 0, 0),
