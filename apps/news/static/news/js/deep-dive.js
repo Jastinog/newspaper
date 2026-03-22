@@ -1,8 +1,7 @@
 /**
  * Deep dive feature — supports multiple concurrent generations.
  *
- * Shows progress inline on the digest card: a pulsing border, a thin
- * progress bar at the bottom of the <li>, and the current step label
+ * Shows progress inline on the digest card: the current step label
  * in place of the "details →" link.
  *
  * Depends on: ws.js
@@ -72,17 +71,10 @@
         }
     }
 
-    /** Update progress bar + step label on the card. */
+    /** Update step label on the card. */
     function updateProgress(itemId, p) {
         var c = getCardEls(itemId);
         if (!c.li) return;
-
-        // Update bar fill
-        var fill = c.li.querySelector('.dd-inline-bar-fill');
-        if (fill) {
-            var pct = Math.round(((p.step || 0) / (p.totalSteps || 6)) * 100);
-            fill.style.width = pct + '%';
-        }
 
         // Update step label
         var stepEl = c.li.querySelector('[data-dd-step="' + itemId + '"]');
@@ -94,22 +86,9 @@
         }
     }
 
-    /** Stop the generating animation and remove the progress bar. */
-    function stopGenerating(itemId) {
-        var c = getCardEls(itemId);
-        if (!c.li) return c;
-
-        c.li.classList.remove('dd-generating');
-
-        var bar = c.li.querySelector('.dd-inline-bar');
-        if (bar) bar.remove();
-
-        return c;
-    }
-
     /** Remove inline progress, restore the link. */
     function cleanupProgress(itemId) {
-        var c = stopGenerating(itemId);
+        var c = getCardEls(itemId);
         if (!c.li) return;
 
         var stepEl = c.li.querySelector('[data-dd-step="' + itemId + '"]');
@@ -123,7 +102,7 @@
 
     /** Show error state on the card. */
     function showError(itemId, message) {
-        var c = stopGenerating(itemId);
+        var c = getCardEls(itemId);
         if (!c.li) return;
 
         var stepEl = c.li.querySelector('[data-dd-step="' + itemId + '"]');
@@ -207,7 +186,6 @@
         p.totalSteps = msg.total_steps;
         p.stepId = msg.step_id;
         p.label = msg.label;
-        p.detail = msg.detail;
         updateProgress(msg.item_id, p);
     });
 
@@ -271,7 +249,6 @@
                 totalSteps: 6,
                 stepId: null,
                 label: null,
-                detail: null,
                 url: null,
                 error: null,
             };
