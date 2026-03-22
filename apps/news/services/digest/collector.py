@@ -14,7 +14,7 @@ CHUNKS_PER_QUERY = 60
 class TopicArticleCollector:
     """Collects articles per topic using embedding similarity — no duplicates across topics."""
 
-    def __init__(self, hours=72, per_topic=25, threshold=0.25):
+    def __init__(self, hours=36, per_topic=25, threshold=0.25):
         self.hours = hours
         self.per_topic = per_topic
         self.threshold = threshold

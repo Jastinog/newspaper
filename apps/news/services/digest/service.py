@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 class DigestService:
     """Orchestrates parallel digest pipeline: collect by topic → generate → save."""
 
-    def __init__(self, client: OpenAIClient = None, hours=72, per_topic=25):
+    def __init__(self, client: OpenAIClient = None, hours=36, per_topic=25):
         self.client = client
         self.collector = TopicArticleCollector(hours=hours, per_topic=per_topic)
         self.saver = DigestSaver()
