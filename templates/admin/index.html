@@ -46,7 +46,7 @@
 {# --- Traffic charts --- #}
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
     {% component "unfold/components/card.html" with title="Today — Hourly Traffic" %}
-        {% component "unfold/components/chart/bar.html" with data=hourly_chart height=240 options='{"scales":{"x":{"stacked":true},"y":{"stacked":true}}}' %}{% endcomponent %}
+        {% component "unfold/components/chart/bar.html" with data=hourly_chart height=240 %}{% endcomponent %}
     {% endcomponent %}
 
     {% component "unfold/components/card.html" with title="Views & Visitors (30 days)" %}

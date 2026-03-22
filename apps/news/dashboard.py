@@ -295,6 +295,7 @@ def dashboard_callback(request, context):
                 "borderColor": "rgb(34, 197, 94)",
                 "borderWidth": 1,
                 "type": "bar",
+                "stack": "traffic",
             },
             {
                 "label": "Bots",
@@ -303,6 +304,7 @@ def dashboard_callback(request, context):
                 "borderColor": "rgb(193, 18, 31)",
                 "borderWidth": 1,
                 "type": "bar",
+                "stack": "traffic",
             },
         ],
     })
