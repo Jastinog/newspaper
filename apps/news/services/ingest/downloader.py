@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 TIMEOUT = 20
 MAX_FILE_SIZE = 15 * 1024 * 1024  # 15 MB
 MIN_DIMENSION = 100  # skip tracking pixels
-DOMAIN_DELAY = 2.0  # seconds between requests to same domain
+DOMAIN_DELAY = 8.0  # seconds between requests to same domain
 
 HEADERS = {
     "User-Agent": BROWSER_UA,

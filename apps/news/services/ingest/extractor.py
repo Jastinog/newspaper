@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 TIMEOUT = 20
 MAX_WORKERS = 10
-DOMAIN_DELAY = 2.0  # min seconds between requests to same domain
+DOMAIN_DELAY = 8.0  # min seconds between requests to same domain
 
 # Real browser headers to avoid bot detection
 HEADERS = {

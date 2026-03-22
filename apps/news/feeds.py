@@ -13,7 +13,12 @@ DEFAULT_CATEGORIES = [
     {"slug": "gaming", "name": "Gaming", "order": 11},
     {"slug": "design", "name": "Design / Product", "order": 12},
     {"slug": "media", "name": "Media / Blogs", "order": 13},
-    {"slug": "ru", "name": "Русские", "order": 14},
+    {"slug": "mideast", "name": "Middle East", "order": 14},
+    {"slug": "asia", "name": "Asia-Pacific", "order": 15},
+    {"slug": "southasia", "name": "South Asia", "order": 16},
+    {"slug": "africa", "name": "Africa", "order": 17},
+    {"slug": "latam", "name": "Latin America", "order": 18},
+    {"slug": "ru", "name": "Русские", "order": 19},
 ]
 
 DEFAULT_FEEDS = [
@@ -43,7 +48,9 @@ DEFAULT_FEEDS = [
     {"title": "BBC News - Europe", "url": "https://feeds.bbci.co.uk/news/world/europe/rss.xml", "category": "europe"},
     {"title": "EurActiv", "url": "https://www.euractiv.com/feed/", "category": "europe"},
     {"title": "Euronews English", "url": "https://www.euronews.com/rss?format=mrss&level=theme&name=news", "category": "europe"},
+    {"title": "Le Monde English", "url": "https://www.lemonde.fr/en/rss/une.xml", "category": "europe"},
     {"title": "Politico EU", "url": "https://www.politico.eu/feed/", "category": "europe"},
+    {"title": "Spiegel International", "url": "https://www.spiegel.de/international/index.rss", "category": "europe"},
     {"title": "The Guardian - Europe", "url": "https://www.theguardian.com/world/europe-news/rss", "category": "europe"},
     # ── Tech ──────────────────────────────────────────────
     {"title": "9to5Google", "url": "https://9to5google.com/feed/", "category": "tech"},
@@ -177,6 +184,43 @@ DEFAULT_FEEDS = [
     {"title": "Stratechery", "url": "https://stratechery.com/feed/", "category": "media"},
     {"title": "The Conversation", "url": "https://theconversation.com/us/articles.atom", "category": "media"},
     {"title": "Wait But Why", "url": "https://waitbutwhy.com/feed", "category": "media"},
+    # ── Middle East ───────────────────────────────────────
+    {"title": "Al-Monitor", "url": "https://www.al-monitor.com/rss", "category": "mideast"},
+    {"title": "Arab News", "url": "https://www.arabnews.com/taxonomy/term/2/feed", "category": "mideast"},
+    {"title": "Israel Hayom", "url": "https://www.israelhayom.com/feed/", "category": "mideast"},
+    {"title": "Jerusalem Post", "url": "https://www.jpost.com/rss/rssfeedsfrontpage.aspx", "category": "mideast"},
+    {"title": "Middle East Eye", "url": "https://www.middleeasteye.net/rss", "category": "mideast"},
+    {"title": "Middle East Monitor", "url": "https://www.middleeastmonitor.com/feed/", "category": "mideast"},
+    {"title": "Daily Sabah", "url": "https://www.dailysabah.com/rssfeed/latest", "category": "mideast"},
+    {"title": "Hurriyet Daily News", "url": "https://www.hurriyetdailynews.com/rss.aspx", "category": "mideast"},
+    {"title": "Times of Israel", "url": "https://www.timesofisrael.com/feed/", "category": "mideast"},
+    # ── Asia-Pacific ─────────────────────────────────────
+    {"title": "ABC Australia", "url": "https://www.abc.net.au/news/feed/2942460/rss.xml", "category": "asia"},
+    {"title": "Bangkok Post", "url": "https://www.bangkokpost.com/rss/data/topstories.xml", "category": "asia"},
+    {"title": "CGTN", "url": "https://www.cgtn.com/subscribe/rss/section/world.xml", "category": "asia"},
+    {"title": "Channel NewsAsia", "url": "https://www.channelnewsasia.com/api/v1/rss-outbound-feed?_format=xml", "category": "asia"},
+    {"title": "China Daily", "url": "https://www.chinadaily.com.cn/rss/world_rss.xml", "category": "asia"},
+    {"title": "Japan Times", "url": "https://www.japantimes.co.jp/feed/", "category": "asia"},
+    {"title": "Korea Times", "url": "https://www.koreatimes.co.kr/www/rss/rss.xml", "category": "asia"},
+    {"title": "NHK World", "url": "https://www3.nhk.or.jp/nhkworld/data/en/news/backstory/rss.xml", "category": "asia"},
+    {"title": "Nikkei Asia", "url": "https://asia.nikkei.com/rss/feed/nar", "category": "asia"},
+    {"title": "Nippon.com", "url": "https://www.nippon.com/en/feed/", "category": "asia"},
+    {"title": "RNZ New Zealand", "url": "https://www.rnz.co.nz/rss/national.xml", "category": "asia"},
+    {"title": "Taipei Times", "url": "https://www.taipeitimes.com/xml/index.rss", "category": "asia"},
+    {"title": "Yonhap News", "url": "https://en.yna.co.kr/RSS/news.xml", "category": "asia"},
+    # ── South Asia ───────────────────────────────────────
+    {"title": "Dawn", "url": "https://www.dawn.com/feeds/home", "category": "southasia"},
+    {"title": "NDTV", "url": "https://feeds.feedburner.com/NDTV-LatestNews", "category": "southasia"},
+    {"title": "The Hindu", "url": "https://www.thehindu.com/feeder/default.rss", "category": "southasia"},
+    # ── Africa ───────────────────────────────────────────
+    {"title": "Africanews", "url": "https://www.africanews.com/feed/rss", "category": "africa"},
+    {"title": "Mail & Guardian", "url": "https://mg.co.za/feed/", "category": "africa"},
+    {"title": "News24 South Africa", "url": "https://feeds.news24.com/articles/news24/TopStories/rss", "category": "africa"},
+    {"title": "Premium Times Nigeria", "url": "https://www.premiumtimesng.com/feed", "category": "africa"},
+    {"title": "The East African", "url": "https://www.theeastafrican.co.ke/rss.xml", "category": "africa"},
+    # ── Latin America ────────────────────────────────────
+    {"title": "Global Voices", "url": "https://globalvoices.org/feed/", "category": "latam"},
+    {"title": "MercoPress", "url": "https://en.mercopress.com/rss", "category": "latam"},
     # ── Русские ───────────────────────────────────────────
     {"title": "3DNews", "url": "https://3dnews.ru/breaking/rss/", "category": "ru"},
     {"title": "N+1", "url": "https://nplus1.ru/rss", "category": "ru"},
