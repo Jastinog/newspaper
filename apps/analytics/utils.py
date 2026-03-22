@@ -126,6 +126,8 @@ _BOT_SIGNATURE_DEFS = [
     ("Wapiti", "Wapiti"),
     ("ZAP", "OWASP ZAP"),
     ("Nuclei", "Nuclei"),
+    # Meta / Facebook crawlers
+    ("meta-webindexer", "Meta Web Indexer"),
     # Other crawlers
     ("Turnitin", "Turnitin"),
     ("Grammarly", "Grammarly"),
