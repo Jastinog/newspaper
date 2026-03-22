@@ -63,16 +63,16 @@ DEFAULT_TOPICS = [
         ],
     },
     {
-        "name_en": "Science • Health",
-        "name_ru": "Наука • Здоровье",
-        "name_uk": "Наука • Здоров'я",
+        "name_en": "Crypto • Fintech",
+        "name_ru": "Крипто • Финтех",
+        "name_uk": "Крипто • Фінтех",
         "queries": [
-            "scientific discoveries, research breakthroughs, space exploration, "
-            "physics, biology, chemistry, astronomy advances",
-            "public health, medical research, disease outbreaks, epidemics, "
-            "vaccines, healthcare systems, WHO reports",
-            "pharmaceutical industry, drug development, clinical trials, "
-            "biotechnology, genetics, medical devices, mental health",
+            "cryptocurrency, Bitcoin, Ethereum, altcoins, token launches, "
+            "crypto market, blockchain technology, DeFi, decentralized finance",
+            "fintech startups, digital payments, neobanks, mobile banking, "
+            "payment systems, digital wallets, financial technology innovation",
+            "crypto regulation, SEC enforcement, stablecoins, NFTs, Web3, "
+            "crypto exchanges, mining, staking, institutional crypto adoption",
         ],
     },
     {
@@ -86,6 +86,45 @@ DEFAULT_TOPICS = [
             "frontline updates, drone warfare, military aid",
             "Middle East conflicts, Gaza, Israel, terrorism, insurgency, "
             "humanitarian crisis, refugees, war casualties",
+        ],
+    },
+    {
+        "name_en": "Disasters • Emergencies",
+        "name_ru": "Катастрофы • ЧП",
+        "name_uk": "Катастрофи • НС",
+        "queries": [
+            "natural disasters, earthquakes, tsunamis, volcanic eruptions, "
+            "hurricanes, typhoons, floods, landslides, wildfires",
+            "plane crashes, train derailments, ship sinkings, industrial accidents, "
+            "explosions, building collapses, mine disasters, mass casualties",
+            "emergency response, rescue operations, humanitarian aid, evacuation, "
+            "death toll, disaster relief, FEMA, Red Cross, infrastructure damage",
+        ],
+    },
+    {
+        "name_en": "Science",
+        "name_ru": "Наука",
+        "name_uk": "Наука",
+        "queries": [
+            "scientific discoveries, research breakthroughs, physics, "
+            "biology, chemistry, mathematics, academic publications",
+            "space exploration, NASA, ESA, SpaceX, satellites, "
+            "astronomy, cosmology, Mars missions, space station",
+            "quantum computing, particle physics, CERN, climate science, "
+            "paleontology, archaeology, ocean exploration, Nobel Prize",
+        ],
+    },
+    {
+        "name_en": "Health • Medicine",
+        "name_ru": "Здоровье • Медицина",
+        "name_uk": "Здоров'я • Медицина",
+        "queries": [
+            "public health, disease outbreaks, epidemics, pandemics, "
+            "vaccines, WHO reports, healthcare systems, health policy",
+            "pharmaceutical industry, drug development, clinical trials, "
+            "FDA approvals, biotechnology, gene therapy, medical devices",
+            "mental health, cancer research, chronic diseases, nutrition, "
+            "medical breakthroughs, hospital systems, health insurance",
         ],
     },
     {
@@ -124,33 +163,59 @@ DEFAULT_TOPICS = [
             "renewable energy, solar power, wind energy, electric vehicles, "
             "green technology, clean energy transition, battery storage",
             "oil and gas industry, energy prices, OPEC decisions, nuclear energy, "
-            "energy security, power grid, natural disasters weather",
+            "energy security, power grid, fossil fuels",
         ],
     },
     {
-        "name_en": "Sports • Entertainment",
-        "name_ru": "Спорт • Развлечения",
-        "name_uk": "Спорт • Розваги",
+        "name_en": "Sports",
+        "name_ru": "Спорт",
+        "name_uk": "Спорт",
         "queries": [
-            "professional sports, football soccer, basketball, tennis, Formula 1, "
-            "Olympics, championships, tournament results, transfer news",
-            "entertainment industry, movies, box office, music releases, "
-            "streaming platforms, celebrity news, TV series, awards",
-            "gaming industry, esports, cultural events, festivals, "
-            "arts exhibitions, book releases, theatre, concerts",
+            "professional sports, football soccer, basketball, tennis, "
+            "Formula 1, Olympics, championships, tournament results",
+            "transfer news, player contracts, coaching changes, team standings, "
+            "league tables, match highlights, sports injuries",
+            "UFC, MMA, boxing, athletics, swimming, cycling, cricket, "
+            "rugby, golf, esports, sports scandals, doping",
         ],
     },
     {
-        "name_en": "Society • Culture",
-        "name_ru": "Общество • Культура",
-        "name_uk": "Суспільство • Культура",
+        "name_en": "Entertainment • Culture",
+        "name_ru": "Развлечения • Культура",
+        "name_uk": "Розваги • Культура",
+        "queries": [
+            "movies, box office, film festivals, Oscars, TV series, "
+            "streaming platforms, Netflix, Disney, celebrity news",
+            "music releases, concerts, tours, Grammy awards, albums, "
+            "artists, gaming industry, video games, game releases",
+            "art exhibitions, theatre, books, literature, cultural events, "
+            "festivals, fashion, social media trends, viral content",
+        ],
+    },
+    {
+        "name_en": "Dev • Open Source",
+        "name_ru": "Разработка • Open Source",
+        "name_uk": "Розробка • Open Source",
+        "queries": [
+            "software development, programming languages, frameworks, libraries, "
+            "developer tools, code editors, IDEs, debugging, testing",
+            "open source projects, GitHub, Linux kernel, Apache, Mozilla, "
+            "open source community, free software, licensing, contributions",
+            "DevOps, CI/CD, cloud infrastructure, containers, Kubernetes, Docker, "
+            "microservices, APIs, web development, backend, frontend",
+        ],
+    },
+    {
+        "name_en": "Society • Migration",
+        "name_ru": "Общество • Миграция",
+        "name_uk": "Суспільство • Міграція",
         "queries": [
             "social issues, inequality, protests, social movements, "
-            "human rights, immigration, migration policy, civil rights",
-            "education policy, university research, cultural trends, "
-            "demographics, religion, community development, social welfare",
-            "lifestyle trends, food industry, travel, fashion, "
-            "social media culture, generational shifts, public opinion polls",
+            "human rights, civil rights, discrimination, social justice",
+            "immigration, migration policy, refugees, asylum seekers, "
+            "border control, deportation, integration, diaspora",
+            "education policy, demographics, religion, public opinion, "
+            "welfare systems, poverty, homelessness, community development",
         ],
     },
 ]
@@ -159,10 +224,17 @@ DEFAULT_TOPICS = [
 class Command(BaseCommand):
     help = "Load default categories, RSS feeds, and digest topics"
 
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--reset-topics",
+            action="store_true",
+            help="Delete existing topics and recreate from DEFAULT_TOPICS",
+        )
+
     def handle(self, *args, **options):
         self._seed_categories()
         self._seed_feeds()
-        self._seed_topics()
+        self._seed_topics(reset=options["reset_topics"])
         self._classify_feeds()
 
     def _seed_categories(self):
@@ -199,9 +271,12 @@ class Command(BaseCommand):
             f"Feeds: {feed_created} new ({len(DEFAULT_FEEDS)} total)"
         ))
 
-    def _seed_topics(self):
-        if DigestTopic.objects.exists():
-            self.stdout.write(f"Topics: {DigestTopic.objects.count()} already exist, skipping")
+    def _seed_topics(self, reset=False):
+        if reset:
+            deleted, _ = DigestTopic.objects.all().delete()
+            self.stdout.write(self.style.WARNING(f"Topics: deleted {deleted} objects"))
+        elif DigestTopic.objects.exists():
+            self.stdout.write(f"Topics: {DigestTopic.objects.count()} already exist, skipping (use --reset-topics)")
             return
 
         # Create topics with their search query embeddings
