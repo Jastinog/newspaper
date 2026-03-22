@@ -274,3 +274,15 @@ msgstr "Результати пошуку за запитом"
 
 #~ msgid "sources"
 #~ msgstr "джерел"
+
+msgid "Breaking news"
+msgstr "Термінова новина"
+
+msgid "Important"
+msgstr "Важливо"
+
+msgid "Worth noting"
+msgstr "Варто звернути увагу"
+
+msgid "For context"
+msgstr "Для контексту"

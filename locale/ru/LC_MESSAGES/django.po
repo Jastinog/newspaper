@@ -273,3 +273,15 @@ msgstr "Результаты поиска по запросу"
 
 #~ msgid "sources"
 #~ msgstr "источников"
+
+msgid "Breaking news"
+msgstr "Срочная новость"
+
+msgid "Important"
+msgstr "Важно"
+
+msgid "Worth noting"
+msgstr "Стоит обратить внимание"
+
+msgid "For context"
+msgstr "Для контекста"

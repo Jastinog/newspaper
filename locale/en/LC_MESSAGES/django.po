@@ -205,3 +205,15 @@ msgstr "Center-Right"
 
 msgid "Right"
 msgstr "Right"
+
+msgid "Breaking news"
+msgstr "Breaking news"
+
+msgid "Important"
+msgstr "Important"
+
+msgid "Worth noting"
+msgstr "Worth noting"
+
+msgid "For context"
+msgstr "For context"

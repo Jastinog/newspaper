@@ -186,6 +186,30 @@
         border-radius: 2px;
         vertical-align: middle;
         margin-right: 0.4rem;
+        position: relative;
+        cursor: default;
+    }
+    .importance-bar::after {
+        content: attr(data-label);
+        position: absolute;
+        bottom: calc(100% + 4px);
+        left: 50%;
+        transform: translateX(-50%);
+        font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+        font-size: 0.6rem;
+        font-weight: 600;
+        letter-spacing: 0.03em;
+        white-space: nowrap;
+        color: #fff;
+        background: rgba(0,0,0,0.75);
+        padding: 0.15rem 0.4rem;
+        border-radius: 3px;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.15s;
+    }
+    .importance-bar:hover::after {
+        opacity: 1;
     }
     .importance-bar.critical {
         background: #d32f2f;
@@ -659,10 +683,10 @@
                         <span class="item-topic">{{ item.topic }}</span>
                         <span class="item-summary">{{ item.summary }}</span>
                         <span class="deep-dive-hint-wrap">
-                            {% if item.importance >= 7 %}<span class="importance-bar critical"></span>
-                            {% elif item.importance >= 6 %}<span class="importance-bar high"></span>
-                            {% elif item.importance >= 4 %}<span class="importance-bar medium"></span>
-                            {% else %}<span class="importance-bar low"></span>
+                            {% if item.importance >= 7 %}<span class="importance-bar critical" data-label="{% trans 'Breaking news' %}"></span>
+                            {% elif item.importance >= 6 %}<span class="importance-bar high" data-label="{% trans 'Important' %}"></span>
+                            {% elif item.importance >= 4 %}<span class="importance-bar medium" data-label="{% trans 'Worth noting' %}"></span>
+                            {% else %}<span class="importance-bar low" data-label="{% trans 'For context' %}"></span>
                             {% endif %}
                             <a href="{% url 'deep_dive' item.id %}" class="deep-dive-hint deep-dive-link" data-item-id="{{ item.id }}">{% trans "details" %} &rarr;</a>
                         </span>
