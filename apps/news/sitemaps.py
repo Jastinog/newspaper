@@ -3,6 +3,8 @@ from django.urls import reverse
 
 from .models import Article, Category, DeepDive, Digest
 
+SITEMAP_TOTAL_LIMIT = 45_000
+
 
 class StaticSitemap(Sitemap):
     """Homepage."""
@@ -80,19 +82,26 @@ class DeepDiveSitemap(Sitemap):
 
 
 class ArticleSitemap(Sitemap):
-    """News articles with slugs."""
+    """News articles with slugs — dynamically limited to fit within 45k total."""
 
-    limit = 5000
     priority = 0.5
     changefreq = "monthly"
 
     def items(self):
+        other_count = (
+            1  # static (homepage)
+            + Digest.objects.filter(language="en").count()
+            + Category.objects.count()
+            + DeepDive.objects.count()
+        )
+        article_limit = max(SITEMAP_TOTAL_LIMIT - other_count, 0)
         return (
             Article.objects
             .filter(published__isnull=False)
             .exclude(slug="")
             .order_by("-published")
             .only("pk", "slug", "published")
+            [:article_limit]
         )
 
     def lastmod(self, obj):
