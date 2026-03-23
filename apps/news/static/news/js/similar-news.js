@@ -303,6 +303,7 @@
         return {
             overlay: overlay,
             graphBox: graphBox,
+            reveal: function () { overlay.classList.add('ready'); },
             setFg: function (fg, onResize) { fgInstance = fg; resizeFn = onResize || null; },
         };
     }
@@ -377,8 +378,14 @@
             return force;
         })());
 
+        // Reveal modal once graph has warmed up and first frame is painted
+        var revealed = false;
+
         // Continuous zoom-to-fit while simulation runs, then once more when it stops
-        fg.onEngineTick(function () { fg.zoomToFit(0, 40); });
+        fg.onEngineTick(function () {
+            fg.zoomToFit(0, 40);
+            if (!revealed) { revealed = true; modal.reveal(); }
+        });
         fg.onEngineStop(function () { fg.zoomToFit(400, 40); });
 
         // Resize (cleaned up on modal close)
@@ -394,38 +401,34 @@
         modal.setFg(fg, onResize);
     }
 
-    /* ── Show ────────────────────────────────────── */
+    /* ── Populate modal with graph or empty message ─ */
 
-    function show(centerInfo, data) {
+    function populateGraph(m, centerInfo, data) {
+        clearChildren(m.graphBox);
         var graph = buildGraph(centerInfo, data);
-        var m = createModal();
-        document.body.appendChild(m.overlay);
-
         if (graph.nodes.length <= 1) {
             m.graphBox.appendChild(
                 el('div', 'similar-modal-empty', bd('similarEmpty', 'No similar news found'))
             );
+            m.reveal();
         } else {
-            // Let the browser paint the modal+blur first, then init the heavy graph
-            requestAnimationFrame(function () {
-                requestAnimationFrame(function () {
-                    renderGraph(m.graphBox, graph, m);
-                });
-            });
+            renderGraph(m.graphBox, graph, m);
         }
     }
 
     /* ── Fetch + launch ──────────────────────────── */
 
     function launch(itemId, centerInfo) {
+        var m = createModal();
+        document.body.appendChild(m.overlay);
+
         if (cache[itemId]) {
-            show(centerInfo, cache[itemId]);
+            populateGraph(m, centerInfo, cache[itemId]);
             return;
         }
 
-        var m = createModal();
         m.graphBox.appendChild(el('div', 'similar-modal-loading', bd('similarLoading', 'Loading\u2026')));
-        document.body.appendChild(m.overlay);
+        m.reveal();
 
         fetch(API + itemId + '/similar/')
             .then(function (r) {
@@ -434,8 +437,7 @@
             })
             .then(function (data) {
                 cache[itemId] = data;
-                m.overlay.remove();
-                show(centerInfo, data);
+                populateGraph(m, centerInfo, data);
             })
             .catch(function () {
                 clearChildren(m.graphBox);
