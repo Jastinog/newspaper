@@ -3,35 +3,6 @@
 
 {% block extra_css %}
 <style>
-    .digest-date-nav {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 1rem;
-        margin-bottom: 0.5rem;
-    }
-    .digest-date-nav .date-label {
-        font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
-        font-size: 0.75rem;
-        color: var(--fg-muted);
-        text-transform: uppercase;
-        letter-spacing: 0.1em;
-    }
-    .digest-date-nav a {
-        font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
-        font-size: 0.85rem;
-        color: var(--fg-muted);
-        text-decoration: none;
-        line-height: 1;
-        transition: color 0.2s;
-    }
-    .digest-date-nav a:hover {
-        color: var(--fg);
-    }
-    .digest-date-nav .arrow-disabled {
-        visibility: hidden;
-    }
-
     /* === SECTION NAV BAR === */
     .section-nav {
         display: flex;
@@ -112,6 +83,7 @@
     }
     .digest-item-card .item-summary {
         display: block;
+        text-indent: 0;
     }
     .section-nav-rule {
         border-top: 1px solid var(--border);
@@ -618,6 +590,11 @@
         .digest-section .section-articles li {
             padding: 0.35rem 0;
         }
+
+        .digest-grid .digest-section .summary {
+            border-left: none;
+            padding-left: 0;
+        }
     }
 
     /* Back to top */
@@ -647,24 +624,28 @@
 </style>
 {% endblock %}
 
-{% block content %}
-{% include "news/_search_bar.html" %}
-
-{% if digest %}
-    <div class="digest-date-nav">
+{% block masthead_date %}
+    {% if digest %}
         {% if prev_date %}
             <a href="{% url 'digest_by_date' prev_date|date:'Y-m-d' %}">&larr;</a>
         {% else %}
             <span class="arrow-disabled">&larr;</span>
         {% endif %}
-        <span class="date-label">{{ digest.date|date:"F j, Y" }}</span>
+        {{ digest.date|date:"F j, Y" }}
         {% if next_date %}
             <a href="{% url 'digest_by_date' next_date|date:'Y-m-d' %}">&rarr;</a>
         {% else %}
             <span class="arrow-disabled">&rarr;</span>
         {% endif %}
-    </div>
+    {% else %}
+        {% now "l, F j, Y" %}
+    {% endif %}
+{% endblock %}
 
+{% block content %}
+{% include "news/_search_bar.html" %}
+
+{% if digest %}
     <div class="section-nav-rule"></div>
     <div class="section-nav" id="sectionNav">
         <button class="section-nav-arrow hidden" id="sectionNavLeft" aria-label="Scroll left">&lsaquo;</button>
@@ -738,11 +719,9 @@
         var list = document.getElementById('sectionNavList');
         var leftBtn = document.getElementById('sectionNavLeft');
         var rightBtn = document.getElementById('sectionNavRight');
-        var navItems = document.querySelectorAll('.section-nav-item');
-        if (!list || !navItems.length) return;
+        if (!list) return;
 
         var SCROLL_AMOUNT = 200;
-        var isFiltered = document.querySelector('.filtered-grid') !== null;
 
         /* Arrow visibility */
         function updateArrows() {
@@ -761,22 +740,6 @@
         rightBtn.addEventListener('click', function() {
             list.scrollBy({ left: SCROLL_AMOUNT, behavior: 'smooth' });
         });
-
-        /* Scroll-based highlight (only in "all" mode) */
-        var sections = document.querySelectorAll('.digest-section');
-        if (!isFiltered && sections.length) {
-            function highlightOnScroll() {
-                var current = 0;
-                for (var i = sections.length - 1; i >= 0; i--) {
-                    if (sections[i].getBoundingClientRect().top <= 80) { current = i; break; }
-                }
-                navItems.forEach(function(it, i) {
-                    if (i === 0) { it.classList.remove('active'); return; }
-                    it.classList.toggle('active', i - 1 === current);
-                });
-            }
-            window.addEventListener('scroll', highlightOnScroll, { passive: true });
-        }
 
         /* Scroll active nav item into view */
         var activeItem = list.querySelector('.section-nav-item.active');

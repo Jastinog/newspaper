@@ -123,11 +123,6 @@
         }
 
         /* === MASTHEAD === */
-        header {
-            padding: 0;
-            margin-bottom: 0;
-        }
-
         .masthead-rule-top {
             border-top: 1px solid var(--border-heavy);
         }
@@ -139,12 +134,31 @@
         }
 
         .masthead-date {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.6rem;
             font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
             font-size: 0.7rem;
             text-transform: uppercase;
             letter-spacing: 0.12em;
             color: var(--fg-dim);
             margin-bottom: 0.4rem;
+        }
+        .masthead-date a {
+            font-size: 0.85rem;
+            color: var(--fg-muted);
+            text-decoration: none;
+            line-height: 1;
+            transition: color 0.2s;
+        }
+        .masthead-date a:hover {
+            color: var(--fg);
+        }
+        .masthead-date .arrow-disabled {
+            font-size: 0.85rem;
+            color: var(--fg-faint);
+            opacity: 0.4;
         }
 
         .masthead .site-title {
@@ -184,7 +198,6 @@
         }
         .lang-switcher form {
             display: flex;
-            gap: 0;
         }
         .lang-switcher button {
             background: none;
@@ -361,7 +374,7 @@
                         {% endfor %}
                     </form>
                 </div>
-                <div class="masthead-date">{% now "l, F j, Y" %}</div>
+                <div class="masthead-date">{% block masthead_date %}{% now "l, F j, Y" %}{% endblock %}</div>
                 <div class="site-title"><a href="/">{% trans "Newspaper" %}</a></div>
                 <div class="masthead-subtitle">{% trans "Daily News Digest" %}</div>
                 <button class="theme-toggle" onclick="toggleTheme()" title="{% trans "Toggle dark/light theme" %}" aria-label="{% trans "Toggle theme" %}">
