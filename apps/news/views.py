@@ -1,4 +1,4 @@
-from django.db.models import Count
+from django.db.models import Count, Prefetch
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -7,7 +7,7 @@ from rest_framework import generics
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from .models import Article, ArticleChunk, Category, DeepDive, Digest, DigestItem, Feed
+from .models import Article, ArticleChunk, ArticleImage, Category, DeepDive, Digest, DigestItem, Feed
 from .services.deep_dive.search import SimilaritySearch
 from .services.search import SearchService
 from .serializers import (
@@ -213,7 +213,7 @@ def robots_txt(request):
 
 @api_view(["GET"])
 def similar_items_api(request, item_id):
-    """Find DigestItems semantically similar to the given one via pgvector embeddings."""
+    """Tree: center → similar digest items → their articles."""
     item = get_object_or_404(
         DigestItem.objects.select_related("section__digest"),
         pk=item_id,
@@ -221,52 +221,88 @@ def similar_items_api(request, item_id):
 
     article_ids = list(item.articles.values_list("id", flat=True))
     if not article_ids:
-        return Response({"items": []})
+        return Response({"items": [], "articles": []})
 
-    # Take first-chunk embeddings from this item's articles (up to 3)
     embeddings = list(
         ArticleChunk.objects
         .filter(article_id__in=article_ids, chunk_index=0)
         .values_list("embedding", flat=True)[:3]
     )
     if not embeddings:
-        return Response({"items": []})
+        return Response({"items": [], "articles": []})
 
-    # Semantic search for similar chunks
     search = SimilaritySearch(days=14)
     results = search.multi_query_search(embeddings, top_k_per_query=10, final_top_k=30)
 
-    # Map chunks → articles, excluding this item's own articles
-    found_article_ids = {r[1] for r in results} - set(article_ids)
-    if not found_article_ids:
-        return Response({"items": []})
+    own_ids = set(article_ids)
+    art_scores = {}
+    for _cid, aid, _ci, score in results:
+        if aid not in own_ids:
+            art_scores[aid] = max(art_scores.get(aid, 0), score)
 
-    # Find DigestItems linked to those articles (same language only)
+    found_ids = set(art_scores.keys())
+    if not found_ids:
+        return Response({"items": [], "articles": []})
+
+    # ── Similar DigestItems with nested articles ──
     similar = (
         DigestItem.objects
         .filter(
-            articles__id__in=found_article_ids,
+            articles__id__in=found_ids,
             section__digest__language=item.section.digest.language,
         )
         .exclude(id=item.id)
         .select_related("section__digest", "image")
+        .prefetch_related(
+            Prefetch("articles", queryset=Article.objects.select_related("feed")),
+        )
         .distinct()
-        .order_by("-section__digest__date", "-importance")[:5]
+        .order_by("-section__digest__date", "-importance")[:8]
     )
 
-    data = []
+    items_data = []
+    covered = set()
     for si in similar:
-        data.append({
+        all_articles = list(si.articles.all())
+        si_aids = {a.id for a in all_articles}
+        best = max((art_scores.get(aid, 0) for aid in si_aids), default=0)
+        covered |= si_aids
+
+        si_articles = []
+        for a in all_articles[:4]:
+            si_articles.append({
+                "id": a.id,
+                "title": a.title,
+                "url": a.get_absolute_url(),
+                "feed": a.feed.title if a.feed else "",
+            })
+
+        items_data.append({
             "id": si.id,
             "topic": si.topic,
-            "summary": si.summary[:150],
+            "summary": si.summary[:200],
             "image_url": si.best_image_url,
             "section": si.section.title,
             "date": si.section.digest.date.isoformat(),
             "deep_dive_url": reverse("deep_dive", args=[si.id]),
+            "score": round(best * 100),
+            "articles": si_articles,
         })
 
-    return Response({"items": data})
+    # ── Standalone articles (not in any found digest item) ──
+    orphan_ids = found_ids - covered
+    articles_data = []
+    if orphan_ids:
+        for a in Article.objects.filter(id__in=orphan_ids).select_related("feed").order_by("-published")[:10]:
+            articles_data.append({
+                "id": a.id,
+                "title": a.title,
+                "url": a.get_absolute_url(),
+                "feed": a.feed.title if a.feed else "",
+                "score": round(art_scores.get(a.id, 0) * 100),
+            })
+
+    return Response({"items": items_data, "articles": articles_data})
 
 
 # ── API Views ─────────────────────────────────────────────
