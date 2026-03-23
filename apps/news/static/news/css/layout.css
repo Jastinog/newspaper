@@ -1,0 +1,175 @@
+/* === MASTHEAD === */
+.masthead-rule-top {
+    border-top: 1px solid var(--border-heavy);
+}
+
+.masthead {
+    padding: 1rem 0 0.8rem;
+    text-align: center;
+    position: relative;
+}
+
+.masthead-date {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--fg-dim);
+    margin-bottom: 0.4rem;
+}
+.masthead-date a {
+    font-size: 0.85rem;
+    color: var(--fg-muted);
+    text-decoration: none;
+    line-height: 1;
+    transition: color 0.2s;
+}
+.masthead-date a:hover {
+    color: var(--fg);
+}
+.masthead-date .arrow-disabled {
+    font-size: 0.85rem;
+    color: var(--fg-faint);
+    opacity: 0.4;
+}
+
+.masthead .site-title {
+    font-family: "Libre Baskerville", Georgia, serif;
+    font-size: clamp(2rem, 5vw, 3.6rem);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    line-height: 1.05;
+    margin-bottom: 0.2rem;
+    text-shadow: var(--emboss);
+}
+
+.masthead .site-title a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.masthead-subtitle {
+    font-family: "Libre Baskerville", Georgia, serif;
+    font-size: clamp(0.72rem, 1.4vw, 0.82rem);
+    font-style: italic;
+    color: var(--fg-dim);
+    letter-spacing: 0.06em;
+}
+
+.masthead-rule-bottom {
+    border-top: 4px double var(--border-heavy);
+}
+
+/* === LANGUAGE SWITCHER === */
+.lang-switcher {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    transform: translateY(-50%);
+}
+.lang-switcher form {
+    display: flex;
+}
+.lang-switcher button {
+    background: none;
+    border: 1px solid var(--border);
+    border-right: none;
+    padding: 0.3rem 0.5rem;
+    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    color: var(--fg-muted);
+    transition: color 0.2s, background 0.2s;
+}
+.lang-switcher button:first-of-type {
+    border-radius: 3px 0 0 3px;
+}
+.lang-switcher button:last-of-type {
+    border-right: 1px solid var(--border);
+    border-radius: 0 3px 3px 0;
+}
+.lang-switcher button:hover {
+    color: var(--fg);
+}
+.lang-switcher button.active {
+    background: var(--fg);
+    color: var(--bg);
+    border-color: var(--fg);
+}
+
+/* === THEME TOGGLE === */
+.theme-toggle {
+    position: absolute;
+    top: 50%;
+    right: 0;
+    transform: translateY(-50%);
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    width: 2.5rem;
+    height: 2.5rem;
+    cursor: pointer;
+    font-size: 1.1rem;
+    line-height: 1;
+    color: var(--fg-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s, border-color 0.2s;
+}
+.theme-toggle:hover {
+    color: var(--fg);
+    border-color: var(--fg-dim);
+}
+
+/* === FOOTER === */
+footer {
+    border-top: 2px solid var(--border-heavy);
+    padding: 1rem 0;
+    text-align: center;
+    color: var(--fg-muted);
+    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    font-size: 0.75rem;
+    letter-spacing: 0.03em;
+}
+
+/* === RESPONSIVE === */
+
+/* Mobile: stack header controls */
+@media (max-width: 599px) {
+    .masthead {
+        padding: 0.6rem 0;
+    }
+    .masthead-date {
+        font-size: 0.6rem;
+    }
+    .lang-switcher {
+        position: static;
+        transform: none;
+        display: flex;
+        justify-content: center;
+        margin-bottom: 0.5rem;
+    }
+    .theme-toggle {
+        position: static;
+        transform: none;
+        width: 2rem;
+        height: 2rem;
+        font-size: 0.95rem;
+        margin: 0.4rem auto 0;
+    }
+}
+
+/* Tablet portrait */
+@media (min-width: 600px) and (max-width: 768px) {
+    .masthead {
+        padding: 0.9rem 0 0.7rem;
+    }
+}
