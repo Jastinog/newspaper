@@ -1,12 +1,14 @@
 from django.db.models import Count
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils.translation import get_language, gettext_lazy as _
 from rest_framework import generics
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from .models import Article, Category, DeepDive, Digest, DigestItem, Feed
+from .models import Article, ArticleChunk, Category, DeepDive, Digest, DigestItem, Feed
+from .services.deep_dive.search import SimilaritySearch
 from .services.search import SearchService
 from .serializers import (
     ArticleDetailSerializer,
@@ -205,6 +207,66 @@ def robots_txt(request):
     ]
     return HttpResponse("\n".join(lines), content_type="text/plain")
 
+
+# ── Similar Items API ─────────────────────────────────────
+
+
+@api_view(["GET"])
+def similar_items_api(request, item_id):
+    """Find DigestItems semantically similar to the given one via pgvector embeddings."""
+    item = get_object_or_404(
+        DigestItem.objects.select_related("section__digest"),
+        pk=item_id,
+    )
+
+    article_ids = list(item.articles.values_list("id", flat=True))
+    if not article_ids:
+        return Response({"items": []})
+
+    # Take first-chunk embeddings from this item's articles (up to 3)
+    embeddings = list(
+        ArticleChunk.objects
+        .filter(article_id__in=article_ids, chunk_index=0)
+        .values_list("embedding", flat=True)[:3]
+    )
+    if not embeddings:
+        return Response({"items": []})
+
+    # Semantic search for similar chunks
+    search = SimilaritySearch(days=14)
+    results = search.multi_query_search(embeddings, top_k_per_query=10, final_top_k=30)
+
+    # Map chunks → articles, excluding this item's own articles
+    found_article_ids = {r[1] for r in results} - set(article_ids)
+    if not found_article_ids:
+        return Response({"items": []})
+
+    # Find DigestItems linked to those articles (same language only)
+    similar = (
+        DigestItem.objects
+        .filter(
+            articles__id__in=found_article_ids,
+            section__digest__language=item.section.digest.language,
+        )
+        .exclude(id=item.id)
+        .select_related("section__digest", "image")
+        .distinct()
+        .order_by("-section__digest__date", "-importance")[:5]
+    )
+
+    data = []
+    for si in similar:
+        data.append({
+            "id": si.id,
+            "topic": si.topic,
+            "summary": si.summary[:150],
+            "image_url": si.best_image_url,
+            "section": si.section.title,
+            "date": si.section.digest.date.isoformat(),
+            "deep_dive_url": reverse("deep_dive", args=[si.id]),
+        })
+
+    return Response({"items": data})
 
 
 # ── API Views ─────────────────────────────────────────────

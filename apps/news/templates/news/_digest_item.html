@@ -9,4 +9,5 @@
     {% else %}<span class="importance-bar low" data-label="{% trans 'For context' %}"></span>
     {% endif %}
     <a href="{% url 'deep_dive' item.id %}" class="deep-dive-hint deep-dive-link" data-item-id="{{ item.id }}">{% trans "details" %} &rarr;</a>
+    <button class="similar-btn" data-item-id="{{ item.id }}" aria-label="{% trans 'Similar news' %}" title="{% trans 'Similar news' %}">&asymp;</button>
 </span>
