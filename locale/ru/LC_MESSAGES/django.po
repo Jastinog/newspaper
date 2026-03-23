@@ -42,10 +42,10 @@ msgid "Unique Clients"
 msgstr "Уникальные посетители"
 
 msgid "Sessions"
-msgstr ""
+msgstr "Сессии"
 
 msgid "Confirmed Humans"
-msgstr ""
+msgstr "Подтверждённые люди"
 
 msgid "Top Country"
 msgstr "Топ страна"
@@ -54,25 +54,25 @@ msgid "Today — Hourly Traffic"
 msgstr "Сегодня — почасовой трафик"
 
 msgid "Total Sessions"
-msgstr ""
+msgstr "Всего сессий"
 
 msgid "Human Sessions"
-msgstr ""
+msgstr "Сессии людей"
 
 msgid "Bounce Rate"
-msgstr ""
+msgstr "Показатель отказов"
 
 msgid "Avg Pages/Session"
-msgstr ""
+msgstr "Стр./сессию"
 
 msgid "Avg Active Time"
-msgstr ""
+msgstr "Ср. активное время"
 
 msgid "Avg Duration"
-msgstr ""
+msgstr "Ср. длительность"
 
 msgid "Live Sessions"
-msgstr ""
+msgstr "Активные сессии"
 
 msgid "Period Overview"
 msgstr "Обзор за период"
@@ -285,3 +285,18 @@ msgstr "Стоит обратить внимание"
 
 msgid "For context"
 msgstr "Для контекста"
+
+msgid "Similar news"
+msgstr "Похожие новости"
+
+msgid "No similar news found"
+msgstr "Похожих новостей не найдено"
+
+msgid "Source articles"
+msgstr "Статьи-источники"
+
+msgid "Current"
+msgstr "Текущая"
+
+msgid "Loading…"
+msgstr "Загрузка…"

@@ -228,6 +228,7 @@ def _serialize_article(article, score=0):
         "url": article.get_absolute_url(),
         "feed": article.feed.title if article.feed else "",
         "score": score,
+        "date": article.published.isoformat() if article.published else "",
         "image_url": article._primary_imgs[0].image.url if article._primary_imgs else "",
     }
 
@@ -301,7 +302,10 @@ def similar_items_api(request, item_id):
             "date": si.section.digest.date.isoformat(),
             "deep_dive_url": reverse("deep_dive", args=[si.id]),
             "score": round(best * 100),
-            "articles": [_serialize_article(a) for a in all_articles[:4]],
+            "articles": [
+                _serialize_article(a, score=round(art_scores.get(a.id, 0) * 100))
+                for a in all_articles[:4]
+            ],
         })
 
     # ── Standalone articles (not in any found digest item) ──

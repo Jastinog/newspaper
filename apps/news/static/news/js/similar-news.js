@@ -54,10 +54,13 @@
 
             (d.articles || []).forEach(function (a) {
                 var aid = 'a' + a.id + '_' + d.id;
+                var parts = [];
+                if (a.feed) parts.push(a.feed);
+                if (a.date) parts.push(a.date.slice(0, 10));
                 nodes.push({
                     id: aid, type: 'article', _level: 2,
                     label: a.title, summary: '',
-                    sub: a.feed || '', score: 0,
+                    sub: parts.join(' \u00b7 '), score: a.score || 0,
                     imageUrl: a.image_url || '', url: a.url,
                 });
                 links.push({ source: nid, target: aid });
@@ -67,10 +70,13 @@
         // Level 1: standalone similar articles (no digest item)
         (data.articles || []).forEach(function (a) {
             var aid = 'sa' + a.id;
+            var parts = [];
+            if (a.feed) parts.push(a.feed);
+            if (a.date) parts.push(a.date.slice(0, 10));
             nodes.push({
                 id: aid, type: 'article', _level: 1,
                 label: a.title, summary: '',
-                sub: a.feed || '', score: a.score || 0,
+                sub: parts.join(' \u00b7 '), score: a.score || 0,
                 imageUrl: a.image_url || '', url: a.url,
             });
             links.push({ source: 'c', target: aid });
