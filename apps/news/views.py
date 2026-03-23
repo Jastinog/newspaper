@@ -254,7 +254,9 @@ def similar_items_api(request, item_id):
         .exclude(id=item.id)
         .select_related("section__digest", "image")
         .prefetch_related(
-            Prefetch("articles", queryset=Article.objects.select_related("feed")),
+            Prefetch("articles", queryset=Article.objects.select_related("feed").prefetch_related(
+                Prefetch("images", queryset=ArticleImage.objects.filter(is_primary=True, downloaded=True).exclude(image=""), to_attr="_primary_imgs"),
+            )),
         )
         .distinct()
         .order_by("-section__digest__date", "-importance")[:8]
@@ -275,6 +277,7 @@ def similar_items_api(request, item_id):
                 "title": a.title,
                 "url": a.get_absolute_url(),
                 "feed": a.feed.title if a.feed else "",
+                "image_url": a._primary_imgs[0].image.url if a._primary_imgs else "",
             })
 
         items_data.append({
@@ -293,13 +296,21 @@ def similar_items_api(request, item_id):
     orphan_ids = found_ids - covered
     articles_data = []
     if orphan_ids:
-        for a in Article.objects.filter(id__in=orphan_ids).select_related("feed").order_by("-published")[:10]:
+        for a in (
+            Article.objects.filter(id__in=orphan_ids)
+            .select_related("feed")
+            .prefetch_related(
+                Prefetch("images", queryset=ArticleImage.objects.filter(is_primary=True, downloaded=True).exclude(image=""), to_attr="_primary_imgs"),
+            )
+            .order_by("-published")[:10]
+        ):
             articles_data.append({
                 "id": a.id,
                 "title": a.title,
                 "url": a.get_absolute_url(),
                 "feed": a.feed.title if a.feed else "",
                 "score": round(art_scores.get(a.id, 0) * 100),
+                "image_url": a._primary_imgs[0].image.url if a._primary_imgs else "",
             })
 
     return Response({"items": items_data, "articles": articles_data})

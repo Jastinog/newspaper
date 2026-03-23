@@ -18,9 +18,7 @@
 .similar-modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.45);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
+    background: none;
     z-index: 10000;
     display: flex;
     align-items: center;
@@ -33,15 +31,21 @@
 }
 
 .similar-modal {
-    background: var(--bg);
-    border: 1px solid var(--border);
+    background: rgba(var(--bg-rgb, 255,255,255), 0.55);
+    backdrop-filter: blur(24px) saturate(1.4);
+    -webkit-backdrop-filter: blur(24px) saturate(1.4);
+    border: 1px solid rgba(var(--fg-rgb, 0,0,0), 0.08);
     border-left: 3px solid var(--accent);
-    width: calc(100vw - 2rem);
-    height: calc(100vh - 2rem);
+    width: 100vw;
+    height: 100vh;
     position: relative;
-    box-shadow: 0 6px 30px rgba(0,0,0,0.25);
     display: flex;
     flex-direction: column;
+}
+
+[data-theme="dark"] .similar-modal {
+    background: rgba(var(--bg-rgb, 20,20,20), 0.5);
+    border-color: rgba(255,255,255,0.08);
 }
 
 .similar-modal-header {
@@ -49,7 +53,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 0.8rem 1.2rem 0.5rem;
-    border-bottom: 1px solid var(--border-faint);
+    border-bottom: 1px solid rgba(var(--fg-rgb), 0.08);
     flex-shrink: 0;
 }
 
@@ -93,7 +97,7 @@
     gap: 1.2rem;
     justify-content: center;
     padding: 0.6rem 1rem 0.8rem;
-    border-top: 1px solid var(--border-faint);
+    border-top: 1px solid rgba(var(--fg-rgb), 0.08);
     flex-shrink: 0;
 }
 

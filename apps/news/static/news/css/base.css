@@ -1,7 +1,9 @@
 /* === THEME VARIABLES === */
 :root, [data-theme="light"] {
     --bg: #f4f0e8;
+    --bg-rgb: 244, 240, 232;
     --fg: #161210;
+    --fg-rgb: 22, 18, 16;
     --fg-secondary: #2a2622;
     --fg-dim: #4a4640;
     --fg-muted: #706a62;
@@ -22,7 +24,9 @@
 
 [data-theme="dark"] {
     --bg: #181410;
+    --bg-rgb: 24, 20, 16;
     --fg: #d8d0c2;
+    --fg-rgb: 216, 208, 194;
     --fg-secondary: #c4bcae;
     --fg-dim: #8a8274;
     --fg-muted: #6e665c;

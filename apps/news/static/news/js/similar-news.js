@@ -5,7 +5,7 @@
  * Level 1: similar digest items + standalone articles
  * Level 2: articles of each similar digest item
  *
- * Uses dagMode('lr') so nodes never overlap.
+ * Connected nodes are pulled LEFT of center; root stays right.
  */
 (function () {
     'use strict';
@@ -34,7 +34,7 @@
 
     function buildGraph(center, data) {
         var nodes = [{
-            id: 'c', type: 'center',
+            id: 'c', type: 'center', _level: 0,
             label: center.topic, summary: center.summary || '',
             imageUrl: center.imageUrl, score: 0, url: null, sub: '',
         }];
@@ -44,7 +44,7 @@
         (data.items || []).forEach(function (d) {
             var nid = 'i' + d.id;
             nodes.push({
-                id: nid, type: 'item',
+                id: nid, type: 'item', _level: 1,
                 label: d.topic, summary: d.summary || '',
                 sub: d.section + ' \u00b7 ' + d.date,
                 score: d.score || 0,
@@ -55,10 +55,10 @@
             (d.articles || []).forEach(function (a) {
                 var aid = 'a' + a.id + '_' + d.id;
                 nodes.push({
-                    id: aid, type: 'article',
+                    id: aid, type: 'article', _level: 2,
                     label: a.title, summary: '',
                     sub: a.feed || '', score: 0,
-                    imageUrl: '', url: a.url,
+                    imageUrl: a.image_url || '', url: a.url,
                 });
                 links.push({ source: nid, target: aid });
             });
@@ -68,10 +68,10 @@
         (data.articles || []).forEach(function (a) {
             var aid = 'sa' + a.id;
             nodes.push({
-                id: aid, type: 'article',
+                id: aid, type: 'article', _level: 1,
                 label: a.title, summary: '',
                 sub: a.feed || '', score: a.score || 0,
-                imageUrl: '', url: a.url,
+                imageUrl: a.image_url || '', url: a.url,
             });
             links.push({ source: 'c', target: aid });
         });
@@ -102,19 +102,19 @@
 
     function computeLayout(node, ctx) {
         var t = node.type;
-        var IMG_S = (t === 'center' || t === 'item') ? 42 : 0;
-        var hasImg = IMG_S > 0 && node._img && node._img.complete && node._img.naturalWidth > 0;
-        var imgW = hasImg ? IMG_S : 0;
-        var STRIPE = 3;
-        var PAD = 6;
-        var TEXT_LEFT = STRIPE + (imgW || PAD);
-        var CARD_W = t === 'center' ? 230 : t === 'item' ? 190 : 150;
-        var TEXT_W = CARD_W - TEXT_LEFT - PAD - (hasImg ? PAD : 0);
-        var titleSize = t === 'center' ? 9 : t === 'article' ? 6 : 7;
+        var hasImg = node._img && node._img.complete && node._img.naturalWidth > 0;
+        var IMG_MIN = t === 'center' ? 56 : t === 'item' ? 42 : 32;
+        var STRIPE = t === 'center' ? 4 : 3;
+        var PAD = t === 'center' ? 8 : 6;
+        // First pass: compute text height with estimated text width
+        var CARD_W = t === 'center' ? 280 : t === 'item' ? 210 : 160;
+        var TEXT_LEFT_EST = STRIPE + IMG_MIN + PAD;
+        var TEXT_W = CARD_W - TEXT_LEFT_EST - PAD;
+        var titleSize = t === 'center' ? 11 : t === 'item' ? 8 : 6.5;
 
         ctx.font = '700 ' + titleSize + 'px "PT Serif", Georgia, serif';
         var titleLines = wrapText(ctx, node.label, TEXT_W);
-        var maxLines = t === 'center' ? 3 : 2;
+        var maxLines = t === 'center' ? 4 : t === 'item' ? 3 : 2;
         if (titleLines.length > maxLines) {
             titleLines = titleLines.slice(0, maxLines);
             titleLines[maxLines - 1] += '\u2026';
@@ -123,17 +123,23 @@
 
         var summaryLines = [];
         var summaryH = 0;
-        if (node.summary && t === 'center') {
-            ctx.font = '6px -apple-system, system-ui, sans-serif';
+        if (node.summary && (t === 'center' || t === 'item')) {
+            var sumSize = t === 'center' ? 7 : 6;
+            var sumMax = t === 'center' ? 3 : 2;
+            ctx.font = sumSize + 'px -apple-system, system-ui, sans-serif';
             summaryLines = wrapText(ctx, node.summary, TEXT_W);
-            if (summaryLines.length > 2) summaryLines = summaryLines.slice(0, 2);
-            summaryH = summaryLines.length * 7.8 + 2;
+            if (summaryLines.length > sumMax) summaryLines = summaryLines.slice(0, sumMax);
+            summaryH = summaryLines.length * (sumSize * 1.3) + 2;
         }
 
-        var subH = node.sub ? 9 : 0;
-        var scoreH = node.score ? 9 : 0;
+        var subH = node.sub ? (t === 'center' ? 11 : 9) : 0;
+        var scoreH = node.score ? (t === 'center' ? 11 : 9) : 0;
         var textH = PAD + titleH + summaryH + subH + scoreH + PAD;
-        var CARD_H = Math.max(textH, imgW > 0 ? imgW : 0);
+        // Image is a square that fills the full card height
+        var CARD_H = Math.max(textH, IMG_MIN);
+        var IMG_S = CARD_H;
+        var TEXT_LEFT = STRIPE + IMG_S + PAD;
+        CARD_W = TEXT_LEFT + TEXT_W + PAD;
 
         var stripeColor = t === 'center' ? 'accent'
                         : t === 'item'   ? 'item'
@@ -141,10 +147,11 @@
 
         return {
             CARD_W: CARD_W, CARD_H: CARD_H, STRIPE: STRIPE, PAD: PAD,
-            IMG_S: IMG_S, hasImg: hasImg, imgW: imgW,
+            IMG_S: IMG_S, hasImg: hasImg,
             TEXT_LEFT: TEXT_LEFT, titleSize: titleSize,
             titleLines: titleLines, titleH: titleH,
-            summaryLines: summaryLines, stripeKey: stripeColor,
+            summaryLines: summaryLines, summarySize: node.summary ? (t === 'center' ? 7 : 6) : 0,
+            stripeKey: stripeColor,
         };
     }
 
@@ -169,29 +176,48 @@
         ctx.fillStyle = stripeColor;
         ctx.fillRect(x, y, L.STRIPE, L.CARD_H);
 
-        // Square image (cover-fit)
+        // Square image: full card height
+        var imgX = x + L.STRIPE;
+        var imgY = y;
         if (L.hasImg) {
             ctx.save();
             ctx.beginPath();
-            ctx.rect(x + L.STRIPE, y, L.IMG_S, L.CARD_H);
+            ctx.rect(imgX, imgY, L.IMG_S, L.IMG_S);
             ctx.clip();
             var ratio = node._img.naturalWidth / node._img.naturalHeight;
             var dw, dh;
-            if (ratio > 1) { dh = L.CARD_H; dw = L.CARD_H * ratio; }
+            if (ratio > 1) { dh = L.IMG_S; dw = L.IMG_S * ratio; }
             else { dw = L.IMG_S; dh = L.IMG_S / ratio; }
             ctx.drawImage(node._img,
-                x + L.STRIPE + (L.IMG_S - dw) / 2,
-                y + (L.CARD_H - dh) / 2, dw, dh);
+                imgX + (L.IMG_S - dw) / 2,
+                imgY + (L.IMG_S - dh) / 2, dw, dh);
             ctx.restore();
+        } else {
+            // Placeholder: tinted square + doc icon
+            ctx.fillStyle = colors.borderLight;
+            ctx.fillRect(imgX, imgY, L.IMG_S, L.IMG_S);
+            var iconSize = L.IMG_S * 0.38;
+            var cx = imgX + L.IMG_S / 2;
+            var cy = imgY + L.IMG_S / 2;
+            ctx.strokeStyle = colors.fgFaint;
+            ctx.lineWidth = 0.8;
+            var hw = iconSize * 0.4, hh = iconSize * 0.5;
+            ctx.strokeRect(cx - hw, cy - hh, hw * 2, hh * 2);
+            ctx.beginPath();
+            ctx.moveTo(cx - hw + 2, cy - hh * 0.2);
+            ctx.lineTo(cx + hw - 2, cy - hh * 0.2);
+            ctx.moveTo(cx - hw + 2, cy + hh * 0.3);
+            ctx.lineTo(cx + hw - 2, cy + hh * 0.3);
+            ctx.stroke();
         }
 
         // Border
         ctx.strokeStyle = t === 'center' ? colors.accent : colors.borderLight;
-        ctx.lineWidth = t === 'center' ? 1.5 : 0.5;
+        ctx.lineWidth = t === 'center' ? 2 : t === 'item' ? 0.8 : 0.5;
         ctx.strokeRect(x, y, L.CARD_W, L.CARD_H);
 
         // Text
-        var tx = x + L.TEXT_LEFT + (L.hasImg ? L.PAD : 0);
+        var tx = x + L.TEXT_LEFT;
         var ty = y + L.PAD;
 
         ctx.font = '700 ' + L.titleSize + 'px "PT Serif", Georgia, serif';
@@ -205,23 +231,25 @@
 
         if (L.summaryLines.length) {
             ty += 2;
-            ctx.font = '6px -apple-system, system-ui, sans-serif';
+            ctx.font = L.summarySize + 'px -apple-system, system-ui, sans-serif';
             ctx.fillStyle = colors.fgMuted;
             for (var j = 0; j < L.summaryLines.length; j++) {
                 ctx.fillText(L.summaryLines[j], tx, ty);
-                ty += 7.8;
+                ty += L.summarySize * 1.3;
             }
         }
 
         if (node.sub) {
-            ctx.font = '5.5px -apple-system, system-ui, sans-serif';
+            var subSize = t === 'center' ? 7 : t === 'item' ? 6 : 5.5;
+            ctx.font = subSize + 'px -apple-system, system-ui, sans-serif';
             ctx.fillStyle = colors.fgFaint;
-            ctx.fillText(truncate(node.sub, 35), tx, ty + 1);
-            ty += 9;
+            ctx.fillText(truncate(node.sub, 40), tx, ty + 1);
+            ty += t === 'center' ? 11 : 9;
         }
 
         if (node.score) {
-            ctx.font = '700 6px -apple-system, system-ui, sans-serif';
+            var scoreSize = t === 'center' ? 8 : t === 'item' ? 7 : 6;
+            ctx.font = '700 ' + scoreSize + 'px -apple-system, system-ui, sans-serif';
             ctx.fillStyle = stripeColor;
             ctx.fillText(node.score + '%', tx, ty + 1);
         }
@@ -314,8 +342,6 @@
             .width(container.clientWidth)
             .height(container.clientHeight)
             .nodeId('id')
-            .dagMode('lr')
-            .dagLevelDistance(350)
             .nodeCanvasObject(function (node, ctx, gs) {
                 drawNode(node, ctx, gs, colors);
             })
@@ -335,14 +361,32 @@
             .onNodeHover(function (node) {
                 container.style.cursor = node && node.url ? 'pointer' : 'default';
             })
-            .cooldownTicks(0)
-            .warmupTicks(100);
+            .cooldownTicks(200)
+            .warmupTicks(150);
 
         // Strong repulsion to prevent card overlap
         fg.d3Force('charge').strength(-3000).distanceMax(600);
 
-        // Zoom to fit after layout settles
-        setTimeout(function () { fg.zoomToFit(400, 40); }, 1200);
+        // Link preferred distance (matches level spacing)
+        fg.d3Force('link').distance(350);
+
+        // Pull connected nodes LEFT: center stays right, items middle, articles far-left
+        fg.d3Force('levelX', (function () {
+            var nodes;
+            function force(alpha) {
+                for (var i = 0; i < nodes.length; i++) {
+                    var n = nodes[i];
+                    var tx = n._level === 0 ? 0 : n._level === 1 ? -350 : -700;
+                    n.vx += (tx - n.x) * 0.12 * alpha;
+                }
+            }
+            force.initialize = function (_) { nodes = _; };
+            return force;
+        })());
+
+        // Continuous zoom-to-fit while simulation runs, then once more when it stops
+        fg.onEngineTick(function () { fg.zoomToFit(0, 40); });
+        fg.onEngineStop(function () { fg.zoomToFit(400, 40); });
 
         // Resize (cleaned up on modal close)
         var resizeTimer;
@@ -369,7 +413,12 @@
                 el('div', 'similar-modal-empty', bd('similarEmpty', 'No similar news found'))
             );
         } else {
-            renderGraph(m.graphBox, graph, m);
+            // Let the browser paint the modal+blur first, then init the heavy graph
+            requestAnimationFrame(function () {
+                requestAnimationFrame(function () {
+                    renderGraph(m.graphBox, graph, m);
+                });
+            });
         }
     }
 
