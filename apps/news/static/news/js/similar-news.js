@@ -98,60 +98,55 @@
         return lines;
     }
 
-    /* ── Canvas: draw node card ──────────────────── */
+    /* ── Per-type sizing constants ────────────────── */
+
+    var SIZES = {
+        center:  { cardW: 280, imgMin: 56, stripe: 4, pad: 8, titlePx: 11, maxTitle: 4, sumPx: 7, maxSum: 3, subPx: 7, scorePx: 8, metaH: 11, borderW: 2, stripeKey: 'accent'  },
+        item:    { cardW: 210, imgMin: 42, stripe: 3, pad: 6, titlePx:  8, maxTitle: 3, sumPx: 6, maxSum: 2, subPx: 6, scorePx: 7, metaH:  9, borderW: 0.8, stripeKey: 'item'   },
+        article: { cardW: 160, imgMin: 32, stripe: 3, pad: 6, titlePx: 6.5, maxTitle: 2, sumPx: 0, maxSum: 0, subPx: 5.5, scorePx: 6, metaH: 9, borderW: 0.5, stripeKey: 'fgMuted' },
+    };
+
+    /* ── Canvas: compute node card layout ─────────── */
 
     function computeLayout(node, ctx) {
-        var t = node.type;
+        var S = SIZES[node.type];
         var hasImg = node._img && node._img.complete && node._img.naturalWidth > 0;
-        var IMG_MIN = t === 'center' ? 56 : t === 'item' ? 42 : 32;
-        var STRIPE = t === 'center' ? 4 : 3;
-        var PAD = t === 'center' ? 8 : 6;
-        // First pass: compute text height with estimated text width
-        var CARD_W = t === 'center' ? 280 : t === 'item' ? 210 : 160;
-        var TEXT_LEFT_EST = STRIPE + IMG_MIN + PAD;
-        var TEXT_W = CARD_W - TEXT_LEFT_EST - PAD;
-        var titleSize = t === 'center' ? 11 : t === 'item' ? 8 : 6.5;
 
-        ctx.font = '700 ' + titleSize + 'px "PT Serif", Georgia, serif';
-        var titleLines = wrapText(ctx, node.label, TEXT_W);
-        var maxLines = t === 'center' ? 4 : t === 'item' ? 3 : 2;
-        if (titleLines.length > maxLines) {
-            titleLines = titleLines.slice(0, maxLines);
-            titleLines[maxLines - 1] += '\u2026';
+        // Estimate text width from card width minus image + padding
+        var textLeftEst = S.stripe + S.imgMin + S.pad;
+        var textW = S.cardW - textLeftEst - S.pad;
+
+        ctx.font = '700 ' + S.titlePx + 'px "PT Serif", Georgia, serif';
+        var titleLines = wrapText(ctx, node.label, textW);
+        if (titleLines.length > S.maxTitle) {
+            titleLines = titleLines.slice(0, S.maxTitle);
+            titleLines[S.maxTitle - 1] += '\u2026';
         }
-        var titleH = titleLines.length * titleSize * 1.35;
+        var titleH = titleLines.length * S.titlePx * 1.35;
 
         var summaryLines = [];
         var summaryH = 0;
-        if (node.summary && (t === 'center' || t === 'item')) {
-            var sumSize = t === 'center' ? 7 : 6;
-            var sumMax = t === 'center' ? 3 : 2;
-            ctx.font = sumSize + 'px -apple-system, system-ui, sans-serif';
-            summaryLines = wrapText(ctx, node.summary, TEXT_W);
-            if (summaryLines.length > sumMax) summaryLines = summaryLines.slice(0, sumMax);
-            summaryH = summaryLines.length * (sumSize * 1.3) + 2;
+        if (node.summary && S.sumPx > 0) {
+            ctx.font = S.sumPx + 'px -apple-system, system-ui, sans-serif';
+            summaryLines = wrapText(ctx, node.summary, textW);
+            if (summaryLines.length > S.maxSum) summaryLines = summaryLines.slice(0, S.maxSum);
+            summaryH = summaryLines.length * (S.sumPx * 1.3) + 2;
         }
 
-        var subH = node.sub ? (t === 'center' ? 11 : 9) : 0;
-        var scoreH = node.score ? (t === 'center' ? 11 : 9) : 0;
-        var textH = PAD + titleH + summaryH + subH + scoreH + PAD;
-        // Image is a square that fills the full card height
-        var CARD_H = Math.max(textH, IMG_MIN);
-        var IMG_S = CARD_H;
-        var TEXT_LEFT = STRIPE + IMG_S + PAD;
-        CARD_W = TEXT_LEFT + TEXT_W + PAD;
+        var subH = node.sub ? S.metaH : 0;
+        var scoreH = node.score ? S.metaH : 0;
+        var textH = S.pad + titleH + summaryH + subH + scoreH + S.pad;
 
-        var stripeColor = t === 'center' ? 'accent'
-                        : t === 'item'   ? 'item'
-                        :                  'fgMuted';
+        // Image is a square that fills the full card height
+        var cardH = Math.max(textH, S.imgMin);
+        var imgS = cardH;
+        var textLeft = S.stripe + imgS + S.pad;
+        var cardW = textLeft + textW + S.pad;
 
         return {
-            CARD_W: CARD_W, CARD_H: CARD_H, STRIPE: STRIPE, PAD: PAD,
-            IMG_S: IMG_S, hasImg: hasImg,
-            TEXT_LEFT: TEXT_LEFT, titleSize: titleSize,
-            titleLines: titleLines, titleH: titleH,
-            summaryLines: summaryLines, summarySize: node.summary ? (t === 'center' ? 7 : 6) : 0,
-            stripeKey: stripeColor,
+            S: S, cardW: cardW, cardH: cardH, imgS: imgS, hasImg: hasImg,
+            textLeft: textLeft, titleLines: titleLines, titleH: titleH,
+            summaryLines: summaryLines,
         };
     }
 
@@ -162,43 +157,43 @@
             node._layout = computeLayout(node, ctx);
         }
         var L = node._layout;
-        var t = node.type;
+        var S = L.S;
 
-        var x = node.x - L.CARD_W / 2;
-        var y = node.y - L.CARD_H / 2;
+        var x = node.x - L.cardW / 2;
+        var y = node.y - L.cardH / 2;
 
         // Background
         ctx.fillStyle = colors.bg;
-        ctx.fillRect(x, y, L.CARD_W, L.CARD_H);
+        ctx.fillRect(x, y, L.cardW, L.cardH);
 
         // Left stripe
-        var stripeColor = colors[L.stripeKey];
+        var stripeColor = colors[S.stripeKey];
         ctx.fillStyle = stripeColor;
-        ctx.fillRect(x, y, L.STRIPE, L.CARD_H);
+        ctx.fillRect(x, y, S.stripe, L.cardH);
 
         // Square image: full card height
-        var imgX = x + L.STRIPE;
+        var imgX = x + S.stripe;
         var imgY = y;
         if (L.hasImg) {
             ctx.save();
             ctx.beginPath();
-            ctx.rect(imgX, imgY, L.IMG_S, L.IMG_S);
+            ctx.rect(imgX, imgY, L.imgS, L.imgS);
             ctx.clip();
             var ratio = node._img.naturalWidth / node._img.naturalHeight;
             var dw, dh;
-            if (ratio > 1) { dh = L.IMG_S; dw = L.IMG_S * ratio; }
-            else { dw = L.IMG_S; dh = L.IMG_S / ratio; }
+            if (ratio > 1) { dh = L.imgS; dw = L.imgS * ratio; }
+            else { dw = L.imgS; dh = L.imgS / ratio; }
             ctx.drawImage(node._img,
-                imgX + (L.IMG_S - dw) / 2,
-                imgY + (L.IMG_S - dh) / 2, dw, dh);
+                imgX + (L.imgS - dw) / 2,
+                imgY + (L.imgS - dh) / 2, dw, dh);
             ctx.restore();
         } else {
             // Placeholder: tinted square + doc icon
             ctx.fillStyle = colors.borderLight;
-            ctx.fillRect(imgX, imgY, L.IMG_S, L.IMG_S);
-            var iconSize = L.IMG_S * 0.38;
-            var cx = imgX + L.IMG_S / 2;
-            var cy = imgY + L.IMG_S / 2;
+            ctx.fillRect(imgX, imgY, L.imgS, L.imgS);
+            var iconSize = L.imgS * 0.38;
+            var cx = imgX + L.imgS / 2;
+            var cy = imgY + L.imgS / 2;
             ctx.strokeStyle = colors.fgFaint;
             ctx.lineWidth = 0.8;
             var hw = iconSize * 0.4, hh = iconSize * 0.5;
@@ -212,52 +207,50 @@
         }
 
         // Border
-        ctx.strokeStyle = t === 'center' ? colors.accent : colors.borderLight;
-        ctx.lineWidth = t === 'center' ? 2 : t === 'item' ? 0.8 : 0.5;
-        ctx.strokeRect(x, y, L.CARD_W, L.CARD_H);
+        ctx.strokeStyle = node.type === 'center' ? colors.accent : colors.borderLight;
+        ctx.lineWidth = S.borderW;
+        ctx.strokeRect(x, y, L.cardW, L.cardH);
 
         // Text
-        var tx = x + L.TEXT_LEFT;
-        var ty = y + L.PAD;
+        var tx = x + L.textLeft;
+        var ty = y + S.pad;
 
-        ctx.font = '700 ' + L.titleSize + 'px "PT Serif", Georgia, serif';
+        ctx.font = '700 ' + S.titlePx + 'px "PT Serif", Georgia, serif';
         ctx.textAlign = 'left';
         ctx.textBaseline = 'top';
         ctx.fillStyle = colors.fg;
         for (var i = 0; i < L.titleLines.length; i++) {
             ctx.fillText(L.titleLines[i], tx, ty);
-            ty += L.titleSize * 1.35;
+            ty += S.titlePx * 1.35;
         }
 
         if (L.summaryLines.length) {
             ty += 2;
-            ctx.font = L.summarySize + 'px -apple-system, system-ui, sans-serif';
+            ctx.font = S.sumPx + 'px -apple-system, system-ui, sans-serif';
             ctx.fillStyle = colors.fgMuted;
             for (var j = 0; j < L.summaryLines.length; j++) {
                 ctx.fillText(L.summaryLines[j], tx, ty);
-                ty += L.summarySize * 1.3;
+                ty += S.sumPx * 1.3;
             }
         }
 
         if (node.sub) {
-            var subSize = t === 'center' ? 7 : t === 'item' ? 6 : 5.5;
-            ctx.font = subSize + 'px -apple-system, system-ui, sans-serif';
+            ctx.font = S.subPx + 'px -apple-system, system-ui, sans-serif';
             ctx.fillStyle = colors.fgFaint;
             ctx.fillText(truncate(node.sub, 40), tx, ty + 1);
-            ty += t === 'center' ? 11 : 9;
+            ty += S.metaH;
         }
 
         if (node.score) {
-            var scoreSize = t === 'center' ? 8 : t === 'item' ? 7 : 6;
-            ctx.font = '700 ' + scoreSize + 'px -apple-system, system-ui, sans-serif';
+            ctx.font = '700 ' + S.scorePx + 'px -apple-system, system-ui, sans-serif';
             ctx.fillStyle = stripeColor;
             ctx.fillText(node.score + '%', tx, ty + 1);
         }
 
         node._bx = x;
         node._by = y;
-        node._bw = L.CARD_W;
-        node._bh = L.CARD_H;
+        node._bw = L.cardW;
+        node._bh = L.cardH;
     }
 
     /* ── Legend ───────────────────────────────────── */

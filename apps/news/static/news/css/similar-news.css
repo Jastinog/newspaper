@@ -123,15 +123,19 @@
 [data-theme="dark"] .similar-legend-dot.dot-item { background: #a8845c; }
 
 /* === LOADING / EMPTY === */
-.similar-modal-loading {
+.similar-modal-loading,
+.similar-modal-empty {
     display: flex;
     align-items: center;
     justify-content: center;
-    flex: 1;
-    min-height: 300px;
     font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
     font-size: 0.8rem;
     color: var(--fg-faint);
+}
+
+.similar-modal-loading {
+    flex: 1;
+    min-height: 300px;
     animation: similar-pulse 1.5s ease-in-out infinite;
 }
 @keyframes similar-pulse {
@@ -140,11 +144,5 @@
 }
 
 .similar-modal-empty {
-    display: flex;
-    align-items: center;
-    justify-content: center;
     min-height: 200px;
-    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
-    font-size: 0.8rem;
-    color: var(--fg-faint);
 }

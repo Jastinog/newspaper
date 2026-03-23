@@ -211,9 +211,30 @@ def robots_txt(request):
 # ── Similar Items API ─────────────────────────────────────
 
 
+def _primary_image_prefetch():
+    """Prefetch for fetching a single primary image per article."""
+    return Prefetch(
+        "images",
+        queryset=ArticleImage.objects.filter(is_primary=True, downloaded=True).exclude(image=""),
+        to_attr="_primary_imgs",
+    )
+
+
+def _serialize_article(article, score=0):
+    """Serialize an article with prefetched primary image for the similar-items API."""
+    return {
+        "id": article.id,
+        "title": article.title,
+        "url": article.get_absolute_url(),
+        "feed": article.feed.title if article.feed else "",
+        "score": score,
+        "image_url": article._primary_imgs[0].image.url if article._primary_imgs else "",
+    }
+
+
 @api_view(["GET"])
 def similar_items_api(request, item_id):
-    """Tree: center → similar digest items → their articles."""
+    """Tree: center -> similar digest items -> their articles."""
     item = get_object_or_404(
         DigestItem.objects.select_related("section__digest"),
         pk=item_id,
@@ -254,9 +275,10 @@ def similar_items_api(request, item_id):
         .exclude(id=item.id)
         .select_related("section__digest", "image")
         .prefetch_related(
-            Prefetch("articles", queryset=Article.objects.select_related("feed").prefetch_related(
-                Prefetch("images", queryset=ArticleImage.objects.filter(is_primary=True, downloaded=True).exclude(image=""), to_attr="_primary_imgs"),
-            )),
+            Prefetch(
+                "articles",
+                queryset=Article.objects.select_related("feed").prefetch_related(_primary_image_prefetch()),
+            ),
         )
         .distinct()
         .order_by("-section__digest__date", "-importance")[:8]
@@ -270,16 +292,6 @@ def similar_items_api(request, item_id):
         best = max((art_scores.get(aid, 0) for aid in si_aids), default=0)
         covered |= si_aids
 
-        si_articles = []
-        for a in all_articles[:4]:
-            si_articles.append({
-                "id": a.id,
-                "title": a.title,
-                "url": a.get_absolute_url(),
-                "feed": a.feed.title if a.feed else "",
-                "image_url": a._primary_imgs[0].image.url if a._primary_imgs else "",
-            })
-
         items_data.append({
             "id": si.id,
             "topic": si.topic,
@@ -289,29 +301,23 @@ def similar_items_api(request, item_id):
             "date": si.section.digest.date.isoformat(),
             "deep_dive_url": reverse("deep_dive", args=[si.id]),
             "score": round(best * 100),
-            "articles": si_articles,
+            "articles": [_serialize_article(a) for a in all_articles[:4]],
         })
 
     # ── Standalone articles (not in any found digest item) ──
     orphan_ids = found_ids - covered
     articles_data = []
     if orphan_ids:
-        for a in (
+        orphans = (
             Article.objects.filter(id__in=orphan_ids)
             .select_related("feed")
-            .prefetch_related(
-                Prefetch("images", queryset=ArticleImage.objects.filter(is_primary=True, downloaded=True).exclude(image=""), to_attr="_primary_imgs"),
-            )
+            .prefetch_related(_primary_image_prefetch())
             .order_by("-published")[:10]
-        ):
-            articles_data.append({
-                "id": a.id,
-                "title": a.title,
-                "url": a.get_absolute_url(),
-                "feed": a.feed.title if a.feed else "",
-                "score": round(art_scores.get(a.id, 0) * 100),
-                "image_url": a._primary_imgs[0].image.url if a._primary_imgs else "",
-            })
+        )
+        articles_data = [
+            _serialize_article(a, score=round(art_scores.get(a.id, 0) * 100))
+            for a in orphans
+        ]
 
     return Response({"items": items_data, "articles": articles_data})
 
