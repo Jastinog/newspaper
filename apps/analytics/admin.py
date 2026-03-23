@@ -25,9 +25,9 @@ class ReadOnlyAdmin(ModelAdmin):
 class ClientAdmin(ReadOnlyAdmin):
     list_display = (
         "client_id", "type_icon", "bot_name_display", "device_type",
-        "browser", "os", "country_display", "first_seen", "last_seen",
+        "browser", "os", "country_display", "city", "first_seen", "last_seen",
     )
-    list_filter = ("is_bot", "device_type", "country")
+    list_filter = ("is_bot", "device_type", "country", "city")
     search_fields = ("client_id", "browser", "os", "bot_name")
     readonly_fields = (
         "client_id", "first_seen", "last_seen", "device_type", "browser", "os",

@@ -32,6 +32,19 @@
 
     /* ── Build DAG graph data ────────────────────── */
 
+    function pushArticleNode(nodes, links, a, id, type, level, linkSrc, score) {
+        var parts = [];
+        if (a.feed) parts.push(a.feed);
+        if (a.date) parts.push(a.date.slice(0, 10));
+        nodes.push({
+            id: id, type: type, _level: level,
+            label: a.title, summary: '',
+            sub: parts.join(' \u00b7 '), score: score,
+            imageUrl: a.image_url || '', url: a.url,
+        });
+        links.push({ source: linkSrc, target: id });
+    }
+
     function buildGraph(center, data) {
         var nodes = [{
             id: 'c', type: 'center', _level: 0,
@@ -40,7 +53,6 @@
         }];
         var links = [];
 
-        // Level 1: similar digest items → Level 2: their articles
         (data.items || []).forEach(function (d) {
             var nid = 'i' + d.id;
             nodes.push({
@@ -53,33 +65,16 @@
             links.push({ source: 'c', target: nid });
 
             (d.articles || []).forEach(function (a) {
-                var aid = 'a' + a.id + '_' + d.id;
-                var parts = [];
-                if (a.feed) parts.push(a.feed);
-                if (a.date) parts.push(a.date.slice(0, 10));
-                nodes.push({
-                    id: aid, type: 'article', _level: 2,
-                    label: a.title, summary: '',
-                    sub: parts.join(' \u00b7 '), score: a.score || 0,
-                    imageUrl: a.image_url || '', url: a.url,
-                });
-                links.push({ source: nid, target: aid });
+                pushArticleNode(nodes, links, a, 'a' + a.id + '_' + d.id, 'article', 2, nid, a.score || 0);
             });
         });
 
-        // Level 1: standalone similar articles (no digest item)
+        (data.sources || []).forEach(function (a) {
+            pushArticleNode(nodes, links, a, 'src' + a.id, 'source', -1, 'c', 0);
+        });
+
         (data.articles || []).forEach(function (a) {
-            var aid = 'sa' + a.id;
-            var parts = [];
-            if (a.feed) parts.push(a.feed);
-            if (a.date) parts.push(a.date.slice(0, 10));
-            nodes.push({
-                id: aid, type: 'article', _level: 1,
-                label: a.title, summary: '',
-                sub: parts.join(' \u00b7 '), score: a.score || 0,
-                imageUrl: a.image_url || '', url: a.url,
-            });
-            links.push({ source: 'c', target: aid });
+            pushArticleNode(nodes, links, a, 'sa' + a.id, 'article', 1, 'c', a.score || 0);
         });
 
         return { nodes: nodes, links: links };
@@ -109,7 +104,8 @@
     var SIZES = {
         center:  { cardW: 280, imgMin: 56, stripe: 4, pad: 8, titlePx: 11, maxTitle: 4, sumPx: 7, maxSum: 3, subPx: 7, scorePx: 8, metaH: 11, borderW: 2, stripeKey: 'accent'  },
         item:    { cardW: 210, imgMin: 42, stripe: 3, pad: 6, titlePx:  8, maxTitle: 3, sumPx: 6, maxSum: 2, subPx: 6, scorePx: 7, metaH:  9, borderW: 0.8, stripeKey: 'item'   },
-        article: { cardW: 160, imgMin: 32, stripe: 3, pad: 6, titlePx: 6.5, maxTitle: 2, sumPx: 0, maxSum: 0, subPx: 5.5, scorePx: 6, metaH: 9, borderW: 0.5, stripeKey: 'fgMuted' },
+        article: { cardW: 160, imgMin: 32, stripe: 3, pad: 6, titlePx: 6.5, maxTitle: 2, sumPx: 0, maxSum: 0, subPx: 5.5, scorePx: 7, metaH: 10, borderW: 0.5, stripeKey: 'fgMuted' },
+        source:  { cardW: 160, imgMin: 32, stripe: 3, pad: 6, titlePx: 6.5, maxTitle: 2, sumPx: 0, maxSum: 0, subPx: 5.5, scorePx: 7, metaH: 10, borderW: 0.8, stripeKey: 'source' },
     };
 
     /* ── Canvas: compute node card layout ─────────── */
@@ -212,8 +208,8 @@
             ctx.stroke();
         }
 
-        // Border
-        ctx.strokeStyle = node.type === 'center' ? colors.accent : colors.borderLight;
+        // Border color matches the left stripe
+        ctx.strokeStyle = stripeColor;
         ctx.lineWidth = S.borderW;
         ctx.strokeRect(x, y, L.cardW, L.cardH);
 
@@ -249,7 +245,7 @@
 
         if (node.score) {
             ctx.font = '700 ' + S.scorePx + 'px -apple-system, system-ui, sans-serif';
-            ctx.fillStyle = stripeColor;
+            ctx.fillStyle = colors.accent;
             ctx.fillText(node.score + '%', tx, ty + 1);
         }
 
@@ -284,9 +280,10 @@
         modal.appendChild(graphBox);
 
         var legend = el('div', 'similar-modal-legend');
+        legend.appendChild(legendItem('source', bd('similarSources', 'Source articles')));
         legend.appendChild(legendItem('center', bd('similarCurrent', 'Current')));
-        legend.appendChild(legendItem('item', bd('similarLabel', 'Similar news')));
-        legend.appendChild(legendItem('article', bd('similarSources', 'Source articles')));
+        legend.appendChild(legendItem('item', bd('similarDigest', 'Digest news')));
+        legend.appendChild(legendItem('article', bd('similarArticles', 'Articles')));
         modal.appendChild(legend);
 
         overlay.appendChild(modal);
@@ -335,7 +332,15 @@
             borderLight: cssVar('--border-light'),
             bg: cssVar('--bg'),
             item: isDark ? '#a8845c' : '#8b6e4e',
+            source: isDark ? '#5b9bd5' : '#2b7ab5',
         };
+        var linkDefault = isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)';
+        var linkSource  = isDark ? 'rgba(91,155,213,0.35)' : 'rgba(43,122,181,0.3)';
+
+        function isSourceLink(link) {
+            var t = link.target;
+            return typeof t === 'object' && t.type === 'source';
+        }
 
         var fg = new ForceGraph()(container)
             .graphData({ nodes: graph.nodes, links: graph.links })
@@ -352,8 +357,8 @@
                     ctx.fillRect(node._bx, node._by, node._bw, node._bh);
                 }
             })
-            .linkWidth(1)
-            .linkColor(function () { return isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)'; })
+            .linkWidth(function (link) { return isSourceLink(link) ? 1.5 : 1; })
+            .linkColor(function (link) { return isSourceLink(link) ? linkSource : linkDefault; })
             .d3VelocityDecay(0.6)
             .onNodeClick(function (node) {
                 if (node.url) window.location.href = node.url;
@@ -376,7 +381,7 @@
             function force(alpha) {
                 for (var i = 0; i < nodes.length; i++) {
                     var n = nodes[i];
-                    var tx = n._level === 0 ? 0 : n._level === 1 ? -350 : -700;
+                    var tx = n._level === -1 ? 350 : n._level === 0 ? 0 : n._level === 1 ? -350 : -700;
                     n.vx += (tx - n.x) * 0.12 * alpha;
                 }
             }

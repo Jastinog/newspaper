@@ -243,15 +243,23 @@ def similar_items_api(request, item_id):
 
     article_ids = list(item.articles.values_list("id", flat=True))
     if not article_ids:
-        return Response({"items": [], "articles": []})
+        return Response({"items": [], "articles": [], "sources": []})
 
     embeddings = list(
         ArticleChunk.objects
         .filter(article_id__in=article_ids, chunk_index=0)
         .values_list("embedding", flat=True)[:3]
     )
+    own_articles = list(
+        item.articles
+        .select_related("feed")
+        .prefetch_related(_primary_image_prefetch())
+        .order_by("-published")
+    )
+    sources_data = [_serialize_article(a) for a in own_articles]
+
     if not embeddings:
-        return Response({"items": [], "articles": []})
+        return Response({"items": [], "articles": [], "sources": sources_data})
 
     search = SimilaritySearch(days=14)
     results = search.multi_query_search(embeddings, top_k_per_query=10, final_top_k=30)
@@ -323,7 +331,7 @@ def similar_items_api(request, item_id):
             for a in orphans
         ]
 
-    return Response({"items": items_data, "articles": articles_data})
+    return Response({"items": items_data, "articles": articles_data, "sources": sources_data})
 
 
 # ── API Views ─────────────────────────────────────────────
