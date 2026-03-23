@@ -1,5 +1,5 @@
 {% extends "news/base.html" %}
-{% load markdown_extras news_extras i18n static %}
+{% load i18n static %}
 
 {% block extra_css %}
 <style>
@@ -69,8 +69,12 @@
     .section-nav-item.active {
         color: var(--accent);
     }
+    .section-nav-rule {
+        border-top: 1px solid var(--border);
+        margin-bottom: 0.3rem;
+    }
 
-    /* Filtered mode: shares responsive column rules with digest-grid */
+    /* === FILTERED MODE === */
     .filtered-grid {
         list-style: none;
         column-gap: 1.5rem;
@@ -85,11 +89,8 @@
         display: block;
         text-indent: 0;
     }
-    .section-nav-rule {
-        border-top: 1px solid var(--border);
-        margin-bottom: 0.3rem;
-    }
 
+    /* === HEADLINE === */
     .digest-headline {
         font-family: "PT Serif", Georgia, serif;
         font-size: clamp(1.2rem, 3vw, 1.8rem);
@@ -213,47 +214,6 @@
         padding: 0.1rem 0.3rem;
         border-radius: 3px;
         font-size: 0.9em;
-    }
-
-    /* === SOURCES === */
-    .digest-section .section-articles {
-        margin-top: 0.8rem;
-        padding-top: 0.5rem;
-        border-top: 1px solid var(--border-faint);
-    }
-
-    .digest-section .section-articles h4 {
-        font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
-        font-size: 0.65rem;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-        color: var(--fg-faint);
-        margin-bottom: 0.3rem;
-    }
-
-    .digest-section .section-articles ul {
-        list-style: none;
-    }
-
-    .digest-section .section-articles li {
-        padding: 0.2rem 0;
-        font-size: 0.8rem;
-        border-bottom: none;
-    }
-
-    .digest-section .section-articles li a {
-        color: var(--link);
-        text-decoration: none;
-    }
-
-    .digest-section .section-articles li a:hover {
-        text-decoration: underline;
-    }
-
-    .digest-section .section-articles .source {
-        font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
-        font-size: 0.65rem;
-        color: var(--fg-faint);
     }
 
     /* Importance bar */
@@ -587,10 +547,6 @@
             font-size: 0.9rem;
         }
 
-        .digest-section .section-articles li {
-            padding: 0.35rem 0;
-        }
-
         .digest-grid .digest-section .summary {
             border-left: none;
             padding-left: 0;
@@ -620,7 +576,6 @@
     .back-to-top.visible {
         display: flex;
     }
-
 </style>
 {% endblock %}
 
@@ -643,7 +598,7 @@
 {% endblock %}
 
 {% block content %}
-{% include "news/_search_bar.html" %}
+{% if not active_section %}{% include "news/_search_bar.html" %}{% endif %}
 
 {% if digest %}
     <div class="section-nav-rule"></div>
@@ -660,7 +615,7 @@
         <button class="section-nav-arrow hidden" id="sectionNavRight" aria-label="Scroll right">&rsaquo;</button>
     </div>
 
-    {% if digest.headline %}
+    {% if not active_section and digest.headline %}
         <div class="digest-headline">{{ digest.headline }}</div>
     {% endif %}
 
@@ -669,19 +624,7 @@
     {% if active_section %}
     <ul class="digest-grid filtered-grid">
         {% for item in filtered_items %}
-            <li class="digest-item-card">
-                {% if item.best_image_url %}<div class="item-image-wrap"><img class="item-image" src="{{ item.best_image_url }}" alt="" loading="lazy">{% bias_spectrum item %}</div>{% else %}{% bias_spectrum item %}{% endif %}
-                <span class="item-topic">{{ item.topic }}</span>
-                <span class="item-summary">{{ item.summary }}</span>
-                <span class="deep-dive-hint-wrap">
-                    {% if item.importance >= 7 %}<span class="importance-bar critical" data-label="{% trans 'Breaking news' %}"></span>
-                    {% elif item.importance >= 6 %}<span class="importance-bar high" data-label="{% trans 'Important' %}"></span>
-                    {% elif item.importance >= 4 %}<span class="importance-bar medium" data-label="{% trans 'Worth noting' %}"></span>
-                    {% else %}<span class="importance-bar low" data-label="{% trans 'For context' %}"></span>
-                    {% endif %}
-                    <a href="{% url 'deep_dive' item.id %}" class="deep-dive-hint deep-dive-link" data-item-id="{{ item.id }}">{% trans "details" %} &rarr;</a>
-                </span>
-            </li>
+            <li class="digest-item-card">{% include "news/_digest_item.html" %}</li>
         {% endfor %}
     </ul>
     {% else %}
@@ -692,19 +635,7 @@
             <div class="summary">
                 <ul>
                 {% for item in section.items.all %}
-                    <li>
-                        {% if item.best_image_url %}<div class="item-image-wrap"><img class="item-image" src="{{ item.best_image_url }}" alt="" loading="lazy">{% bias_spectrum item %}</div>{% else %}{% bias_spectrum item %}{% endif %}
-                        <span class="item-topic">{{ item.topic }}</span>
-                        <span class="item-summary">{{ item.summary }}</span>
-                        <span class="deep-dive-hint-wrap">
-                            {% if item.importance >= 7 %}<span class="importance-bar critical" data-label="{% trans 'Breaking news' %}"></span>
-                            {% elif item.importance >= 6 %}<span class="importance-bar high" data-label="{% trans 'Important' %}"></span>
-                            {% elif item.importance >= 4 %}<span class="importance-bar medium" data-label="{% trans 'Worth noting' %}"></span>
-                            {% else %}<span class="importance-bar low" data-label="{% trans 'For context' %}"></span>
-                            {% endif %}
-                            <a href="{% url 'deep_dive' item.id %}" class="deep-dive-hint deep-dive-link" data-item-id="{{ item.id }}">{% trans "details" %} &rarr;</a>
-                        </span>
-                    </li>
+                    <li>{% include "news/_digest_item.html" %}</li>
                 {% endfor %}
                 </ul>
             </div>
