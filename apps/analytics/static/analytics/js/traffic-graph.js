@@ -195,7 +195,8 @@
 
     /* ── Render force graph into container ────────── */
 
-    var LEVEL_X = { 0: -500, 1: -170, 2: 170, 3: 500 };
+    // Root (country) on right, children spread left — same as similar-news
+    var LEVEL_X = { 0: 525, 1: 175, 2: -175, 3: -525 };
 
     function render(container, graphData) {
         var colors = getColors();
@@ -212,14 +213,17 @@
             })
             .linkWidth(1)
             .linkColor(function () { return colors.link; })
-            .d3VelocityDecay(0.65)
-            .cooldownTicks(200)
+            .d3VelocityDecay(0.85)
+            .d3AlphaDecay(0.1)
+            .cooldownTicks(60)
             .warmupTicks(150)
             .onNodeClick(function (n) { if (n.url) window.open(n.url, '_blank'); })
-            .onNodeHover(function (n) { container.style.cursor = n && n.url ? 'pointer' : 'default'; });
+            .onNodeHover(function (n) { container.style.cursor = n && n.url ? 'pointer' : 'default'; })
+            .onNodeDrag(function (n) { n.fx = n.x; n.fy = n.y; })
+            .onNodeDragEnd(function (n) { n.fx = undefined; n.fy = undefined; });
 
-        fg.d3Force('charge').strength(-2000).distanceMax(600);
-        fg.d3Force('link').distance(200);
+        fg.d3Force('charge').strength(-3000).distanceMax(600);
+        fg.d3Force('link').distance(350);
 
         fg.d3Force('levelX', (function () {
             var nodes;
@@ -238,7 +242,7 @@
         fg.onEngineTick(function () {
             if (!zoomed) { zoomed = true; fg.zoomToFit(0, 40); }
         });
-        fg.onEngineStop(function () { fg.zoomToFit(400, 40); });
+        fg.onEngineStop(function () { fg.zoomToFit(300, 40); });
 
         var timer;
         function onResize() {
