@@ -11,7 +11,7 @@ from .utils import country_flag, format_duration
 
 @staff_member_required
 def traffic_graph_api(request):
-    """Return traffic graph data: country -> city -> client -> sessions (humans only)."""
+    """Return traffic graph data: country -> city -> client (humans only)."""
     days = min(max(int(request.GET.get("days", 7)), 1), 30)
     since = timezone.now() - timedelta(days=days)
 
@@ -21,7 +21,6 @@ def traffic_graph_api(request):
         .order_by("-started_at")
     )
 
-    # Build tree: country → city → client → sessions
     tree = {}
     for s in rows:
         c = s.client
@@ -44,31 +43,28 @@ def traffic_graph_api(request):
             "browser": c.browser or "?",
             "os": c.os or "?",
             "device": c.device_type or "?",
-            "sessions": [],
+            "sc": 0,
+            "pages": 0,
+            "time": 0,
         })
-        cl["sessions"].append({
-            "id": s.id,
-            "pages": s.page_count,
-            "time": format_duration(s.active_time),
-            "date": s.started_at.strftime("%d.%m %H:%M"),
-            "ref": s.referrer_domain or "",
-            "ok": s.has_interaction,
-            "url": reverse("admin:analytics_session_change", args=[s.id]),
-        })
+        cl["sc"] += 1
+        cl["pages"] += s.page_count
+        cl["time"] += s.active_time
 
     countries_out = []
     for _code, co in sorted(tree.items(), key=lambda x: x[1]["n"], reverse=True):
         cities_out = []
         for ci_name, ci in sorted(co["cities"].items(), key=lambda x: x[1]["n"], reverse=True):
             clients_out = []
-            for cl in sorted(ci["clients"].values(), key=lambda x: len(x["sessions"]), reverse=True):
+            for cl in sorted(ci["clients"].values(), key=lambda x: x["sc"], reverse=True):
                 clients_out.append({
                     "browser": cl["browser"],
                     "os": cl["os"],
                     "device": cl["device"],
-                    "sc": len(cl["sessions"]),
+                    "sc": cl["sc"],
+                    "pages": cl["pages"],
+                    "time": format_duration(cl["time"]),
                     "url": reverse("admin:analytics_client_change", args=[cl["id"]]),
-                    "sessions": cl["sessions"][:5],
                 })
             cities_out.append({
                 "name": ci_name,

@@ -1,10 +1,9 @@
 /**
  * Traffic graph — force-directed DAG for admin analytics.
  *
- * Level 0 (left):    Countries
- * Level 1:           Cities
- * Level 2:           Clients (humans only)
- * Level 3 (right):   Sessions (full info)
+ * Level 0 (right):   Countries
+ * Level 1 (center):  Cities
+ * Level 2 (left):    Clients (humans only, with aggregated stats)
  */
 (function () {
     'use strict';
@@ -37,7 +36,7 @@
         parent.appendChild(d);
     }
 
-    /* ── Build graph: country → city → client → session ── */
+    /* ── Build graph: country → city → client ────── */
 
     function buildGraph(data) {
         var nodes = [], links = [];
@@ -67,24 +66,10 @@
                         id: cId, type: 'client', _level: 2,
                         label: c.browser + ' \u00b7 ' + c.os,
                         sub: c.device,
-                        meta: c.sc + ' sess',
+                        meta: c.sc + ' sess \u00b7 ' + c.time + ' \u00b7 ' + c.pages + ' pg',
                         url: c.url || null,
                     });
                     links.push({ source: ciId, target: cId });
-
-                    (c.sessions || []).forEach(function (sess) {
-                        var sId = 'ss:' + sess.id;
-                        var check = sess.ok ? ' \u2714' : '';
-                        var ref = sess.ref ? ' \u2190 ' + sess.ref : '';
-                        nodes.push({
-                            id: sId, type: 'session', _level: 3,
-                            label: sess.pages + ' pg \u00b7 ' + sess.time + check,
-                            sub: sess.date + ref,
-                            meta: '',
-                            url: sess.url || null,
-                        });
-                        links.push({ source: cId, target: sId });
-                    });
                 });
             });
         });
@@ -95,10 +80,9 @@
     /* ── Per-type card sizing ────────────────────── */
 
     var SIZES = {
-        country: { cardW: 180, stripe: 4, pad: 8, titlePx: 10,  maxTitle: 2, subPx: 7,   metaPx: 7,   metaH: 12, borderW: 1.5 },
-        city:    { cardW: 160, stripe: 3, pad: 7, titlePx: 9,   maxTitle: 2, subPx: 6.5, metaPx: 6.5, metaH: 11, borderW: 1 },
-        client:  { cardW: 165, stripe: 3, pad: 6, titlePx: 8,   maxTitle: 2, subPx: 6,   metaPx: 6,   metaH: 10, borderW: 0.8 },
-        session: { cardW: 175, stripe: 3, pad: 5, titlePx: 7.5, maxTitle: 2, subPx: 6,   metaPx: 6,   metaH: 10, borderW: 0.5 },
+        country: { cardW: 180, stripe: 4, pad: 8, titlePx: 10, maxTitle: 2, subPx: 7,   metaPx: 7,   metaH: 12, borderW: 1.5 },
+        city:    { cardW: 160, stripe: 3, pad: 7, titlePx: 9,  maxTitle: 2, subPx: 6.5, metaPx: 6.5, metaH: 11, borderW: 1 },
+        client:  { cardW: 210, stripe: 3, pad: 6, titlePx: 8,  maxTitle: 2, subPx: 6,   metaPx: 6,   metaH: 10, borderW: 0.8 },
     };
 
     /* ── Detect admin dark mode ──────────────────── */
@@ -117,7 +101,6 @@
             country:     isDark ? '#60a5fa' : '#3b82f6',   // blue
             city:        isDark ? '#2dd4bf' : '#14b8a6',   // teal
             client:      isDark ? '#34d399' : '#22c55e',   // green
-            session:     isDark ? '#c084fc' : '#a855f7',   // purple
             link:        isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.07)',
             overlayBg:   isDark ? 'rgba(15,23,42,0.88)'   : 'rgba(255,255,255,0.85)',
         };
@@ -127,7 +110,6 @@
         ['country', 'Countries'],
         ['city',    'Cities'],
         ['client',  'Visitors'],
-        ['session', 'Sessions'],
     ];
 
     /* ── Compute card layout metrics ─────────────── */
@@ -187,7 +169,7 @@
         if (node.meta) {
             ctx.font = '600 ' + S.metaPx + 'px -apple-system,system-ui,sans-serif';
             ctx.fillStyle = stripe;
-            ctx.fillText(node.meta, tx, ty + 1);
+            ctx.fillText(truncate(node.meta, 40), tx, ty + 1);
         }
 
         node._bx = x; node._by = y; node._bw = L.cardW; node._bh = L.cardH;
@@ -195,8 +177,7 @@
 
     /* ── Render force graph into container ────────── */
 
-    // Root (country) on right, children spread left — same as similar-news
-    var LEVEL_X = { 0: 525, 1: 175, 2: -175, 3: -525 };
+    var LEVEL_X = { 0: 350, 1: 0, 2: -350 };
 
     function render(container, graphData) {
         var colors = getColors();
@@ -270,7 +251,7 @@
         header.className = 'tg-header';
         var title = document.createElement('span');
         title.className = 'tg-title';
-        title.textContent = 'Visitor Sessions';
+        title.textContent = 'Visitors';
         title.style.color = colors.fgMuted;
         header.appendChild(title);
         var closeBtn = document.createElement('button');
