@@ -3,7 +3,7 @@ from django.utils.html import format_html, mark_safe
 from unfold.admin import ModelAdmin
 
 from .models import Activity, Client, Session
-from .utils import country_flag
+from .utils import country_flag, format_duration
 
 
 def _format_source(source):
@@ -104,10 +104,7 @@ class SessionAdmin(ReadOnlyAdmin):
 
     @admin.display(description="Active Time")
     def active_time_display(self, obj):
-        mins, secs = divmod(obj.active_time, 60)
-        if mins:
-            return f"{mins}m {secs}s"
-        return f"{secs}s"
+        return format_duration(obj.active_time)
 
 
 @admin.register(Activity)

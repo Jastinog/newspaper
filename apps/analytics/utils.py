@@ -208,6 +208,19 @@ def country_flag(code: str) -> str:
     return chr(0x1F1E6 + ord(c[0]) - 65) + chr(0x1F1E6 + ord(c[1]) - 65)
 
 
+def format_duration(seconds: int) -> str:
+    """Seconds -> human-readable duration like '3m12s'."""
+    if not seconds:
+        return "0s"
+    if seconds < 60:
+        return f"{seconds}s"
+    m, s = divmod(seconds, 60)
+    if m < 60:
+        return f"{m}m {s}s" if s else f"{m}m"
+    h, m = divmod(m, 60)
+    return f"{h}h {m}m"
+
+
 def _empty_result(is_bot: bool, bot_name: str) -> dict:
     return {
         "is_bot": is_bot,

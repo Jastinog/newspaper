@@ -1,5 +1,5 @@
 {% extends 'admin/index.html' %}
-{% load i18n unfold %}
+{% load i18n unfold static %}
 
 {% block content %}
 
@@ -51,6 +51,39 @@
 
     {% component "unfold/components/card.html" with title="Views & Visitors (30 days)" %}
         {% component "unfold/components/chart/line.html" with data=views_chart height=240 %}{% endcomponent %}
+    {% endcomponent %}
+</div>
+
+{# --- Traffic Session Graph --- #}
+<div class="grid grid-cols-1 mb-8">
+    {% component "unfold/components/card.html" with title="Visitor Sessions (7 days)" %}
+        <div style="display:flex;justify-content:flex-end;margin-bottom:4px">
+            <button id="traffic-graph-fullscreen" type="button"
+                    class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+                    style="background:none;border:1px solid currentColor;border-radius:4px;padding:2px 10px;cursor:pointer">
+                Fullscreen
+            </button>
+        </div>
+        <div id="traffic-graph-container" style="height:500px;position:relative;overflow:hidden">
+            <div id="traffic-graph-loading"
+                 style="display:flex;align-items:center;justify-content:center;height:100%;color:#94a3b8;font-size:14px;animation:tg-pulse 1.5s ease-in-out infinite">
+                Loading graph&hellip;
+            </div>
+        </div>
+        <div class="flex gap-4 justify-center pt-3 pb-1 border-t border-gray-100 dark:border-gray-800 mt-2">
+            <span class="flex items-center gap-1.5 text-xs text-gray-400">
+                <span class="w-2 h-2 rounded-full bg-blue-500 dark:bg-blue-400"></span> Sources
+            </span>
+            <span class="flex items-center gap-1.5 text-xs text-gray-400">
+                <span class="w-2 h-2 rounded-full bg-green-500 dark:bg-green-400"></span> Visitors
+            </span>
+            <span class="flex items-center gap-1.5 text-xs text-gray-400">
+                <span class="w-2 h-2 rounded-full bg-red-500 dark:bg-red-400"></span> Bots
+            </span>
+            <span class="flex items-center gap-1.5 text-xs text-gray-400">
+                <span class="w-2 h-2 rounded-full bg-purple-500 dark:bg-purple-400"></span> Sessions
+            </span>
+        </div>
     {% endcomponent %}
 </div>
 
@@ -255,6 +288,45 @@
         </table>
     {% endcomponent %}
 </div>
+
+{# --- Traffic Graph Scripts & Styles --- #}
+<style>
+@keyframes tg-pulse { 0%,100%{opacity:.4} 50%{opacity:1} }
+#traffic-graph-container canvas { display:block }
+.tg-overlay {
+    position:fixed; inset:0; z-index:99999;
+    backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+    opacity:0; transition:opacity .25s ease;
+}
+.tg-overlay.tg-ready { opacity:1 }
+.tg-header {
+    position:absolute; top:0; left:0; right:0; z-index:2;
+    display:flex; justify-content:space-between; align-items:center;
+    padding:12px 20px;
+}
+.tg-title {
+    font:600 11px/1 -apple-system,system-ui,sans-serif;
+    text-transform:uppercase; letter-spacing:.1em;
+}
+.tg-close {
+    background:none; border:none; font-size:1.5rem; cursor:pointer;
+    padding:0 4px; transition:opacity .15s;
+}
+.tg-close:hover { opacity:.6 }
+.tg-fullscreen-box { position:absolute; inset:40px 0 40px 0; overflow:hidden }
+.tg-fullscreen-box canvas { display:block }
+.tg-legend {
+    position:absolute; bottom:0; left:0; right:0; z-index:2;
+    display:flex; gap:16px; justify-content:center; padding:10px;
+}
+.tg-legend-item {
+    display:flex; align-items:center; gap:5px;
+    font:11px -apple-system,system-ui,sans-serif;
+}
+.tg-legend-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0 }
+</style>
+<script defer src="https://cdn.jsdelivr.net/npm/force-graph/dist/force-graph.min.js"></script>
+<script src="{% static 'analytics/js/traffic-graph.js' %}"></script>
 
 {{ block.super }}
 {% endblock %}
