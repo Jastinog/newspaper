@@ -1,9 +1,10 @@
 /**
  * Traffic graph — force-directed DAG for admin analytics.
  *
- * Level 0 (left):   Referrer source domains
- * Level 1 (center): Clients / visitors
- * Level 2 (right):  Sessions
+ * Level 0 (left):    Countries
+ * Level 1:           Cities
+ * Level 2:           Clients (humans only)
+ * Level 3 (right):   Sessions (full info)
  */
 (function () {
     'use strict';
@@ -36,46 +37,54 @@
         parent.appendChild(d);
     }
 
-    /* ── Build graph nodes & links from API data ─── */
+    /* ── Build graph: country → city → client → session ── */
 
     function buildGraph(data) {
         var nodes = [], links = [];
 
-        (data.sources || []).forEach(function (src) {
-            var srcId = 's:' + src.domain;
+        (data.countries || []).forEach(function (co) {
+            var coId = 'co:' + co.name;
             nodes.push({
-                id: srcId, type: 'source', _level: 0,
-                label: src.domain === 'direct' ? 'Direct' : src.domain,
-                sub: src.sessions + ' sess \u00b7 ' + src.clients_total + ' vis',
+                id: coId, type: 'country', _level: 0,
+                label: co.flag + ' ' + co.name,
+                sub: co.cc + ' cities',
                 meta: '', url: null,
             });
 
-            (src.clients || []).forEach(function (c) {
-                var cId = 'c:' + c.id;
-                var label = c.is_bot
-                    ? '\uD83E\uDD16 ' + (c.bot_name || c.browser)
-                    : '\uD83D\uDC64 ' + c.browser + ' \u00b7 ' + c.os;
-
+            (co.cities || []).forEach(function (ci) {
+                var ciId = 'ci:' + co.name + ':' + ci.name;
                 nodes.push({
-                    id: cId, type: c.is_bot ? 'bot' : 'client', _level: 1,
-                    label: label,
-                    sub: c.loc || '',
-                    meta: c.sc + ' sess',
-                    url: c.url || null,
+                    id: ciId, type: 'city', _level: 1,
+                    label: ci.name,
+                    sub: ci.cc + ' visitors',
+                    meta: '', url: null,
                 });
-                links.push({ source: srcId, target: cId });
+                links.push({ source: coId, target: ciId });
 
-                (c.sessions || []).forEach(function (sess) {
-                    var sId = 'ss:' + sess.id;
-                    var check = sess.ok ? ' \u2714' : '';
+                (ci.clients || []).forEach(function (c) {
+                    var cId = 'c:' + c.id;
                     nodes.push({
-                        id: sId, type: 'session', _level: 2,
-                        label: sess.pages + ' pg \u00b7 ' + sess.time + check,
-                        sub: sess.date,
-                        meta: '',
-                        url: '/admin/analytics/session/' + sess.id + '/change/',
+                        id: cId, type: 'client', _level: 2,
+                        label: c.browser + ' \u00b7 ' + c.os,
+                        sub: c.device,
+                        meta: c.sc + ' sess',
+                        url: c.url || null,
                     });
-                    links.push({ source: cId, target: sId });
+                    links.push({ source: ciId, target: cId });
+
+                    (c.sessions || []).forEach(function (sess) {
+                        var sId = 'ss:' + sess.id;
+                        var check = sess.ok ? ' \u2714' : '';
+                        var ref = sess.ref ? ' \u2190 ' + sess.ref : '';
+                        nodes.push({
+                            id: sId, type: 'session', _level: 3,
+                            label: sess.pages + ' pg \u00b7 ' + sess.time + check,
+                            sub: sess.date + ref,
+                            meta: '',
+                            url: sess.url || null,
+                        });
+                        links.push({ source: cId, target: sId });
+                    });
                 });
             });
         });
@@ -85,13 +94,11 @@
 
     /* ── Per-type card sizing ────────────────────── */
 
-    var CLIENT_SIZE = { cardW: 175, stripe: 3, pad: 6, titlePx: 8.5, maxTitle: 2, subPx: 6.5, metaPx: 6.5, metaH: 10, borderW: 0.8 };
-
     var SIZES = {
-        source:  { cardW: 200, stripe: 4, pad: 8, titlePx: 10, maxTitle: 2, subPx: 7, metaPx: 7, metaH: 12, borderW: 1.5 },
-        client:  CLIENT_SIZE,
-        bot:     CLIENT_SIZE,
-        session: { cardW: 140, stripe: 3, pad: 5, titlePx: 7,  maxTitle: 2, subPx: 6, metaPx: 6, metaH: 10, borderW: 0.5 },
+        country: { cardW: 180, stripe: 4, pad: 8, titlePx: 10,  maxTitle: 2, subPx: 7,   metaPx: 7,   metaH: 12, borderW: 1.5 },
+        city:    { cardW: 160, stripe: 3, pad: 7, titlePx: 9,   maxTitle: 2, subPx: 6.5, metaPx: 6.5, metaH: 11, borderW: 1 },
+        client:  { cardW: 165, stripe: 3, pad: 6, titlePx: 8,   maxTitle: 2, subPx: 6,   metaPx: 6,   metaH: 10, borderW: 0.8 },
+        session: { cardW: 175, stripe: 3, pad: 5, titlePx: 7.5, maxTitle: 2, subPx: 6,   metaPx: 6,   metaH: 10, borderW: 0.5 },
     };
 
     /* ── Detect admin dark mode ──────────────────── */
@@ -107,14 +114,21 @@
             fgMuted:     isDark ? '#94a3b8' : '#64748b',
             fgFaint:     isDark ? '#475569' : '#cbd5e1',
             borderLight: isDark ? '#334155' : '#e2e8f0',
-            source:      isDark ? '#60a5fa' : '#3b82f6',
-            client:      isDark ? '#34d399' : '#22c55e',
-            bot:         isDark ? '#f87171' : '#ef4444',
-            session:     isDark ? '#c084fc' : '#a855f7',
+            country:     isDark ? '#60a5fa' : '#3b82f6',   // blue
+            city:        isDark ? '#2dd4bf' : '#14b8a6',   // teal
+            client:      isDark ? '#34d399' : '#22c55e',   // green
+            session:     isDark ? '#c084fc' : '#a855f7',   // purple
             link:        isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.07)',
             overlayBg:   isDark ? 'rgba(15,23,42,0.88)'   : 'rgba(255,255,255,0.85)',
         };
     }
+
+    var LEGEND = [
+        ['country', 'Countries'],
+        ['city',    'Cities'],
+        ['client',  'Visitors'],
+        ['session', 'Sessions'],
+    ];
 
     /* ── Compute card layout metrics ─────────────── */
 
@@ -166,7 +180,7 @@
         if (node.sub) {
             ctx.font = S.subPx + 'px -apple-system,system-ui,sans-serif';
             ctx.fillStyle = colors.fgMuted;
-            ctx.fillText(truncate(node.sub, 30), tx, ty + 1);
+            ctx.fillText(truncate(node.sub, 35), tx, ty + 1);
             ty += S.metaH;
         }
 
@@ -180,6 +194,8 @@
     }
 
     /* ── Render force graph into container ────────── */
+
+    var LEVEL_X = { 0: -500, 1: -170, 2: 170, 3: 500 };
 
     function render(container, graphData) {
         var colors = getColors();
@@ -196,21 +212,21 @@
             })
             .linkWidth(1)
             .linkColor(function () { return colors.link; })
-            .d3VelocityDecay(0.6)
+            .d3VelocityDecay(0.65)
             .cooldownTicks(200)
             .warmupTicks(150)
             .onNodeClick(function (n) { if (n.url) window.open(n.url, '_blank'); })
             .onNodeHover(function (n) { container.style.cursor = n && n.url ? 'pointer' : 'default'; });
 
-        fg.d3Force('charge').strength(-2500).distanceMax(500);
-        fg.d3Force('link').distance(250);
+        fg.d3Force('charge').strength(-2000).distanceMax(600);
+        fg.d3Force('link').distance(200);
 
         fg.d3Force('levelX', (function () {
             var nodes;
             function force(alpha) {
                 for (var i = 0; i < nodes.length; i++) {
                     var n = nodes[i];
-                    var tx = n._level === 0 ? -350 : n._level === 1 ? 0 : 350;
+                    var tx = LEVEL_X[n._level] || 0;
                     n.vx += (tx - n.x) * 0.12 * alpha;
                 }
             }
@@ -218,7 +234,6 @@
             return force;
         })());
 
-        // Zoom to fit once on first frame, then smoothly when simulation stops
         var zoomed = false;
         fg.onEngineTick(function () {
             if (!zoomed) { zoomed = true; fg.zoomToFit(0, 40); }
@@ -267,16 +282,13 @@
 
         var legend = document.createElement('div');
         legend.className = 'tg-legend';
-        [['source', 'Sources', colors.source],
-         ['client', 'Visitors', colors.client],
-         ['bot', 'Bots', colors.bot],
-         ['session', 'Sessions', colors.session]].forEach(function (t) {
+        LEGEND.forEach(function (t) {
             var item = document.createElement('span');
             item.className = 'tg-legend-item';
             item.style.color = colors.fgMuted;
             var dot = document.createElement('span');
             dot.className = 'tg-legend-dot';
-            dot.style.background = t[2];
+            dot.style.background = colors[t[0]];
             item.appendChild(dot);
             item.appendChild(document.createTextNode(t[1]));
             legend.appendChild(item);
@@ -305,7 +317,7 @@
         });
     }
 
-    /* ── Init: fetch data and render inline graph ── */
+    /* ── Init ─────────────────────────────────────── */
 
     function init() {
         var container = document.getElementById('traffic-graph-container');
