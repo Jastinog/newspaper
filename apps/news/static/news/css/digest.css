@@ -195,6 +195,7 @@
     aspect-ratio: 16 / 9;
     object-fit: cover;
     display: block;
+    image-rendering: pixelated;
 }
 
 /* Summary text */

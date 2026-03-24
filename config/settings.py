@@ -113,7 +113,7 @@ MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 # Image download settings
-IMAGE_MAX_WIDTH = 800
+IMAGE_MAX_WIDTH = 400
 IMAGE_QUALITY = 85
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
