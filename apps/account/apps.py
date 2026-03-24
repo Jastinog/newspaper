@@ -1,7 +1,7 @@
 from django.apps import AppConfig
 
 
-class DeepDiveConfig(AppConfig):
+class AccountConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
-    name = "apps.deep_dive"
-    label = "deep_dive"
+    name = "apps.account"
+    verbose_name = "Account"

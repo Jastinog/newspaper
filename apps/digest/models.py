@@ -4,7 +4,9 @@ from pgvector.django import VectorField
 
 class Digest(models.Model):
     date = models.DateField()
-    language = models.CharField(max_length=5, default="en", db_index=True)
+    language = models.ForeignKey(
+        "core.Language", on_delete=models.CASCADE, related_name="digests",
+    )
     headline = models.TextField(blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -14,7 +16,7 @@ class Digest(models.Model):
 
 
     def __str__(self):
-        return f"Digest {self.date}"
+        return f"Digest {self.date} [{self.language.code}]"
 
 
 class DigestSection(models.Model):

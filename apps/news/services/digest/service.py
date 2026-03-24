@@ -94,6 +94,6 @@ class DigestService:
                 cost_usd=calculate_cost(MODEL_MINI, per_lang_prompt, per_lang_completion),
                 digest=digest,
             )
-            logger.info("Digest saved: %s [%s]", digest, digest.language)
+            logger.info("Digest saved: %s [%s]", digest, digest.language.code)
 
         return digests

@@ -1,1 +1,1 @@
-# Admin moved to apps.feeds, apps.digest, apps.deep_dive, apps.billing
+# Admin moved to apps.feeds, apps.digest, apps.research, apps.billing

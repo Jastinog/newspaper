@@ -1,11 +1,11 @@
-/* === DEEP DIVE INLINE CARD === */
-.deep-dive-hint-wrap {
+/* === RESEARCH INLINE CARD === */
+.research-hint-wrap {
     display: flex;
     align-items: center;
     justify-content: space-between;
     margin-top: 0.3rem;
 }
-.deep-dive-hint {
+.research-hint {
     font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
     font-size: 0.75em;
     color: var(--fg-faint);
@@ -13,7 +13,7 @@
     white-space: nowrap;
 }
 
-.deep-dive-hint:hover {
+.research-hint:hover {
     color: var(--accent);
 }
 
@@ -37,15 +37,15 @@
 }
 
 /* Ready state */
-.deep-dive-ready .deep-dive-hint {
+.research-ready .research-hint {
     color: var(--accent);
     font-weight: 600;
 }
-.deep-dive-ready .deep-dive-hint:hover {
+.research-ready .research-hint:hover {
     opacity: 0.75;
 }
 
-/* === DEEP DIVE READY MODAL === */
+/* === RESEARCH READY MODAL === */
 .dd-modal-overlay {
     position: fixed;
     inset: 0;

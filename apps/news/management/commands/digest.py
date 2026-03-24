@@ -64,7 +64,7 @@ class Command(BaseCommand):
             sections = list(digest.sections.prefetch_related("items"))
             total_items = sum(s.items.count() for s in sections)
             self.stdout.write(self.style.SUCCESS(
-                f"Done: {digest.date} [{digest.language}] — {len(sections)} sections, {total_items} items"
+                f"Done: {digest.date} [{digest.language.code}] — {len(sections)} sections, {total_items} items"
             ))
             self.stdout.write(f"  Headline: {digest.headline[:120]}...")
             for s in sections:

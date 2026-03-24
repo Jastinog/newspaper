@@ -254,7 +254,8 @@ class DeepDiveService:
         # 5. Synthesize article
         self._progress(progress_callback, 5, "synthesis", "Synthesizing article…",
                         f"{len(chunks_by_article)} sources")
-        language = getattr(item.section.digest, "language", "uk")
+        language_obj = getattr(item.section.digest, "language", None)
+        language = language_obj.code if language_obj else "uk"
         result = self.synthesizer.synthesize(item.topic, item.section.title, chunks_by_article, language=language)
 
         elapsed_ms = int((time.time() - start) * 1000)

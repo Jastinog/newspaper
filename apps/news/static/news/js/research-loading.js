@@ -1,13 +1,13 @@
 /**
- * Deep dive loading page — handles generation trigger and progress display.
+ * Research loading page — handles generation trigger and progress display.
  *
- * Expects a global DEEP_DIVE_ITEM_ID variable set by the template.
+ * Expects a global RESEARCH_ITEM_ID variable set by the template.
  * Depends on: ws.js, orbit-animation.js
  */
 (function () {
     'use strict';
 
-    var itemId = window.DEEP_DIVE_ITEM_ID;
+    var itemId = window.RESEARCH_ITEM_ID;
     if (!itemId) return;
 
     var STEP_DEFS = [
@@ -74,17 +74,17 @@
         if (generating) return;
         generating = true;
         showGeneratingUI();
-        WS.send('deep_dive.generate', { item_id: itemId });
+        WS.send('research.generate', { item_id: itemId });
     }
 
     document.getElementById('generateBtn').addEventListener('click', startGeneration);
 
-    WS.on('deep_dive.state', function (msg) {
+    WS.on('research.state', function (msg) {
         var ready = msg.ready || [];
         var inProgress = msg.generating || [];
 
         if (ready.indexOf(itemId) !== -1) {
-            window.location.href = '/deep-dive/' + itemId + '/';
+            window.location.href = '/research/' + itemId + '/';
             return;
         }
 
@@ -94,19 +94,19 @@
         }
 
         if (generating) {
-            WS.send('deep_dive.generate', { item_id: itemId });
+            WS.send('research.generate', { item_id: itemId });
         }
     });
 
-    WS.on('deep_dive.progress', function (msg) {
+    WS.on('research.progress', function (msg) {
         if (msg.item_id === itemId) showProgress(msg);
     });
 
-    WS.on('deep_dive.ready', function (msg) {
+    WS.on('research.ready', function (msg) {
         if (msg.item_id === itemId) window.location.href = msg.url;
     });
 
-    WS.on('deep_dive.error', function (msg) {
+    WS.on('research.error', function (msg) {
         if (msg.item_id === itemId) {
             generating = false;
             document.getElementById('generatingState').style.display = 'none';

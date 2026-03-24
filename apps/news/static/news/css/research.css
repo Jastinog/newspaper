@@ -1,7 +1,7 @@
-/* === DEEP DIVE DETAIL PAGE === */
+/* === RESEARCH DETAIL PAGE === */
 /* Extends article.css — requires article.css to be loaded first */
 
-.deep-dive-badge {
+.research-badge {
     font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
     font-size: 0.65rem;
     font-weight: 700;
@@ -60,14 +60,14 @@
 }
 
 /* Sources section */
-.deep-dive-sources {
+.research-sources {
     max-width: 680px;
     margin: 2.5rem auto 0;
     padding-top: 1.5rem;
     border-top: 2px solid var(--border);
 }
 
-.deep-dive-sources h2 {
+.research-sources h2 {
     font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
     font-size: 0.7rem;
     font-weight: 700;
@@ -77,13 +77,13 @@
     margin-bottom: 0.8rem;
 }
 
-.deep-dive-sources ul {
+.research-sources ul {
     list-style: none;
     margin: 0;
     padding: 0;
 }
 
-.deep-dive-sources li {
+.research-sources li {
     display: flex;
     align-items: baseline;
     gap: 0.6rem;
@@ -92,7 +92,7 @@
     font-size: 0.9rem;
 }
 
-.deep-dive-sources li:last-child {
+.research-sources li:last-child {
     border-bottom: none;
 }
 
@@ -101,15 +101,15 @@
     min-width: 0;
 }
 
-.deep-dive-sources li a {
+.research-sources li a {
     color: var(--link);
     text-decoration: none;
 }
-.deep-dive-sources li a:hover {
+.research-sources li a:hover {
     text-decoration: underline;
 }
 
-.deep-dive-sources .source-feed {
+.research-sources .source-feed {
     font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
     font-size: 0.7rem;
     color: var(--fg-faint);
@@ -159,7 +159,7 @@
     );
 }
 
-.deep-dive-back {
+.research-back {
     max-width: 680px;
     margin: 2rem auto 0;
     padding-top: 1rem;
@@ -170,15 +170,15 @@
     letter-spacing: 0.05em;
 }
 
-.deep-dive-back a {
+.research-back a {
     color: var(--link);
     text-decoration: none;
 }
-.deep-dive-back a:hover {
+.research-back a:hover {
     text-decoration: underline;
 }
 
 /* Responsive */
 @media (max-width: 480px) {
-    .deep-dive-sources { margin-top: 1.5rem; padding-top: 1rem; }
+    .research-sources { margin-top: 1.5rem; padding-top: 1rem; }
 }

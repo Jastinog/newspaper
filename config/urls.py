@@ -9,7 +9,7 @@ urlpatterns = [
     path("api/", include("apps.feeds.api_urls")),
     path("api/", include("apps.digest.api_urls")),
     path("analytics/", include("apps.analytics.urls")),
-    path("", include("apps.deep_dive.urls")),
+    path("", include("apps.research.urls")),
     path("", include("apps.feeds.urls")),
     path("", include("apps.digest.urls")),
 ]

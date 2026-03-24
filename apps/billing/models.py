@@ -4,7 +4,7 @@ from django.db import models
 class APIUsage(models.Model):
     class Service(models.TextChoices):
         DIGEST = "digest", "Digest Generation"
-        DEEP_DIVE = "deep_dive", "Deep Dive"
+        RESEARCH = "research", "Research"
         EMBEDDING = "embedding", "Article Embedding"
 
     class APIType(models.TextChoices):
@@ -22,8 +22,8 @@ class APIUsage(models.Model):
         "digest.Digest", on_delete=models.SET_NULL,
         null=True, blank=True, related_name="api_usages",
     )
-    deep_dive = models.ForeignKey(
-        "deep_dive.DeepDive", on_delete=models.SET_NULL,
+    research = models.ForeignKey(
+        "research.Research", on_delete=models.SET_NULL,
         null=True, blank=True, related_name="api_usages",
     )
     created_at = models.DateTimeField(auto_now_add=True)
@@ -32,7 +32,6 @@ class APIUsage(models.Model):
         ordering = ["-created_at"]
         verbose_name = "API Usage"
         verbose_name_plural = "API Usage"
-
 
     def __str__(self):
         return f"{self.service}/{self.api_type} — {self.total_tokens} tokens (${self.cost_usd})"

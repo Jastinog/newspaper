@@ -10,7 +10,7 @@ from django.utils import timezone
 from apps.analytics.models import Activity, Client, Session
 from apps.billing.models import APIUsage
 from apps.feeds.models import Article, Feed
-from apps.deep_dive.models import DeepDive
+from apps.research.models import Research
 from apps.digest.models import Digest
 
 
@@ -48,7 +48,7 @@ def dashboard_callback(request, context):
     total_articles = Article.objects.count()
     total_feeds = Feed.objects.filter(enabled=True).count()
     total_digests = Digest.objects.count()
-    total_deep_dives = DeepDive.objects.count()
+    total_researches = Research.objects.count()
 
     # === Breakdown by model (all time) ===
     by_model = (
@@ -161,7 +161,7 @@ def dashboard_callback(request, context):
 
     service_colors = {
         "digest": ("rgb(99, 102, 241)", "rgba(99, 102, 241, 0.5)"),
-        "deep_dive": ("rgb(236, 72, 153)", "rgba(236, 72, 153, 0.5)"),
+        "research": ("rgb(236, 72, 153)", "rgba(236, 72, 153, 0.5)"),
         "embedding": ("rgb(34, 197, 94)", "rgba(34, 197, 94, 0.5)"),
     }
 
@@ -403,39 +403,39 @@ def dashboard_callback(request, context):
         .order_by("-sessions")[:8]
     )
 
-    # === Top Deep Dives by views ===
-    deep_dive_views = list(
-        base_pv.filter(timestamp__gte=thirty_days_ago, view_name="deep_dive")
+    # === Top Researches by views ===
+    research_views = list(
+        base_pv.filter(timestamp__gte=thirty_days_ago, view_name="research")
         .values("path")
         .annotate(views=Count("id"))
         .order_by("-views")[:10]
     )
-    # Extract item_id from path like /deep-dive/123/ or /en/deep-dive/123/
+    # Extract item_id from path like /research/123/
     item_ids_map = {}
-    for row in deep_dive_views:
-        m = re.search(r"/deep-dive/(\d+)/", row["path"])
+    for row in research_views:
+        m = re.search(r"/research/(\d+)/", row["path"])
         if m:
             item_ids_map[int(m.group(1))] = row["views"]
 
-    top_deep_dives = []
+    top_researches = []
     if item_ids_map:
         dives = (
-            DeepDive.objects
+            Research.objects
             .filter(item_id__in=item_ids_map.keys())
             .select_related("item__section__digest")
         )
         for dive in dives:
-            top_deep_dives.append({
+            top_researches.append({
                 "title": dive.title[:80],
                 "views": item_ids_map.get(dive.item_id, 0),
                 "item_id": dive.item_id,
                 "date": dive.created_at.strftime("%d.%m"),
             })
-        top_deep_dives.sort(key=lambda x: x["views"], reverse=True)
+        top_researches.sort(key=lambda x: x["views"], reverse=True)
 
     # === Recent API calls table ===
     recent_calls = (
-        APIUsage.objects.select_related("digest", "deep_dive")
+        APIUsage.objects.select_related("digest", "research")
         .order_by("-created_at")[:15]
     )
     recent_table = [
@@ -457,7 +457,7 @@ def dashboard_callback(request, context):
         "total_articles": f"{total_articles:,}",
         "total_feeds": total_feeds,
         "total_digests": total_digests,
-        "total_deep_dives": total_deep_dives,
+        "total_researches": total_researches,
         "model_stats": model_stats,
         "service_stats": service_stats,
         "service_model_stats": service_model_stats,
@@ -480,6 +480,6 @@ def dashboard_callback(request, context):
         "views_chart": views_chart,
         "os_chart": os_chart,
         "top_referrers": top_referrers,
-        "top_deep_dives": top_deep_dives,
+        "top_researches": top_researches,
     })
     return context

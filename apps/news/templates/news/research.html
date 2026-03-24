@@ -3,14 +3,14 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'news/css/article.css' %}">
-<link rel="stylesheet" href="{% static 'news/css/deep-dive.css' %}">
+<link rel="stylesheet" href="{% static 'news/css/research.css' %}">
 {% endblock %}
 
 {% block content %}
 <a href="{% url 'index' %}" class="back-link">&larr; {% trans "Back to digest" %}</a>
 
 <article>
-    <div class="deep-dive-badge">{% trans "Deep Dive" %}</div>
+    <div class="research-badge">{% trans "Research" %}</div>
 
     <div class="article-header">
         <h1>{{ dive.title }}</h1>
@@ -27,7 +27,7 @@
     </div>
 
     {% if sources %}
-    <div class="deep-dive-sources">
+    <div class="research-sources">
         <h2>{% trans "Sources" %}</h2>
         <ul>
         {% for source in sources %}
@@ -46,7 +46,7 @@
     </div>
     {% endif %}
 
-    <div class="deep-dive-back">
+    <div class="research-back">
         <a href="{% url 'index' %}">&larr; {% trans "Back to digest" %}</a>
     </div>
 </article>

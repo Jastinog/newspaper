@@ -37,12 +37,15 @@ INSTALLED_APPS = [
     "apps.location",
     "apps.feeds",
     "apps.digest",
-    "apps.deep_dive",
+    "apps.research",
     "apps.billing",
     "apps.crawler",
     "apps.analytics",
     "apps.websockets",
+    "apps.account",
 ]
+
+AUTH_USER_MODEL = "account.User"
 
 ASGI_APPLICATION = "config.asgi.application"
 

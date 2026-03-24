@@ -16,6 +16,6 @@ def generate_digest():
     result = []
     for d in digests:
         sections = d.sections.count()
-        logger.info("Digest [%s] %s: %d sections", d.language, d.date, sections)
-        result.append({"language": d.language, "date": str(d.date), "sections": sections})
+        logger.info("Digest [%s] %s: %d sections", d.language.code, d.date, sections)
+        result.append({"language": d.language.code, "date": str(d.date), "sections": sections})
     return result

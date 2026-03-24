@@ -60,7 +60,7 @@
                 label: d.topic, summary: d.summary || '',
                 sub: d.section + ' \u00b7 ' + d.date,
                 score: d.score || 0,
-                imageUrl: d.image_url || '', url: d.deep_dive_url,
+                imageUrl: d.image_url || '', url: d.research_url,
             });
             links.push({ source: 'c', target: nid });
 

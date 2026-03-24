@@ -3,7 +3,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'news/css/article.css' %}">
-<link rel="stylesheet" href="{% static 'news/css/deep-dive-loading.css' %}">
+<link rel="stylesheet" href="{% static 'news/css/research-loading.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -37,7 +37,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>var DEEP_DIVE_ITEM_ID = {{ item.id }};</script>
+<script>var RESEARCH_ITEM_ID = {{ item.id }};</script>
 <script src="{% static 'news/js/orbit-animation.js' %}"></script>
-<script src="{% static 'news/js/deep-dive-loading.js' %}"></script>
+<script src="{% static 'news/js/research-loading.js' %}"></script>
 {% endblock %}

@@ -2,7 +2,7 @@ from django.contrib.sitemaps import Sitemap
 from django.urls import reverse
 
 from apps.feeds.models import Article, Category
-from apps.deep_dive.models import DeepDive
+from apps.research.models import Research
 
 from .models import Digest
 
@@ -31,7 +31,7 @@ class DigestSitemap(Sitemap):
     def items(self):
         return (
             Digest.objects
-            .filter(language="en")
+            .filter(language__code="en")
             .order_by("-date")
             .only("date", "created_at")
         )
@@ -61,15 +61,15 @@ class CategorySitemap(Sitemap):
         return latest.published if latest else None
 
 
-class DeepDiveSitemap(Sitemap):
+class ResearchSitemap(Sitemap):
     priority = 0.6
     changefreq = "never"
 
     def items(self):
-        return DeepDive.objects.order_by("-created_at").only("item_id", "created_at")
+        return Research.objects.order_by("-created_at").only("item_id", "created_at")
 
     def location(self, obj):
-        return reverse("deep_dive", kwargs={"item_id": obj.item_id})
+        return reverse("research", kwargs={"item_id": obj.item_id})
 
     def lastmod(self, obj):
         return obj.created_at
@@ -82,9 +82,9 @@ class ArticleSitemap(Sitemap):
     def items(self):
         other_count = (
             1
-            + Digest.objects.filter(language="en").count()
+            + Digest.objects.filter(language__code="en").count()
             + Category.objects.count()
-            + DeepDive.objects.count()
+            + Research.objects.count()
         )
         article_limit = max(SITEMAP_TOTAL_LIMIT - other_count, 0)
         return (
@@ -104,6 +104,6 @@ sitemaps = {
     "static": StaticSitemap,
     "digests": DigestSitemap,
     "categories": CategorySitemap,
-    "deep-dives": DeepDiveSitemap,
+    "research": ResearchSitemap,
     "articles": ArticleSitemap,
 }

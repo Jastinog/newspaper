@@ -11,7 +11,7 @@ from apps.news.services.ai import (
     OpenAIClient,
     fix_truncated_json,
 )
-from apps.news.services.deep_dive.search import SimilaritySearch
+from apps.research.services.search import SimilaritySearch
 from apps.news.services.utils import deduplicate_queries
 
 logger = logging.getLogger(__name__)

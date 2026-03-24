@@ -9,14 +9,14 @@ from apps.analytics.services import SessionService
 
 logger = logging.getLogger(__name__)
 
-# In-progress deep dive generations: item_id -> {event, url, error, waiters}
+# In-progress research generations: item_id -> {event, url, error, waiters}
 _generations = {}
 
 
 class SiteConsumer(AsyncWebsocketConsumer):
     """Single WebSocket endpoint for the entire site.
 
-    Handles analytics tracking and deep dive generation over one /ws/ connection.
+    Handles analytics tracking and research generation over one /ws/ connection.
     Action routing via ACTIONS dict — each action maps to a handler method.
 
     Protocol (dot-namespaced)
@@ -26,15 +26,15 @@ class SiteConsumer(AsyncWebsocketConsumer):
         {"action": "analytics.page_view",  "path": "/...", "referrer": "..."}
         {"action": "analytics.activity",   "type": "scroll|click", "path": "/...", "meta": {...}}
         {"action": "analytics.heartbeat",  "active_time": 120, "has_interaction": true}
-        {"action": "deep_dive.generate",   "item_id": 123}
+        {"action": "research.generate",    "item_id": 123}
 
     Server -> Client:
         {"type": "analytics.session",      "session_id": "uuid"}
-        {"type": "deep_dive.state",        "ready": [...], "generating": [...]}
-        {"type": "deep_dive.generating",   "item_id": 123}
-        {"type": "deep_dive.progress",     "item_id": 123, "step": 1, ...}
-        {"type": "deep_dive.ready",        "item_id": 123, "url": "..."}
-        {"type": "deep_dive.error",        "item_id": 123, "message": "..."}
+        {"type": "research.state",         "ready": [...], "generating": [...]}
+        {"type": "research.generating",    "item_id": 123}
+        {"type": "research.progress",      "item_id": 123, "step": 1, ...}
+        {"type": "research.ready",         "item_id": 123, "url": "..."}
+        {"type": "research.error",         "item_id": 123, "message": "..."}
     """
 
     ACTIONS = {
@@ -43,8 +43,8 @@ class SiteConsumer(AsyncWebsocketConsumer):
         "analytics.page_view": "_on_analytics_page_view",
         "analytics.activity": "_on_analytics_activity",
         "analytics.heartbeat": "_on_analytics_heartbeat",
-        # Deep Dive
-        "deep_dive.generate": "_on_deep_dive_generate",
+        # Research
+        "research.generate": "_on_research_generate",
     }
 
     def __init__(self, *args, **kwargs):
@@ -56,9 +56,9 @@ class SiteConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         await self.accept()
         self.analytics = SessionService(self.scope)
-        state = await self._deep_dive_state()
+        state = await self._research_state()
         await self.send(json.dumps({
-            "type": "deep_dive.state",
+            "type": "research.state",
             "ready": state["ready"],
             "generating": state["generating"],
         }))
@@ -122,24 +122,24 @@ class SiteConsumer(AsyncWebsocketConsumer):
             has_interaction=bool(data.get("has_interaction", False)),
         )
 
-    # ── Deep Dive actions ───────────────────────────
+    # ── Research actions ───────────────────────────
 
-    async def _on_deep_dive_generate(self, data):
+    async def _on_research_generate(self, data):
         item_id = data.get("item_id")
         if not item_id:
             return
 
-        url = await self._deep_dive_url(item_id)
+        url = await self._research_url(item_id)
         if url:
             await self.send(json.dumps({
-                "type": "deep_dive.ready",
+                "type": "research.ready",
                 "item_id": item_id,
                 "url": url,
             }))
             return
 
         await self.send(json.dumps({
-            "type": "deep_dive.generating",
+            "type": "research.generating",
             "item_id": item_id,
         }))
 
@@ -150,18 +150,18 @@ class SiteConsumer(AsyncWebsocketConsumer):
                 "error": None,
                 "waiters": set(),
             }
-            asyncio.create_task(self._run_deep_dive(item_id))
+            asyncio.create_task(self._run_research(item_id))
 
         _generations[item_id]["waiters"].add(self)
-        asyncio.create_task(self._await_deep_dive(item_id))
+        asyncio.create_task(self._await_research(item_id))
 
-    async def _run_deep_dive(self, item_id):
+    async def _run_research(self, item_id):
         gen = _generations[item_id]
         loop = asyncio.get_running_loop()
 
         def progress_callback(step, total, step_id, label, detail=None):
             msg = json.dumps({
-                "type": "deep_dive.progress",
+                "type": "research.progress",
                 "item_id": item_id,
                 "step": step,
                 "total_steps": total,
@@ -174,9 +174,9 @@ class SiteConsumer(AsyncWebsocketConsumer):
             )
 
         try:
-            gen["url"] = await self._do_deep_dive_generate(item_id, progress_callback)
+            gen["url"] = await self._do_research_generate(item_id, progress_callback)
         except Exception as e:
-            logger.exception("Deep dive failed for item %s", item_id)
+            logger.exception("Research generation failed for item %s", item_id)
             gen["error"] = str(e)
         finally:
             gen["event"].set()
@@ -193,7 +193,7 @@ class SiteConsumer(AsyncWebsocketConsumer):
             except Exception:
                 pass
 
-    async def _await_deep_dive(self, item_id):
+    async def _await_research(self, item_id):
         gen = _generations.get(item_id)
         if not gen:
             return
@@ -201,7 +201,7 @@ class SiteConsumer(AsyncWebsocketConsumer):
             await asyncio.wait_for(gen["event"].wait(), timeout=300)
         except asyncio.TimeoutError:
             await self.send(json.dumps({
-                "type": "deep_dive.error",
+                "type": "research.error",
                 "item_id": item_id,
                 "message": "Generation timed out",
             }))
@@ -209,22 +209,22 @@ class SiteConsumer(AsyncWebsocketConsumer):
 
         if gen["url"]:
             await self.send(json.dumps({
-                "type": "deep_dive.ready",
+                "type": "research.ready",
                 "item_id": item_id,
                 "url": gen["url"],
             }))
         else:
             await self.send(json.dumps({
-                "type": "deep_dive.error",
+                "type": "research.error",
                 "item_id": item_id,
                 "message": gen.get("error", "Unknown error"),
             }))
 
-    # ── Deep Dive DB helpers ────────────────────────
+    # ── Research DB helpers ────────────────────────
 
     @database_sync_to_async
-    def _deep_dive_state(self):
-        from apps.deep_dive.models import DeepDive
+    def _research_state(self):
+        from apps.research.models import Research
         from apps.digest.models import Digest, DigestItem
 
         digest_ids = list(Digest.objects.order_by("-date").values_list("id", flat=True)[:3])
@@ -236,29 +236,29 @@ class SiteConsumer(AsyncWebsocketConsumer):
             .values_list("id", flat=True)
         )
         ready = list(
-            DeepDive.objects.filter(item_id__in=item_ids)
+            Research.objects.filter(item_id__in=item_ids)
             .values_list("item_id", flat=True)
         )
         generating = [iid for iid in _generations if iid in item_ids]
         return {"ready": ready, "generating": generating}
 
     @database_sync_to_async
-    def _deep_dive_url(self, item_id):
-        from apps.deep_dive.models import DeepDive
+    def _research_url(self, item_id):
+        from apps.research.models import Research
 
-        if DeepDive.objects.filter(item_id=item_id).exists():
-            return f"/deep-dive/{item_id}/"
+        if Research.objects.filter(item_id=item_id).exists():
+            return f"/research/{item_id}/"
         return None
 
     @database_sync_to_async
-    def _do_deep_dive_generate(self, item_id, progress_callback=None):
-        from apps.deep_dive.models import DeepDive
+    def _do_research_generate(self, item_id, progress_callback=None):
+        from apps.research.models import Research
         from apps.digest.models import DigestItem
-        from apps.deep_dive.services import DeepDiveService
+        from apps.research.services import ResearchService
 
-        if DeepDive.objects.filter(item_id=item_id).exists():
-            return f"/deep-dive/{item_id}/"
+        if Research.objects.filter(item_id=item_id).exists():
+            return f"/research/{item_id}/"
 
         item = DigestItem.objects.select_related("section__digest").get(pk=item_id)
-        DeepDiveService().generate(item, progress_callback=progress_callback)
-        return f"/deep-dive/{item_id}/"
+        ResearchService().generate(item, progress_callback=progress_callback)
+        return f"/research/{item_id}/"

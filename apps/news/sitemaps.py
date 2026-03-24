@@ -1,7 +1,8 @@
 from django.contrib.sitemaps import Sitemap
 from django.urls import reverse
 
-from .models import Article, Category, DeepDive, Digest
+from .models import Article, Category, Digest
+from apps.research.models import Research
 
 SITEMAP_TOTAL_LIMIT = 45_000
 
@@ -30,10 +31,9 @@ class DigestSitemap(Sitemap):
     changefreq = "daily"
 
     def items(self):
-        # One URL per date; use English digests as canonical source of dates
         return (
             Digest.objects
-            .filter(language="en")
+            .filter(language__code="en")
             .order_by("-date")
             .only("date", "created_at")
         )
@@ -65,17 +65,17 @@ class CategorySitemap(Sitemap):
         return latest.published if latest else None
 
 
-class DeepDiveSitemap(Sitemap):
-    """Deep dive analytical articles."""
+class ResearchSitemap(Sitemap):
+    """Research analytical articles."""
 
     priority = 0.6
     changefreq = "never"
 
     def items(self):
-        return DeepDive.objects.order_by("-created_at").only("item_id", "created_at")
+        return Research.objects.order_by("-created_at").only("item_id", "created_at")
 
     def location(self, obj):
-        return reverse("deep_dive", kwargs={"item_id": obj.item_id})
+        return reverse("research", kwargs={"item_id": obj.item_id})
 
     def lastmod(self, obj):
         return obj.created_at
@@ -90,9 +90,9 @@ class ArticleSitemap(Sitemap):
     def items(self):
         other_count = (
             1  # static (homepage)
-            + Digest.objects.filter(language="en").count()
+            + Digest.objects.filter(language__code="en").count()
             + Category.objects.count()
-            + DeepDive.objects.count()
+            + Research.objects.count()
         )
         article_limit = max(SITEMAP_TOTAL_LIMIT - other_count, 0)
         return (
@@ -112,6 +112,6 @@ sitemaps = {
     "static": StaticSitemap,
     "digests": DigestSitemap,
     "categories": CategorySitemap,
-    "deep-dives": DeepDiveSitemap,
+    "research": ResearchSitemap,
     "articles": ArticleSitemap,
 }

@@ -2,6 +2,7 @@ from datetime import date
 
 from django.db.models import Max
 
+from apps.core.models import Language
 from apps.feeds.models import Article, ArticleImage
 from apps.digest.models import Digest, DigestItem, DigestSection
 
@@ -27,13 +28,14 @@ class DigestSaver:
         """Create Digest records for each language from topic results."""
         digests = []
         sorted_results = sorted(topic_results, key=lambda r: r["topic"].order)
+        language_map = {l.code: l for l in Language.objects.filter(code__in=languages)}
 
         for lang in languages:
-            Digest.objects.filter(date=digest_date, language=lang).delete()
+            Digest.objects.filter(date=digest_date, language__code=lang).delete()
 
             digest = Digest.objects.create(
                 date=digest_date,
-                language=lang,
+                language=language_map[lang],
                 headline=headlines.get(lang, ""),
             )
 

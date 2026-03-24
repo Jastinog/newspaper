@@ -7,8 +7,9 @@ from rest_framework import generics
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from .models import Article, ArticleChunk, ArticleImage, Category, DeepDive, Digest, DigestItem, Feed
-from .services.deep_dive.search import SimilaritySearch
+from .models import Article, ArticleChunk, ArticleImage, Category, Digest, DigestItem, Feed
+from apps.research.models import Research
+from apps.research.services.search import SimilaritySearch
 from .services.search import SearchService
 from .serializers import (
     ArticleDetailSerializer,
@@ -45,11 +46,11 @@ def index(request, date=None):
         except ValueError:
             return redirect("index")
 
-    digest = _latest_digest(Digest.objects.filter(language=current_lang), date=parsed)
+    digest = _latest_digest(Digest.objects.filter(language__code=current_lang), date=parsed)
 
     # Fallback to English if no digest for current language
     if not digest and current_lang != "en":
-        digest = _latest_digest(Digest.objects.filter(language="en"), date=parsed)
+        digest = _latest_digest(Digest.objects.filter(language__code="en"), date=parsed)
 
     # Prev/next navigation
     prev_date = next_date = None
@@ -137,14 +138,14 @@ def category_detail(request, slug):
     })
 
 
-def deep_dive(request, item_id):
+def research(request, item_id):
     item = get_object_or_404(
         DigestItem.objects.select_related("section__digest"), pk=item_id,
     )
 
-    dive = DeepDive.objects.filter(item=item).first()
+    dive = Research.objects.filter(item=item).first()
     if not dive:
-        return render(request, "news/deep_dive_loading.html", {"item": item})
+        return render(request, "news/research_loading.html", {"item": item})
 
     sources = dive.sources.select_related("article__feed").order_by("order")
 
@@ -155,7 +156,7 @@ def deep_dive(request, item_id):
         "og_type": "article",
     }
 
-    return render(request, "news/deep_dive.html", {
+    return render(request, "news/research.html", {
         "dive": dive,
         "section": item.section,
         "sources": sources,
@@ -308,7 +309,7 @@ def similar_items_api(request, item_id):
             "image_url": si.best_image_url,
             "section": si.section.title,
             "date": si.section.digest.date.isoformat(),
-            "deep_dive_url": reverse("deep_dive", args=[si.id]),
+            "research_url": reverse("research", args=[si.id]),
             "score": round(best * 100),
             "articles": [
                 _serialize_article(a, score=round(art_scores.get(a.id, 0) * 100))

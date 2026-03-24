@@ -6,7 +6,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 from apps.feeds.models import Article, ArticleChunk, ArticleImage
-from apps.deep_dive.services.search import SimilaritySearch
+from apps.research.services.search import SimilaritySearch
 
 from .models import Digest, DigestItem
 
@@ -38,11 +38,11 @@ def index(request, date=None):
         except ValueError:
             return redirect("index")
 
-    digest = _latest_digest(Digest.objects.filter(language=current_lang), date=parsed)
+    digest = _latest_digest(Digest.objects.filter(language__code=current_lang), date=parsed)
 
     # Fallback to English if no digest for current language
     if not digest and current_lang != "en":
-        digest = _latest_digest(Digest.objects.filter(language="en"), date=parsed)
+        digest = _latest_digest(Digest.objects.filter(language__code="en"), date=parsed)
 
     # Prev/next navigation
     prev_date = next_date = None
@@ -181,7 +181,7 @@ def similar_items_api(request, item_id):
             "image_url": si.best_image_url,
             "section": si.section.title,
             "date": si.section.digest.date.isoformat(),
-            "deep_dive_url": reverse("deep_dive", args=[si.id]),
+            "research_url": reverse("research", args=[si.id]),
             "score": round(best * 100),
             "articles": [
                 _serialize_article(a, score=round(art_scores.get(a.id, 0) * 100))

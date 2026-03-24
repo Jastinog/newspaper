@@ -10,4 +10,4 @@ class APIUsageAdmin(ModelAdmin):
     list_display_links = ("id",)
     list_filter = ("service", "api_type", "model")
     date_hierarchy = "created_at"
-    raw_id_fields = ("digest", "deep_dive")
+    raw_id_fields = ("digest", "research")

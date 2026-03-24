@@ -1,5 +1,5 @@
 /**
- * Deep dive feature — supports multiple concurrent generations.
+ * Research feature — supports multiple concurrent generations.
  *
  * Shows progress inline on the digest card: the current step label
  * in place of the "details →" link.
@@ -42,16 +42,16 @@
     /** Find the <li> and hint link for a given item id. */
     function getCardEls(itemId) {
         var link = document.querySelector(
-            '.deep-dive-link[data-item-id="' + itemId + '"]'
+            '.research-link[data-item-id="' + itemId + '"]'
         );
         var li = link ? link.closest('li') : null;
         return { link: link, li: li };
     }
 
-    /** Add "deep-dive-ready" class to an item's <li>. */
+    /** Add "research-ready" class to an item's <li>. */
     function markReady(itemId) {
         var c = getCardEls(itemId);
-        if (c.li) c.li.classList.add('deep-dive-ready');
+        if (c.li) c.li.classList.add('research-ready');
     }
 
     /* ── Inline progress rendering ───────────────────── */
@@ -130,7 +130,7 @@
         }
 
         modal.appendChild(el('div', 'dd-modal-check', '\u2713'));
-        modal.appendChild(el('div', 'dd-modal-title', bodyData('ddReady', 'Deep dive ready')));
+        modal.appendChild(el('div', 'dd-modal-title', bodyData('ddReady', 'Research ready')));
         modal.appendChild(el('div', 'dd-modal-topic', p.topic));
 
         if (p.summary) {
@@ -159,7 +159,7 @@
 
     /* ── WS handlers ─────────────────────────────────── */
 
-    WS.on('deep_dive.state', function (msg) {
+    WS.on('research.state', function (msg) {
         var readyIds = msg.ready || [];
         readyIds.forEach(markReady);
 
@@ -169,17 +169,17 @@
             if (!p.url && !p.error) {
                 var id = parseInt(keys[i], 10);
                 if (readyIds.indexOf(id) !== -1) {
-                    p.url = '/deep-dive/' + id + '/';
+                    p.url = '/research/' + id + '/';
                     cleanupProgress(id);
                     markReady(id);
                 } else {
-                    WS.send('deep_dive.generate', { item_id: id });
+                    WS.send('research.generate', { item_id: id });
                 }
             }
         }
     });
 
-    WS.on('deep_dive.progress', function (msg) {
+    WS.on('research.progress', function (msg) {
         if (!hasPending(msg.item_id)) return;
         var p = pending[msg.item_id];
         p.step = msg.step;
@@ -189,7 +189,7 @@
         updateProgress(msg.item_id, p);
     });
 
-    WS.on('deep_dive.ready', function (msg) {
+    WS.on('research.ready', function (msg) {
         markReady(msg.item_id);
 
         if (!hasPending(msg.item_id)) return;
@@ -203,7 +203,7 @@
         delete pending[msg.item_id];
     });
 
-    WS.on('deep_dive.error', function (msg) {
+    WS.on('research.error', function (msg) {
         if (!hasPending(msg.item_id)) return;
         var p = pending[msg.item_id];
         p.error = msg.message || bodyData('errorGeneration', 'Error');
@@ -218,21 +218,21 @@
 
     /* ── Click handlers ──────────────────────────────── */
 
-    document.querySelectorAll('.deep-dive-link').forEach(function (link) {
+    document.querySelectorAll('.research-link').forEach(function (link) {
         link.addEventListener('click', function (e) {
             e.preventDefault();
             var itemId = parseInt(this.dataset.itemId, 10);
             var href = this.getAttribute('href');
             var li = this.closest('li');
 
-            if (li.classList.contains('deep-dive-ready')) {
+            if (li.classList.contains('research-ready')) {
                 window.location.href = href;
                 return;
             }
 
             if (hasPending(itemId)) return;
 
-            if (!WS.send('deep_dive.generate', { item_id: itemId })) {
+            if (!WS.send('research.generate', { item_id: itemId })) {
                 window.location.href = href;
                 return;
             }
@@ -242,7 +242,7 @@
             var imageEl = li.querySelector('.item-image');
 
             pending[itemId] = {
-                topic: topicEl ? topicEl.textContent.trim() : 'Deep Dive #' + itemId,
+                topic: topicEl ? topicEl.textContent.trim() : 'Research #' + itemId,
                 summary: summaryEl ? summaryEl.textContent.trim() : '',
                 imageUrl: imageEl ? imageEl.src : '',
                 step: 0,

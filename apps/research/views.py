@@ -3,19 +3,19 @@ from django.utils.translation import gettext_lazy as _
 
 from apps.digest.models import DigestItem
 
-from .models import DeepDive
+from .models import Research
 
 SITE_NAME = _("Newspaper")
 
 
-def deep_dive(request, item_id):
+def research(request, item_id):
     item = get_object_or_404(
         DigestItem.objects.select_related("section__digest"), pk=item_id,
     )
 
-    dive = DeepDive.objects.filter(item=item).first()
+    dive = Research.objects.filter(item=item).first()
     if not dive:
-        return render(request, "news/deep_dive_loading.html", {"item": item})
+        return render(request, "news/research_loading.html", {"item": item})
 
     sources = dive.sources.select_related("article__feed").order_by("order")
 
@@ -26,7 +26,7 @@ def deep_dive(request, item_id):
         "og_type": "article",
     }
 
-    return render(request, "news/deep_dive.html", {
+    return render(request, "news/research.html", {
         "dive": dive,
         "section": item.section,
         "sources": sources,
