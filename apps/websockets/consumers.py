@@ -224,7 +224,8 @@ class SiteConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def _deep_dive_state(self):
-        from apps.news.models import DeepDive, Digest, DigestItem
+        from apps.deep_dive.models import DeepDive
+        from apps.digest.models import Digest, DigestItem
 
         digest_ids = list(Digest.objects.order_by("-date").values_list("id", flat=True)[:3])
         if not digest_ids:
@@ -243,7 +244,7 @@ class SiteConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def _deep_dive_url(self, item_id):
-        from apps.news.models import DeepDive
+        from apps.deep_dive.models import DeepDive
 
         if DeepDive.objects.filter(item_id=item_id).exists():
             return f"/deep-dive/{item_id}/"
@@ -251,8 +252,9 @@ class SiteConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def _do_deep_dive_generate(self, item_id, progress_callback=None):
-        from apps.news.models import DeepDive, DigestItem
-        from apps.news.services.deep_dive import DeepDiveService
+        from apps.deep_dive.models import DeepDive
+        from apps.digest.models import DigestItem
+        from apps.deep_dive.services import DeepDiveService
 
         if DeepDive.objects.filter(item_id=item_id).exists():
             return f"/deep-dive/{item_id}/"

@@ -93,14 +93,14 @@ class Activity(models.Model):
     path = models.CharField(max_length=2000)
     view_name = models.CharField(max_length=100, blank=True, default="")
     article = models.ForeignKey(
-        "news.Article",
+        "feeds.Article",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name="activities",
     )
     category = models.ForeignKey(
-        "news.Category",
+        "feeds.Category",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,

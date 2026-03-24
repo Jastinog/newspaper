@@ -33,7 +33,13 @@ INSTALLED_APPS = [
     "django.contrib.sitemaps",
     "django.contrib.postgres",
     "rest_framework",
-    "apps.news",
+    "apps.core",
+    "apps.location",
+    "apps.feeds",
+    "apps.digest",
+    "apps.deep_dive",
+    "apps.billing",
+    "apps.crawler",
     "apps.analytics",
     "apps.websockets",
 ]
@@ -43,7 +49,7 @@ ASGI_APPLICATION = "config.asgi.application"
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
-    "apps.news.middleware.GeoLanguageMiddleware",
+    "apps.feeds.middleware.GeoLanguageMiddleware",
     "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -51,7 +57,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "apps.analytics.middleware.BotTrackingMiddleware",
-    "apps.news.middleware.Redirect404Middleware",
+    "apps.feeds.middleware.Redirect404Middleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -121,11 +127,11 @@ CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = "Europe/Kyiv"
 CELERY_BEAT_SCHEDULE = {
     "update-news-every-hour": {
-        "task": "news.update",
+        "task": "crawler.update",
         "schedule": 3600,  # every hour
     },
     "digest-daily": {
-        "task": "news.digest",
+        "task": "digest.generate",
         "schedule": crontab(hour=4, minute=0),  # 04:00 Kyiv time
     },
 }
@@ -135,7 +141,7 @@ UNFOLD = {
     "SITE_HEADER": "Newspaper",
     "SHOW_HISTORY": True,
     "SHOW_VIEW_ON_SITE": True,
-    "DASHBOARD_CALLBACK": "apps.news.dashboard.dashboard_callback",
+    "DASHBOARD_CALLBACK": "apps.billing.dashboard.dashboard_callback",
 }
 
 REST_FRAMEWORK = {
