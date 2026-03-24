@@ -2,7 +2,7 @@ import logging
 from dataclasses import dataclass, field
 
 from apps.billing.models import APIUsage
-from apps.feeds.models import Article, ArticleChunk
+from apps.feed.models import Article, ArticleChunk
 from apps.core.services.ai import EMBEDDING_MODEL, EmbeddingClient, calculate_cost
 from apps.core.services.ai.embeddings import BATCH_SIZE
 

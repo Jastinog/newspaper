@@ -1,1 +1,1 @@
-# Models moved to apps.feeds, apps.digest, apps.research, apps.billing
+# Models moved to apps.feed, apps.digest, apps.research, apps.billing

@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 
 from pgvector.django import CosineDistance
 
-from apps.feeds.models import Article, ArticleChunk
+from apps.feed.models import Article, ArticleChunk
 from apps.digest.models import DigestTopic
 
 logger = logging.getLogger(__name__)

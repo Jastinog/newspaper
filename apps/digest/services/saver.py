@@ -3,7 +3,7 @@ from datetime import date
 from django.db.models import Max
 
 from apps.core.models import Language
-from apps.feeds.models import Article, ArticleImage
+from apps.feed.models import Article, ArticleImage
 from apps.digest.models import Digest, DigestItem, DigestSection
 
 

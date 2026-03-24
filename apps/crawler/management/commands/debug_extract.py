@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from apps.feeds.models import Article
+from apps.feed.models import Article
 from apps.crawler.services.extractor import _fetch_and_extract
 
 

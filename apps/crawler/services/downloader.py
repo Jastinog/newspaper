@@ -15,7 +15,7 @@ from django.core.files.base import ContentFile
 from django.utils import timezone as django_tz
 from PIL import Image
 
-from apps.feeds.models import ArticleImage
+from apps.feed.models import ArticleImage
 from .http import BROWSER_UA
 
 logger = logging.getLogger(__name__)

@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 
 from pgvector.django import CosineDistance
 
-from apps.feeds.models import ArticleChunk
+from apps.feed.models import ArticleChunk
 
 logger = logging.getLogger(__name__)
 

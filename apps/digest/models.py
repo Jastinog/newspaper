@@ -40,10 +40,10 @@ class DigestItem(models.Model):
     importance = models.PositiveSmallIntegerField(default=0)
     freshness = models.FloatField(default=0, db_index=True)
     image = models.ForeignKey(
-        "feeds.ArticleImage", on_delete=models.SET_NULL,
+        "feed.ArticleImage", on_delete=models.SET_NULL,
         null=True, blank=True, related_name="digest_items",
     )
-    articles = models.ManyToManyField("feeds.Article", blank=True, related_name="digest_items")
+    articles = models.ManyToManyField("feed.Article", blank=True, related_name="digest_items")
 
     class Meta:
         ordering = ["-freshness", "order"]

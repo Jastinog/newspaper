@@ -5,7 +5,7 @@ from datetime import datetime
 
 from django.db.models import Prefetch
 
-from apps.feeds.models import Article, ArticleChunk, ArticleImage
+from apps.feed.models import Article, ArticleChunk, ArticleImage
 from apps.core.services.ai import (
     EmbeddingClient,
     OpenAIClient,

@@ -4,7 +4,7 @@ import re
 import time
 
 from apps.billing.models import APIUsage
-from apps.feeds.models import ArticleChunk
+from apps.feed.models import ArticleChunk
 from apps.research.models import Research, ResearchSource
 from apps.digest.models import DigestItem
 from apps.core.services.ai import (

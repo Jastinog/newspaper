@@ -13,7 +13,7 @@ from django.db.models import Q
 from django.utils import timezone as django_tz
 from readability import Document
 
-from apps.feeds.models import Article, ArticleImage
+from apps.feed.models import Article, ArticleImage
 from .http import BROWSER_UA
 
 logger = logging.getLogger(__name__)

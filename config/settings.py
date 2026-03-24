@@ -35,13 +35,13 @@ INSTALLED_APPS = [
     "rest_framework",
     "apps.core",
     "apps.location",
-    "apps.feeds",
+    "apps.feed",
     "apps.digest",
     "apps.research",
     "apps.billing",
     "apps.crawler",
     "apps.analytics",
-    "apps.websockets",
+    "apps.websocket",
     "apps.account",
 ]
 
@@ -52,7 +52,7 @@ ASGI_APPLICATION = "config.asgi.application"
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
-    "apps.feeds.middleware.GeoLanguageMiddleware",
+    "apps.feed.middleware.GeoLanguageMiddleware",
     "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -60,7 +60,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "apps.analytics.middleware.BotTrackingMiddleware",
-    "apps.feeds.middleware.Redirect404Middleware",
+    "apps.feed.middleware.Redirect404Middleware",
 ]
 
 ROOT_URLCONF = "config.urls"

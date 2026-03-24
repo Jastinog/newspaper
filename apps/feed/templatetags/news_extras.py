@@ -1,7 +1,7 @@
 from django import template
 from django.utils.translation import gettext as _
 
-from apps.feeds.models import Feed
+from apps.feed.models import Feed
 
 register = template.Library()
 

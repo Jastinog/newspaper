@@ -21,7 +21,7 @@ class Research(models.Model):
 
 class ResearchSource(models.Model):
     research = models.ForeignKey(Research, on_delete=models.CASCADE, related_name="sources")
-    article = models.ForeignKey("feeds.Article", on_delete=models.CASCADE)
+    article = models.ForeignKey("feed.Article", on_delete=models.CASCADE)
     relevance = models.FloatField()
     order = models.PositiveIntegerField(default=0)
 

@@ -1,7 +1,7 @@
 from django.contrib.sitemaps import Sitemap
 from django.urls import reverse
 
-from apps.feeds.models import Article, Category
+from apps.feed.models import Article, Category
 from apps.research.models import Research
 
 from .models import Digest

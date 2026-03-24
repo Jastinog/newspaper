@@ -9,7 +9,7 @@ from django.utils import timezone
 
 from apps.analytics.models import Activity, Client, Session
 from apps.billing.models import APIUsage
-from apps.feeds.models import Article, Feed
+from apps.feed.models import Article, Feed
 from apps.research.models import Research
 from apps.digest.models import Digest
 

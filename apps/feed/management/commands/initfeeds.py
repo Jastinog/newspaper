@@ -5,7 +5,7 @@ from django.core.management.base import BaseCommand
 from django.utils.text import slugify
 
 from apps.core.models import Language
-from apps.feeds.models import Category, Feed
+from apps.feed.models import Category, Feed
 from apps.location.models import Country
 
 

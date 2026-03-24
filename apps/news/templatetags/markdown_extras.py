@@ -1,1 +1,1 @@
-# Moved to apps.feeds.templatetags.markdown_extras
+# Moved to apps.feed.templatetags.markdown_extras

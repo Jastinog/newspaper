@@ -1,1 +1,1 @@
-# Moved to apps.feeds.templatetags.news_extras
+# Moved to apps.feed.templatetags.news_extras

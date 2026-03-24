@@ -2,8 +2,8 @@ import json
 
 from django.core.management.base import BaseCommand
 
-from apps.feeds.feeds import DEFAULT_CATEGORIES, DEFAULT_FEEDS
-from apps.feeds.models import Category, Feed
+from apps.feed.feeds import DEFAULT_CATEGORIES, DEFAULT_FEEDS
+from apps.feed.models import Category, Feed
 from apps.digest.models import DigestTopic, TopicEmbedding
 from apps.core.services.ai import EmbeddingClient, EmbeddingError
 from apps.core.services.ai.client import OpenAIClient, OpenAIError, fix_truncated_json

@@ -5,7 +5,7 @@ from django.utils.translation import get_language, gettext_lazy as _
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from apps.feeds.models import Article, ArticleChunk, ArticleImage
+from apps.feed.models import Article, ArticleChunk, ArticleImage
 from apps.research.services.search import SimilaritySearch
 
 from .models import Digest, DigestItem

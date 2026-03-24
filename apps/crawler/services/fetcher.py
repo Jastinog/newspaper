@@ -8,7 +8,7 @@ import feedparser
 import requests
 from django.db import IntegrityError
 
-from apps.feeds.models import Article, ArticleImage, Feed
+from apps.feed.models import Article, ArticleImage, Feed
 
 logger = logging.getLogger(__name__)
 
