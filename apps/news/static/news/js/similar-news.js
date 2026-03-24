@@ -291,17 +291,20 @@
         var fgInstance = null;
         var resizeFn = null;
 
+        function onKey(e) {
+            if (e.key === 'Escape') close();
+        }
+
         function close() {
             if (fgInstance) { fgInstance.pauseAnimation(); fgInstance = null; }
             if (resizeFn) { window.removeEventListener('resize', resizeFn); resizeFn = null; }
+            document.removeEventListener('keydown', onKey);
             overlay.remove();
         }
 
         closeBtn.onclick = close;
         overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
-        document.addEventListener('keydown', function handler(e) {
-            if (e.key === 'Escape') { close(); document.removeEventListener('keydown', handler); }
-        });
+        document.addEventListener('keydown', onKey);
 
         return {
             overlay: overlay,
@@ -359,14 +362,23 @@
             })
             .linkWidth(function (link) { return isSourceLink(link) ? 1.5 : 1; })
             .linkColor(function (link) { return isSourceLink(link) ? linkSource : linkDefault; })
-            .d3VelocityDecay(0.6)
+            .d3VelocityDecay(0.85)
+            .d3AlphaDecay(0.1)
             .onNodeClick(function (node) {
                 if (node.url) window.location.href = node.url;
             })
             .onNodeHover(function (node) {
                 container.style.cursor = node && node.url ? 'pointer' : 'default';
             })
-            .cooldownTicks(200)
+            .onNodeDrag(function (node) {
+                node.fx = node.x;
+                node.fy = node.y;
+            })
+            .onNodeDragEnd(function (node) {
+                node.fx = undefined;
+                node.fy = undefined;
+            })
+            .cooldownTicks(60)
             .warmupTicks(150);
 
         // Strong repulsion to prevent card overlap
@@ -376,12 +388,13 @@
         fg.d3Force('link').distance(350);
 
         // Pull connected nodes LEFT: center stays right, items middle, articles far-left
+        var LEVEL_X = { '-1': 350, '0': 0, '1': -350, '2': -700 };
         fg.d3Force('levelX', (function () {
             var nodes;
             function force(alpha) {
                 for (var i = 0; i < nodes.length; i++) {
                     var n = nodes[i];
-                    var tx = n._level === -1 ? 350 : n._level === 0 ? 0 : n._level === 1 ? -350 : -700;
+                    var tx = LEVEL_X[n._level] || 0;
                     n.vx += (tx - n.x) * 0.12 * alpha;
                 }
             }
@@ -392,12 +405,15 @@
         // Reveal modal once graph has warmed up and first frame is painted
         var revealed = false;
 
-        // Continuous zoom-to-fit while simulation runs, then once more when it stops
+        // Zoom-to-fit once on first frame, then smoothly when simulation stops
         fg.onEngineTick(function () {
-            fg.zoomToFit(0, 40);
-            if (!revealed) { revealed = true; modal.reveal(); }
+            if (!revealed) {
+                revealed = true;
+                fg.zoomToFit(0, 40);
+                modal.reveal();
+            }
         });
-        fg.onEngineStop(function () { fg.zoomToFit(400, 40); });
+        fg.onEngineStop(function () { fg.zoomToFit(300, 40); });
 
         // Resize (cleaned up on modal close)
         var resizeTimer;

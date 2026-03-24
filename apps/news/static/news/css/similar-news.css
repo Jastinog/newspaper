@@ -3,12 +3,11 @@
     background: none;
     border: none;
     cursor: pointer;
-    font-size: 1.1rem;
+    font-size: 0.95rem;
     color: var(--fg-faint);
     padding: 0 0.2rem;
     line-height: 1;
     transition: color 0.2s;
-    font-weight: 700;
 }
 .similar-btn:hover {
     color: var(--accent);
@@ -37,9 +36,12 @@
     border-left: 3px solid var(--accent);
     width: 100vw;
     height: 100vh;
+    height: 100dvh;
     position: relative;
     display: flex;
     flex-direction: column;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
 }
 
 .similar-modal-header {
@@ -67,7 +69,8 @@
     color: var(--fg-muted);
     cursor: pointer;
     line-height: 1;
-    padding: 0 0.2rem;
+    padding: 0.4rem 0.5rem;
+    margin: -0.4rem -0.5rem -0.4rem 0;
     transition: color 0.15s;
 }
 .similar-modal-close:hover {
@@ -141,4 +144,24 @@
 
 .similar-modal-empty {
     min-height: 200px;
+}
+
+/* === MOBILE === */
+@media (max-width: 600px) {
+    .similar-modal-header {
+        padding: 0.6rem 0.8rem 0.4rem;
+    }
+    .similar-modal-close {
+        font-size: 1.6rem;
+        padding: 0.6rem 0.7rem;
+        margin: -0.6rem -0.7rem -0.6rem 0;
+    }
+    .similar-modal-legend {
+        gap: 0.6rem;
+        padding: 0.4rem 0.6rem 0.5rem;
+        flex-wrap: wrap;
+    }
+    .similar-legend-item {
+        font-size: 0.52rem;
+    }
 }
