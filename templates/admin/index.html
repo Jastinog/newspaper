@@ -54,7 +54,7 @@
     {% endcomponent %}
 </div>
 
-{# --- Traffic Session Graph --- #}
+{# --- Traffic Session Tree --- #}
 <div class="grid grid-cols-1 mb-8">
     {% component "unfold/components/card.html" with title="Visitor Sessions (7 days)" %}
         <div style="display:flex;justify-content:flex-end;margin-bottom:4px">
@@ -64,22 +64,11 @@
                 Fullscreen
             </button>
         </div>
-        <div id="traffic-graph-container" style="height:500px;position:relative;overflow:hidden">
+        <div id="traffic-graph-container" style="max-height:600px;overflow-y:auto;position:relative">
             <div id="traffic-graph-loading"
-                 style="display:flex;align-items:center;justify-content:center;height:100%;color:#94a3b8;font-size:14px;animation:tg-pulse 1.5s ease-in-out infinite">
-                Loading graph&hellip;
+                 style="display:flex;align-items:center;justify-content:center;height:200px;color:#94a3b8;font-size:14px;animation:tg-pulse 1.5s ease-in-out infinite">
+                Loading&hellip;
             </div>
-        </div>
-        <div class="flex gap-4 justify-center pt-3 pb-1 border-t border-gray-100 dark:border-gray-800 mt-2">
-            <span class="flex items-center gap-1.5 text-xs text-gray-400">
-                <span class="w-2 h-2 rounded-full bg-blue-500 dark:bg-blue-400"></span> Countries
-            </span>
-            <span class="flex items-center gap-1.5 text-xs text-gray-400">
-                <span class="w-2 h-2 rounded-full bg-teal-500 dark:bg-teal-400"></span> Cities
-            </span>
-            <span class="flex items-center gap-1.5 text-xs text-gray-400">
-                <span class="w-2 h-2 rounded-full bg-green-500 dark:bg-green-400"></span> Visitors
-            </span>
         </div>
     {% endcomponent %}
 </div>
@@ -286,43 +275,132 @@
     {% endcomponent %}
 </div>
 
-{# --- Traffic Graph Scripts & Styles --- #}
+{# --- Traffic Tree Scripts & Styles --- #}
 <style>
 @keyframes tg-pulse { 0%,100%{opacity:.4} 50%{opacity:1} }
-#traffic-graph-container canvas { display:block }
+
+/* ── Tree layout ─────────────────────────────── */
+.tg-empty {
+    display:flex; align-items:center; justify-content:center;
+    height:200px; color:#94a3b8; font-size:14px;
+}
+.tg-tree { font-family:-apple-system,system-ui,sans-serif }
+.tg-tree--fs { padding:0 20px 20px }
+
+/* ── Chevron ─────────────────────────────────── */
+.tg-chevron {
+    display:inline-flex; align-items:center; justify-content:center;
+    width:18px; flex-shrink:0; font-size:10px;
+    color:#94a3b8; transition:color .15s;
+}
+
+/* ── Shared head row ─────────────────────────── */
+.tg-head {
+    display:flex; align-items:center; gap:6px;
+    padding:8px 10px; cursor:pointer; border-radius:6px;
+    transition:background .15s;
+}
+.tg-head:hover { background:rgba(148,163,184,0.08) }
+
+.tg-flag { font-size:16px; flex-shrink:0 }
+.tg-name { font-weight:600; font-size:13px; color:#1e293b; flex:1; min-width:0 }
+.dark .tg-name { color:#e2e8f0 }
+
+.tg-counts { display:flex; gap:6px; flex-shrink:0 }
+
+/* ── Pills / badges ──────────────────────────── */
+.tg-pill {
+    font-size:11px; font-weight:600; padding:2px 8px;
+    border-radius:10px; white-space:nowrap;
+}
+.tg-pill--blue { background:#dbeafe; color:#2563eb }
+.dark .tg-pill--blue { background:rgba(59,130,246,0.18); color:#93c5fd }
+.tg-pill--teal { background:#ccfbf1; color:#0d9488 }
+.dark .tg-pill--teal { background:rgba(20,184,166,0.18); color:#5eead4 }
+.tg-pill--dim { background:#f1f5f9; color:#64748b; font-weight:500 }
+.dark .tg-pill--dim { background:rgba(100,116,139,0.15); color:#94a3b8 }
+
+/* ── Country node ────────────────────────────── */
+.tg-node--country { border-bottom:1px solid #f1f5f9 }
+.dark .tg-node--country { border-bottom-color:#1e293b }
+.tg-node--country:last-child { border-bottom:none }
+.tg-head--country { padding:10px 10px }
+.tg-head--country .tg-name { font-size:14px }
+
+/* ── City node ───────────────────────────────── */
+.tg-node--city { margin-left:24px }
+.tg-head--city { padding:6px 10px }
+.tg-head--city .tg-name { font-size:13px; font-weight:500 }
+
+/* ── Collapsible body ────────────────────────── */
+.tg-body { overflow:hidden }
+.tg-collapsed { display:none }
+
+/* ── Client leaf ─────────────────────────────── */
+.tg-leaf {
+    display:flex; align-items:center; gap:8px;
+    margin-left:48px; padding:5px 10px;
+    border-radius:5px; text-decoration:none;
+    transition:background .15s;
+}
+a.tg-leaf:hover { background:rgba(34,197,94,0.06) }
+.dark a.tg-leaf:hover { background:rgba(34,197,94,0.1) }
+
+.tg-dot {
+    width:6px; height:6px; border-radius:50%; flex-shrink:0;
+    background:#22c55e;
+}
+.dark .tg-dot { background:#34d399 }
+
+.tg-leaf-info { flex:1; min-width:0; display:flex; flex-direction:column; gap:1px }
+.tg-leaf-title { font-size:12px; font-weight:500; color:#334155 }
+.dark .tg-leaf-title { color:#cbd5e1 }
+.tg-leaf-device { font-size:11px; color:#94a3b8 }
+
+.tg-leaf-stats { display:flex; gap:10px; flex-shrink:0 }
+.tg-stat {
+    font-size:11px; font-weight:600; color:#64748b;
+    white-space:nowrap;
+}
+.dark .tg-stat { color:#94a3b8 }
+
+/* ── Fullscreen overlay ──────────────────────── */
 .tg-overlay {
     position:fixed; inset:0; z-index:99999;
+    background:rgba(255,255,255,0.92);
     backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
     opacity:0; transition:opacity .25s ease;
+    overflow-y:auto;
 }
+.dark .tg-overlay { background:rgba(15,23,42,0.92) }
 .tg-overlay.tg-ready { opacity:1 }
-.tg-header {
-    position:absolute; top:0; left:0; right:0; z-index:2;
+
+.tg-fs-header {
+    position:sticky; top:0; z-index:2;
     display:flex; justify-content:space-between; align-items:center;
-    padding:12px 20px;
+    padding:14px 24px;
+    background:rgba(255,255,255,0.8);
+    backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+    border-bottom:1px solid #e2e8f0;
 }
-.tg-title {
-    font:600 11px/1 -apple-system,system-ui,sans-serif;
+.dark .tg-fs-header {
+    background:rgba(15,23,42,0.8);
+    border-bottom-color:#334155;
+}
+.tg-fs-title {
+    font:600 12px/1 -apple-system,system-ui,sans-serif;
     text-transform:uppercase; letter-spacing:.1em;
+    color:#64748b;
 }
-.tg-close {
+.dark .tg-fs-title { color:#94a3b8 }
+.tg-fs-close {
     background:none; border:none; font-size:1.5rem; cursor:pointer;
-    padding:0 4px; transition:opacity .15s;
+    padding:0 4px; color:#94a3b8; transition:opacity .15s;
 }
-.tg-close:hover { opacity:.6 }
-.tg-fullscreen-box { position:absolute; inset:40px 0 40px 0; overflow:hidden }
-.tg-fullscreen-box canvas { display:block }
-.tg-legend {
-    position:absolute; bottom:0; left:0; right:0; z-index:2;
-    display:flex; gap:16px; justify-content:center; padding:10px;
-}
-.tg-legend-item {
-    display:flex; align-items:center; gap:5px;
-    font:11px -apple-system,system-ui,sans-serif;
-}
-.tg-legend-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0 }
+.tg-fs-close:hover { opacity:.6 }
+
+.tg-fs-box { padding:8px 24px 40px; max-width:900px; margin:0 auto }
 </style>
-<script defer src="https://cdn.jsdelivr.net/npm/force-graph/dist/force-graph.min.js"></script>
 <script src="{% static 'analytics/js/traffic-graph.js' %}"></script>
 
 {{ block.super }}

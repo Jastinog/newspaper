@@ -25,7 +25,7 @@ def traffic_graph_api(request):
     for s in rows:
         c = s.client
         code = c.country or "??"
-        city_name = c.city or "?"
+        city_name = c.city or "Unknown"
 
         country = tree.setdefault(code, {
             "name": c.country_name or code,
@@ -68,12 +68,14 @@ def traffic_graph_api(request):
                 })
             cities_out.append({
                 "name": ci_name,
+                "sc": ci["n"],
                 "cc": len(ci["clients"]),
                 "clients": clients_out,
             })
         countries_out.append({
             "flag": co["flag"],
             "name": co["name"],
+            "sc": co["n"],
             "cc": len(co["cities"]),
             "cities": cities_out,
         })
