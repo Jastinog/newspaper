@@ -2,6 +2,7 @@ import json
 from datetime import timedelta
 
 from django.db.models import Count, Q, Sum
+from django.db.models.functions import TruncDate, TruncMinute
 from django.utils import timezone
 
 from apps.feed.models import Article, ArticlePipeline, Feed
@@ -12,16 +13,60 @@ from apps.harvester.models import (
     HarvesterImage,
 )
 
+# ── Color palette ─────────────────────────────────────────
+GREEN = ("rgb(34, 197, 94)", "rgba(34, 197, 94, 0.5)")
+GREEN_FILL = ("rgb(34, 197, 94)", "rgba(34, 197, 94, 0.1)")
+RED = ("rgb(239, 68, 68)", "rgba(239, 68, 68, 0.5)")
+INDIGO = ("rgb(99, 102, 241)", "rgba(99, 102, 241, 0.5)")
+INDIGO_FILL = ("rgb(99, 102, 241)", "rgba(99, 102, 241, 0.1)")
+YELLOW = ("rgb(234, 179, 8)", "rgba(234, 179, 8, 0.5)")
+YELLOW_FILL = ("rgb(234, 179, 8)", "rgba(234, 179, 8, 0.1)")
+GRAY = ("rgb(156, 163, 175)", "rgba(156, 163, 175, 0.5)")
+PURPLE_FILL = ("rgb(168, 85, 247)", "rgba(168, 85, 247, 0.1)")
 
-def _build_labels(now, days=30):
+
+# ── Helpers ───────────────────────────────────────────────
+def _build_day_labels(now, days=30):
     return [
         (now - timedelta(days=days - 1 - i)).date()
         for i in range(days)
     ]
 
 
-def _daily_series(day_map, dates, field, default=0):
-    return [day_map.get(str(d), {}).get(field, default) for d in dates]
+def _build_minute_labels(now, minutes=60):
+    return [
+        (now - timedelta(minutes=minutes - 1 - i)).replace(second=0, microsecond=0)
+        for i in range(minutes)
+    ]
+
+
+def _series(data_map, keys, field, default=0):
+    return [data_map.get(k, {}).get(field, default) for k in keys]
+
+
+def _bar_ds(label, data, color, stack=None, border_width=1):
+    border, bg = color
+    ds = {
+        "label": label, "data": data,
+        "backgroundColor": bg, "borderColor": border,
+        "borderWidth": border_width, "type": "bar",
+    }
+    if stack:
+        ds["stack"] = stack
+    return ds
+
+
+def _line_ds(label, data, color):
+    border, bg = color
+    return {
+        "label": label, "data": data,
+        "borderColor": border, "backgroundColor": bg,
+        "borderWidth": 2, "fill": True, "tension": 0.3,
+    }
+
+
+def _chart(labels, datasets):
+    return json.dumps({"labels": labels, "datasets": datasets})
 
 
 def build_harvester_context(request):
@@ -30,8 +75,9 @@ def build_harvester_context(request):
     twenty_four_hours_ago = now - timedelta(hours=24)
     thirty_days_ago = now - timedelta(days=30)
     seven_days_ago = now - timedelta(days=7)
-    dates = _build_labels(now, 30)
-    labels = [d.strftime("%d.%m") for d in dates]
+    dates = _build_day_labels(now, 30)
+    day_keys = [str(d) for d in dates]
+    day_display = [d.strftime("%d.%m") for d in dates]
 
     # ── KPI cards ────────────────────────────────────────────
     articles_today = (
@@ -55,7 +101,6 @@ def build_harvester_context(request):
         completed_at__isnull=False,
     ).count()
 
-    # Error rate (24h) across all harvester tables
     error_filter = Q(status="error", started_at__gte=twenty_four_hours_ago)
     total_filter = Q(started_at__gte=twenty_four_hours_ago)
     errors_24h = sum([
@@ -74,7 +119,6 @@ def build_harvester_context(request):
         f"{errors_24h / total_24h * 100:.1f}%" if total_24h > 0 else "—"
     )
 
-    # Active feeds (24h)
     feeds_active_24h = (
         HarvesterFeed.objects
         .filter(started_at__gte=twenty_four_hours_ago)
@@ -84,78 +128,120 @@ def build_harvester_context(request):
     )
     feeds_enabled = Feed.objects.filter(enabled=True).count()
 
-    # ── Chart 1: New articles per day ────────────────────────
-    new_articles_daily = (
+    # ── Minute-level data (last 60 min) ──────────────────────
+    sixty_minutes_ago = now - timedelta(minutes=60)
+    minute_labels = _build_minute_labels(now, 60)
+    minute_keys = [m.strftime("%Y-%m-%d %H:%M") for m in minute_labels]
+    minute_display = [k[-5:] for k in minute_keys]
+
+    # Single query for HarvesterFeed minute data (articles + fetches)
+    feed_min_qs = (
         HarvesterFeed.objects
-        .filter(started_at__gte=thirty_days_ago)
-        .extra(select={"day": "DATE(started_at)"})
-        .values("day")
-        .annotate(total=Sum("new_articles"))
-        .order_by("day")
+        .filter(started_at__gte=sixty_minutes_ago)
+        .annotate(minute=TruncMinute("started_at"))
+        .values("minute")
+        .annotate(
+            new_articles=Sum("new_articles"),
+            total=Count("id"),
+            errors=Count("id", filter=Q(status="error")),
+        )
+        .order_by("minute")
     )
-    new_articles_map = {str(r["day"]): {"total": r["total"]} for r in new_articles_daily}
+    feed_min_map = {}
+    for r in feed_min_qs:
+        feed_min_map[r["minute"].strftime("%Y-%m-%d %H:%M")] = {
+            "new_articles": r["new_articles"] or 0,
+            "success": r["total"] - r["errors"],
+            "errors": r["errors"],
+        }
 
-    new_articles_chart = json.dumps({
-        "labels": labels,
-        "datasets": [{
-            "label": "New Articles",
-            "data": _daily_series(new_articles_map, dates, "total"),
-            "backgroundColor": "rgba(34, 197, 94, 0.5)",
-            "borderColor": "rgb(34, 197, 94)",
-            "borderWidth": 2,
-            "type": "bar",
-        }],
-    })
+    new_articles_min_chart = _chart(minute_display, [
+        _bar_ds("New Articles", _series(feed_min_map, minute_keys, "new_articles"), GREEN),
+    ])
 
-    # ── Chart 2: Feed fetches success vs error ───────────────
-    feed_fetches_daily = (
+    feed_fetches_min_chart = _chart(minute_display, [
+        _bar_ds("Success", _series(feed_min_map, minute_keys, "success"), GREEN, stack="fetches"),
+        _bar_ds("Error", _series(feed_min_map, minute_keys, "errors"), RED, stack="fetches"),
+    ])
+
+    # Extraction per minute
+    extraction_min_qs = (
+        HarvesterContent.objects
+        .filter(started_at__gte=sixty_minutes_ago)
+        .annotate(minute=TruncMinute("started_at"))
+        .values("minute")
+        .annotate(
+            extracted=Sum("articles_extracted"),
+            failed=Sum("articles_failed"),
+        )
+        .order_by("minute")
+    )
+    extraction_min_map = {
+        r["minute"].strftime("%Y-%m-%d %H:%M"): {
+            "extracted": r["extracted"] or 0,
+            "failed": r["failed"] or 0,
+        }
+        for r in extraction_min_qs
+    }
+    extraction_min_chart = _chart(minute_display, [
+        _bar_ds("Extracted", _series(extraction_min_map, minute_keys, "extracted"), GREEN, stack="extraction"),
+        _bar_ds("Failed", _series(extraction_min_map, minute_keys, "failed"), RED, stack="extraction"),
+    ])
+
+    # Pipeline completions per minute
+    completion_min_qs = (
+        ArticlePipeline.objects
+        .filter(completed_at__gte=sixty_minutes_ago)
+        .annotate(minute=TruncMinute("completed_at"))
+        .values("minute")
+        .annotate(completed=Count("id"))
+        .order_by("minute")
+    )
+    completion_min_map = {
+        r["minute"].strftime("%Y-%m-%d %H:%M"): {"completed": r["completed"]}
+        for r in completion_min_qs
+    }
+    completion_min_chart = _chart(minute_display, [
+        _line_ds("Completed", _series(completion_min_map, minute_keys, "completed"), GREEN_FILL),
+    ])
+
+    # ── Daily data (last 30 days) ────────────────────────────
+
+    # Single query for HarvesterFeed daily data (articles + fetches)
+    feed_daily_qs = (
         HarvesterFeed.objects
         .filter(started_at__gte=thirty_days_ago)
-        .extra(select={"day": "DATE(started_at)"})
+        .annotate(day=TruncDate("started_at"))
         .values("day")
         .annotate(
+            new_articles=Sum("new_articles"),
             total=Count("id"),
             errors=Count("id", filter=Q(status="error")),
         )
         .order_by("day")
     )
-    feed_fetches_map = {
-        str(r["day"]): {
+    feed_daily_map = {}
+    for r in feed_daily_qs:
+        feed_daily_map[str(r["day"])] = {
+            "new_articles": r["new_articles"] or 0,
             "success": r["total"] - r["errors"],
             "errors": r["errors"],
         }
-        for r in feed_fetches_daily
-    }
 
-    feed_fetches_chart = json.dumps({
-        "labels": labels,
-        "datasets": [
-            {
-                "label": "Success",
-                "data": _daily_series(feed_fetches_map, dates, "success"),
-                "backgroundColor": "rgba(34, 197, 94, 0.5)",
-                "borderColor": "rgb(34, 197, 94)",
-                "borderWidth": 1,
-                "type": "bar",
-                "stack": "fetches",
-            },
-            {
-                "label": "Error",
-                "data": _daily_series(feed_fetches_map, dates, "errors"),
-                "backgroundColor": "rgba(239, 68, 68, 0.5)",
-                "borderColor": "rgb(239, 68, 68)",
-                "borderWidth": 1,
-                "type": "bar",
-                "stack": "fetches",
-            },
-        ],
-    })
+    new_articles_chart = _chart(day_display, [
+        _bar_ds("New Articles", _series(feed_daily_map, day_keys, "new_articles"), GREEN, border_width=2),
+    ])
 
-    # ── Chart 3: Content extraction ──────────────────────────
+    feed_fetches_chart = _chart(day_display, [
+        _bar_ds("Success", _series(feed_daily_map, day_keys, "success"), GREEN, stack="fetches"),
+        _bar_ds("Error", _series(feed_daily_map, day_keys, "errors"), RED, stack="fetches"),
+    ])
+
+    # Content extraction
     extraction_daily = (
         HarvesterContent.objects
         .filter(started_at__gte=thirty_days_ago)
-        .extra(select={"day": "DATE(started_at)"})
+        .annotate(day=TruncDate("started_at"))
         .values("day")
         .annotate(
             extracted=Sum("articles_extracted"),
@@ -172,45 +258,17 @@ def build_harvester_context(request):
         }
         for r in extraction_daily
     }
+    extraction_chart = _chart(day_display, [
+        _bar_ds("Extracted", _series(extraction_map, day_keys, "extracted"), GREEN, stack="extraction"),
+        _bar_ds("Fallback", _series(extraction_map, day_keys, "fallback"), YELLOW, stack="extraction"),
+        _bar_ds("Failed", _series(extraction_map, day_keys, "failed"), RED, stack="extraction"),
+    ])
 
-    extraction_chart = json.dumps({
-        "labels": labels,
-        "datasets": [
-            {
-                "label": "Extracted",
-                "data": _daily_series(extraction_map, dates, "extracted"),
-                "backgroundColor": "rgba(34, 197, 94, 0.5)",
-                "borderColor": "rgb(34, 197, 94)",
-                "borderWidth": 1,
-                "type": "bar",
-                "stack": "extraction",
-            },
-            {
-                "label": "Fallback",
-                "data": _daily_series(extraction_map, dates, "fallback"),
-                "backgroundColor": "rgba(234, 179, 8, 0.5)",
-                "borderColor": "rgb(234, 179, 8)",
-                "borderWidth": 1,
-                "type": "bar",
-                "stack": "extraction",
-            },
-            {
-                "label": "Failed",
-                "data": _daily_series(extraction_map, dates, "failed"),
-                "backgroundColor": "rgba(239, 68, 68, 0.5)",
-                "borderColor": "rgb(239, 68, 68)",
-                "borderWidth": 1,
-                "type": "bar",
-                "stack": "extraction",
-            },
-        ],
-    })
-
-    # ── Chart 4: Image downloads ─────────────────────────────
+    # Image downloads
     images_daily = (
         HarvesterImage.objects
         .filter(started_at__gte=thirty_days_ago)
-        .extra(select={"day": "DATE(started_at)"})
+        .annotate(day=TruncDate("started_at"))
         .values("day")
         .annotate(
             downloaded=Sum("images_downloaded"),
@@ -225,36 +283,16 @@ def build_harvester_context(request):
         }
         for r in images_daily
     }
+    images_chart = _chart(day_display, [
+        _bar_ds("Downloaded", _series(images_map, day_keys, "downloaded"), INDIGO, stack="images"),
+        _bar_ds("Skipped", _series(images_map, day_keys, "skipped"), GRAY, stack="images"),
+    ])
 
-    images_chart = json.dumps({
-        "labels": labels,
-        "datasets": [
-            {
-                "label": "Downloaded",
-                "data": _daily_series(images_map, dates, "downloaded"),
-                "backgroundColor": "rgba(99, 102, 241, 0.5)",
-                "borderColor": "rgb(99, 102, 241)",
-                "borderWidth": 1,
-                "type": "bar",
-                "stack": "images",
-            },
-            {
-                "label": "Skipped",
-                "data": _daily_series(images_map, dates, "skipped"),
-                "backgroundColor": "rgba(156, 163, 175, 0.5)",
-                "borderColor": "rgb(156, 163, 175)",
-                "borderWidth": 1,
-                "type": "bar",
-                "stack": "images",
-            },
-        ],
-    })
-
-    # ── Chart 5: Embeddings ──────────────────────────────────
+    # Embeddings
     embeddings_daily = (
         HarvesterEmbedding.objects
         .filter(started_at__gte=thirty_days_ago)
-        .extra(select={"day": "DATE(started_at)"})
+        .annotate(day=TruncDate("started_at"))
         .values("day")
         .annotate(
             embedded=Sum("articles_embedded"),
@@ -269,78 +307,38 @@ def build_harvester_context(request):
         }
         for r in embeddings_daily
     }
+    embeddings_chart = _chart(day_display, [
+        _line_ds("Articles Embedded", _series(embeddings_map, day_keys, "embedded"), INDIGO_FILL),
+        _line_ds("Chunks Created", _series(embeddings_map, day_keys, "chunks"), PURPLE_FILL),
+    ])
 
-    embeddings_chart = json.dumps({
-        "labels": labels,
-        "datasets": [
-            {
-                "label": "Articles Embedded",
-                "data": _daily_series(embeddings_map, dates, "embedded"),
-                "borderColor": "rgb(99, 102, 241)",
-                "backgroundColor": "rgba(99, 102, 241, 0.1)",
-                "borderWidth": 2,
-                "fill": True,
-                "tension": 0.3,
-            },
-            {
-                "label": "Chunks Created",
-                "data": _daily_series(embeddings_map, dates, "chunks"),
-                "borderColor": "rgb(168, 85, 247)",
-                "backgroundColor": "rgba(168, 85, 247, 0.1)",
-                "borderWidth": 2,
-                "fill": True,
-                "tension": 0.3,
-            },
-        ],
-    })
-
-    # ── Chart 6: Embedding tokens ────────────────────────────
+    # Embedding tokens
     tokens_daily = (
         HarvesterEmbedding.objects
         .filter(started_at__gte=thirty_days_ago)
-        .extra(select={"day": "DATE(started_at)"})
+        .annotate(day=TruncDate("started_at"))
         .values("day")
         .annotate(tokens=Sum("tokens_used"))
         .order_by("day")
     )
     tokens_map = {str(r["day"]): {"tokens": r["tokens"] or 0} for r in tokens_daily}
+    tokens_chart = _chart(day_display, [
+        _line_ds("Tokens Used", _series(tokens_map, day_keys, "tokens"), YELLOW_FILL),
+    ])
 
-    tokens_chart = json.dumps({
-        "labels": labels,
-        "datasets": [{
-            "label": "Tokens Used",
-            "data": _daily_series(tokens_map, dates, "tokens"),
-            "borderColor": "rgb(234, 179, 8)",
-            "backgroundColor": "rgba(234, 179, 8, 0.1)",
-            "borderWidth": 2,
-            "fill": True,
-            "tension": 0.3,
-        }],
-    })
-
-    # ── Chart 7: Pipeline completion rate ────────────────────
+    # Pipeline completion rate
     completion_daily = (
         ArticlePipeline.objects
         .filter(completed_at__gte=thirty_days_ago)
-        .extra(select={"day": "DATE(completed_at)"})
+        .annotate(day=TruncDate("completed_at"))
         .values("day")
         .annotate(completed=Count("id"))
         .order_by("day")
     )
     completion_map = {str(r["day"]): {"completed": r["completed"]} for r in completion_daily}
-
-    completion_chart = json.dumps({
-        "labels": labels,
-        "datasets": [{
-            "label": "Completed",
-            "data": _daily_series(completion_map, dates, "completed"),
-            "borderColor": "rgb(34, 197, 94)",
-            "backgroundColor": "rgba(34, 197, 94, 0.1)",
-            "borderWidth": 2,
-            "fill": True,
-            "tension": 0.3,
-        }],
-    })
+    completion_chart = _chart(day_display, [
+        _line_ds("Completed", _series(completion_map, day_keys, "completed"), GREEN_FILL),
+    ])
 
     # ── Table: Problem feeds (last 7 days) ───────────────────
     problem_feeds_qs = (
@@ -372,23 +370,15 @@ def build_harvester_context(request):
         (HarvesterImage, "Image DL"),
         (HarvesterEmbedding, "Embedding"),
     ]:
-        qs = (
-            Model.objects
-            .filter(status="error")
-            .order_by("-started_at")[:5]
-        )
-        for run in qs:
-            recent_errors.append({
+        for run in Model.objects.filter(status="error").order_by("-started_at")[:5]:
+            recent_errors.append((run.started_at, {
                 "stage": stage,
                 "date": run.started_at.strftime("%d.%m %H:%M"),
                 "error": (run.error_message[:120] + "...") if len(run.error_message) > 120 else run.error_message,
-                "started_at": run.started_at,
-            })
+            }))
 
-    recent_errors.sort(key=lambda x: x["started_at"], reverse=True)
-    recent_errors = recent_errors[:15]
-    for e in recent_errors:
-        del e["started_at"]
+    recent_errors.sort(key=lambda x: x[0], reverse=True)
+    recent_errors = [row for _, row in recent_errors[:15]]
 
     # ── Total articles in DB ─────────────────────────────────
     total_articles = Article.objects.count()
@@ -405,7 +395,12 @@ def build_harvester_context(request):
         "feeds_active_24h": feeds_active_24h,
         "feeds_enabled": feeds_enabled,
         "total_articles": f"{total_articles:,}",
-        # Charts
+        # Minute charts
+        "new_articles_min_chart": new_articles_min_chart,
+        "feed_fetches_min_chart": feed_fetches_min_chart,
+        "extraction_min_chart": extraction_min_chart,
+        "completion_min_chart": completion_min_chart,
+        # Daily charts
         "new_articles_chart": new_articles_chart,
         "feed_fetches_chart": feed_fetches_chart,
         "extraction_chart": extraction_chart,

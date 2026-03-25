@@ -42,54 +42,84 @@
     {% endcomponent %}
 </div>
 
-{# --- New Articles + Feed Fetches --- #}
+{# --- Real-time: last 60 minutes --- #}
+<h2 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">Real-time (last 60 minutes)</h2>
+
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
-    {% component "unfold/components/card.html" with title="New Articles per Day (30 days)" %}
+    {% component "unfold/components/card.html" with title="New Articles / min" %}
+        <div id="wrap-new-articles-min">
+            {% component "unfold/components/chart/bar.html" with data=new_articles_min_chart height=220 %}{% endcomponent %}
+        </div>
+    {% endcomponent %}
+
+    {% component "unfold/components/card.html" with title="Feed Fetches / min" %}
+        <div id="wrap-feed-fetches-min">
+            {% component "unfold/components/chart/bar.html" with data=feed_fetches_min_chart height=220 %}{% endcomponent %}
+        </div>
+    {% endcomponent %}
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
+    {% component "unfold/components/card.html" with title="Content Extraction / min" %}
+        <div id="wrap-extraction-min">
+            {% component "unfold/components/chart/bar.html" with data=extraction_min_chart height=220 %}{% endcomponent %}
+        </div>
+    {% endcomponent %}
+
+    {% component "unfold/components/card.html" with title="Pipeline Completions / min" %}
+        <div id="wrap-completion-min">
+            {% component "unfold/components/chart/line.html" with data=completion_min_chart height=220 %}{% endcomponent %}
+        </div>
+    {% endcomponent %}
+</div>
+
+{# --- Daily: last 30 days --- #}
+<h2 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">Daily (last 30 days)</h2>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
+    {% component "unfold/components/card.html" with title="New Articles per Day" %}
         <div id="wrap-new-articles">
             {% component "unfold/components/chart/bar.html" with data=new_articles_chart height=280 %}{% endcomponent %}
         </div>
     {% endcomponent %}
 
-    {% component "unfold/components/card.html" with title="Feed Fetches: Success vs Error (30 days)" %}
+    {% component "unfold/components/card.html" with title="Feed Fetches: Success vs Error" %}
         <div id="wrap-feed-fetches">
             {% component "unfold/components/chart/bar.html" with data=feed_fetches_chart height=280 %}{% endcomponent %}
         </div>
     {% endcomponent %}
 </div>
 
-{# --- Extraction + Images --- #}
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
-    {% component "unfold/components/card.html" with title="Content Extraction (30 days)" %}
+    {% component "unfold/components/card.html" with title="Content Extraction" %}
         <div id="wrap-extraction">
             {% component "unfold/components/chart/bar.html" with data=extraction_chart height=280 %}{% endcomponent %}
         </div>
     {% endcomponent %}
 
-    {% component "unfold/components/card.html" with title="Image Downloads (30 days)" %}
+    {% component "unfold/components/card.html" with title="Image Downloads" %}
         <div id="wrap-images">
             {% component "unfold/components/chart/bar.html" with data=images_chart height=280 %}{% endcomponent %}
         </div>
     {% endcomponent %}
 </div>
 
-{# --- Embeddings + Tokens --- #}
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
-    {% component "unfold/components/card.html" with title="Embeddings (30 days)" %}
+    {% component "unfold/components/card.html" with title="Embeddings" %}
         <div id="wrap-embeddings">
             {% component "unfold/components/chart/line.html" with data=embeddings_chart height=280 %}{% endcomponent %}
         </div>
     {% endcomponent %}
 
-    {% component "unfold/components/card.html" with title="Embedding Tokens (30 days)" %}
+    {% component "unfold/components/card.html" with title="Embedding Tokens" %}
         <div id="wrap-tokens">
             {% component "unfold/components/chart/line.html" with data=tokens_chart height=280 %}{% endcomponent %}
         </div>
     {% endcomponent %}
 </div>
 
-{# --- Pipeline Completion --- #}
 <div class="grid grid-cols-1 mb-8">
-    {% component "unfold/components/card.html" with title="Pipeline Completion per Day (30 days)" %}
+    {% component "unfold/components/card.html" with title="Pipeline Completion per Day" %}
         <div id="wrap-completion">
             {% component "unfold/components/chart/line.html" with data=completion_chart height=280 %}{% endcomponent %}
         </div>
@@ -157,6 +187,10 @@
     var INTERVAL = 30000;
 
     var CHART_MAP = {
+        "wrap-new-articles-min": "new_articles_min_chart",
+        "wrap-feed-fetches-min": "feed_fetches_min_chart",
+        "wrap-extraction-min": "extraction_min_chart",
+        "wrap-completion-min": "completion_min_chart",
         "wrap-new-articles": "new_articles_chart",
         "wrap-feed-fetches": "feed_fetches_chart",
         "wrap-extraction": "extraction_chart",
