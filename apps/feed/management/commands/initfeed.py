@@ -4,8 +4,30 @@ from django.conf import settings
 from django.core.management.base import BaseCommand
 
 from apps.core.models import Language
-from apps.feed.feeds import DEFAULT_CATEGORIES
 from apps.feed.models import Category, Feed
+
+DEFAULT_CATEGORIES = [
+    {"slug": "world", "name": "World News", "order": 0},
+    {"slug": "us", "name": "US News", "order": 1},
+    {"slug": "europe", "name": "Europe", "order": 2},
+    {"slug": "tech", "name": "Tech", "order": 3},
+    {"slug": "ai", "name": "AI / ML", "order": 4},
+    {"slug": "security", "name": "Security", "order": 5},
+    {"slug": "science", "name": "Science", "order": 6},
+    {"slug": "finance", "name": "Finance", "order": 7},
+    {"slug": "dev", "name": "Dev & Programming", "order": 8},
+    {"slug": "linux", "name": "Linux / Open Source", "order": 9},
+    {"slug": "startups", "name": "Startups & VC", "order": 10},
+    {"slug": "gaming", "name": "Gaming", "order": 11},
+    {"slug": "design", "name": "Design / Product", "order": 12},
+    {"slug": "media", "name": "Media / Blogs", "order": 13},
+    {"slug": "mideast", "name": "Middle East", "order": 14},
+    {"slug": "asia", "name": "Asia-Pacific", "order": 15},
+    {"slug": "southasia", "name": "South Asia", "order": 16},
+    {"slug": "africa", "name": "Africa", "order": 17},
+    {"slug": "latam", "name": "Latin America", "order": 18},
+    {"slug": "ru", "name": "Русские", "order": 19},
+]
 from apps.location.models import Country
 
 FEED_FIELDS = ("title", "website", "description", "category", "country", "language", "reliability")
