@@ -27,6 +27,16 @@ MIN_DIMENSION = 100  # skip tracking pixels
 DOWNLOAD_BATCH_SIZE = 10
 
 
+def articles_with_downloaded_rss_image():
+    """Article IDs that already have a usable RSS image (OG is a fallback)."""
+    return (
+        ArticleImage.objects
+        .filter(source__slug="rss-image", downloaded=True)
+        .exclude(image="")
+        .values_list("article_id", flat=True)
+    )
+
+
 def download_and_resize(source_url: str) -> tuple[bytes, int, int] | None:
     """Download image, resize if needed, convert to WebP.
 
@@ -168,6 +178,8 @@ class ImageDownloader:
             ).filter(
                 Q(source__slug="rss-image")
                 | Q(source__slug="og-image", article__pipeline__content_extracted_at__isnull=False)
+            ).exclude(
+                Q(source__slug="og-image", article_id__in=articles_with_downloaded_rss_image())
             ).values_list("id", "source_url")
             .order_by("?")
         )

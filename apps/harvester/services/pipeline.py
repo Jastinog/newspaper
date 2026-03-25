@@ -12,7 +12,7 @@ from apps.feed.models import Article, ArticleChunk, ArticleImage, ArticleImageSo
 from apps.harvester.models import HarvesterFeed, RunStatus
 
 from .chunker import chunk_text
-from .downloader import download_and_resize, save_image_result
+from .downloader import articles_with_downloaded_rss_image, download_and_resize, save_image_result
 from .extractor import fetch_and_extract
 from .fetcher import fetch_single_feed, save_articles
 from .http import get_domain
@@ -143,15 +143,18 @@ class HarvestManager:
             pipeline_field: ArticlePipeline field to timestamp on success.
             **extra_filters: additional queryset filters (e.g. content_extracted check).
         """
+        qs = ArticleImage.objects.filter(
+            downloaded=False,
+            source__slug=source_slug,
+            article__published__gte=_cutoff_days(),
+            **extra_filters,
+        )
+
+        if source_slug == "og-image":
+            qs = qs.exclude(article_id__in=articles_with_downloaded_rss_image())
+
         candidates = list(
-            ArticleImage.objects
-            .filter(
-                downloaded=False,
-                source__slug=source_slug,
-                article__published__gte=_cutoff_days(),
-                **extra_filters,
-            )
-            .values_list("id", "source_url", "article_id")
+            qs.values_list("id", "source_url", "article_id")
             .order_by("?")[:CANDIDATE_POOL]
         )
         if not candidates:
