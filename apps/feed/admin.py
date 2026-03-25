@@ -59,44 +59,127 @@ class ArticleImageInline(TabularInline):
         return _img_thumbnail(obj.image.url if obj.image else None, w=80, h=50)
 
 
+class PipelineStageFilter(admin.SimpleListFilter):
+    title = "pipeline stage"
+    parameter_name = "pipeline_stage"
+
+    def lookups(self, request, model_admin):
+        return [
+            ("no_pipeline", "No pipeline"),
+            ("new", "New (nothing done)"),
+            ("rss_images", "RSS images done"),
+            ("content", "Content extracted"),
+            ("og_images", "OG images done"),
+            ("embedded", "Embedded"),
+            ("completed", "Completed"),
+        ]
+
+    def queryset(self, request, queryset):
+        val = self.value()
+        if val == "no_pipeline":
+            return queryset.filter(pipeline__isnull=True)
+        if val == "new":
+            return queryset.filter(
+                pipeline__isnull=False,
+                pipeline__content_extracted_at__isnull=True,
+                pipeline__rss_images_at__isnull=True,
+            )
+        if val == "rss_images":
+            return queryset.filter(
+                pipeline__rss_images_at__isnull=False,
+                pipeline__content_extracted_at__isnull=True,
+            )
+        if val == "content":
+            return queryset.filter(
+                pipeline__content_extracted_at__isnull=False,
+                pipeline__embedded_at__isnull=True,
+            )
+        if val == "og_images":
+            return queryset.filter(
+                pipeline__og_images_at__isnull=False,
+                pipeline__embedded_at__isnull=True,
+            )
+        if val == "embedded":
+            return queryset.filter(
+                pipeline__embedded_at__isnull=False,
+                pipeline__completed_at__isnull=True,
+            )
+        if val == "completed":
+            return queryset.filter(pipeline__completed_at__isnull=False)
+        return queryset
+
+
 @admin.register(Article)
 class ArticleAdmin(ModelAdmin):
-    list_display = ("id", "image_preview", "title", "feed", "published")
-    list_display_links = ("id", "image_preview", "title")
-    list_filter = ("feed__category",)
+    list_display = ("id", "rss_image", "og_image", "title", "feed", "pipeline_status", "published")
+    list_display_links = ("id", "title")
+    list_filter = ("feed__category", PipelineStageFilter)
     search_fields = ("title", "content")
     raw_id_fields = ("feed",)
     inlines = [ArticlePipelineInline, ArticleImageInline]
 
     def get_queryset(self, request):
-        return super().get_queryset(request).prefetch_related("images", "images__source")
+        return (
+            super().get_queryset(request)
+            .select_related("pipeline")
+            .prefetch_related("images", "images__source")
+        )
 
-    @admin.display(description="")
-    def image_preview(self, obj):
-        imgs = [i for i in obj.images.all() if i.image]
-        if not imgs:
+    @admin.display(description="Pipeline")
+    def pipeline_status(self, obj):
+        pipeline = getattr(obj, "pipeline", None)
+        if not pipeline:
+            return format_html('<span style="color:#9ca3af;">—</span>')
+
+        stages = [
+            (pipeline.rss_images_at, "RSS img"),
+            (pipeline.content_extracted_at, "Content"),
+            (pipeline.og_images_at, "OG img"),
+            (pipeline.embedded_at, "Embed"),
+            (pipeline.completed_at, "Done"),
+        ]
+
+        blocks = []
+        for ts, name in stages:
+            color = "#22c55e" if ts else "#ef4444"
+            title = f"{name}: {ts:%d.%m %H:%M}" if ts else f"{name}: pending"
+            blocks.append(format_html(
+                '<span title="{}" style="display:inline-block;width:10px;height:10px;'
+                'border-radius:2px;background:{}"></span>',
+                title, color,
+            ))
+
+        return mark_safe(
+            '<span style="display:inline-flex;gap:2px;">'
+            + "".join(str(b) for b in blocks)
+            + '</span>'
+        )
+
+    def _find_image(self, obj, slug):
+        for i in obj.images.all():
+            if i.image and i.source and i.source.slug == slug:
+                return i
+        return None
+
+    @admin.display(description="RSS")
+    def rss_image(self, obj):
+        img = self._find_image(obj, "rss-image")
+        if not img:
             return ""
-        parts = []
-        for i in imgs:
-            slug = i.source.slug if i.source else ""
-            if slug == "og-image":
-                border = "border:2px solid #1e88e5;"
-                label = "OG"
-            elif slug == "rss-image":
-                border = "border:2px solid #43a047;"
-                label = "RSS"
-            else:
-                border = "opacity:0.6;"
-                label = ""
-            img_html = format_html(
-                '<span style="display:inline-block;position:relative;margin-right:2px;">'
-                '<img src="{}" style="width:40px;height:40px;object-fit:cover;border-radius:3px;{}" />'
-                '<span style="position:absolute;bottom:0;right:0;font-size:8px;background:rgba(0,0,0,.6);color:#fff;padding:0 2px;border-radius:2px;">{}</span>'
-                '</span>',
-                i.image.url, border, label,
-            )
-            parts.append(img_html)
-        return mark_safe("".join(parts))
+        return format_html(
+            '<img src="{}" style="width:40px;height:40px;object-fit:cover;border-radius:3px;" />',
+            img.image.url,
+        )
+
+    @admin.display(description="OG")
+    def og_image(self, obj):
+        img = self._find_image(obj, "og-image")
+        if not img:
+            return ""
+        return format_html(
+            '<img src="{}" style="width:40px;height:40px;object-fit:cover;border-radius:3px;" />',
+            img.image.url,
+        )
 
 
 @admin.register(ArticleImageSource)

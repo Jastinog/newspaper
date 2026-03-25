@@ -1,0 +1,312 @@
+{% extends "unfold/layouts/base_simple.html" %}
+{% load i18n unfold %}
+
+{% block title %}Harvester Dashboard{% endblock %}
+{% block content_title %}Harvester Dashboard{% endblock %}
+
+{% block content %}
+
+{# --- Auto-refresh indicator --- #}
+<div class="flex items-center justify-end mb-4 gap-2">
+    <span id="hd-status" class="text-xs text-gray-400"></span>
+    <span id="hd-dot" class="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+</div>
+
+{# --- KPI Cards --- #}
+<div class="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+    {% component "unfold/components/card.html" with title="Articles Today" %}
+        <span id="kpi-articles-today" class="text-3xl font-bold text-green-600 dark:text-green-400">{{ articles_today }}</span>
+    {% endcomponent %}
+
+    {% component "unfold/components/card.html" with title="Pending Extraction" %}
+        <span id="kpi-pending-extraction" class="text-3xl font-bold text-amber-600 dark:text-amber-400">{{ pending_extraction }}</span>
+    {% endcomponent %}
+
+    {% component "unfold/components/card.html" with title="Pending Embedding" %}
+        <span id="kpi-pending-embedding" class="text-3xl font-bold text-amber-600 dark:text-amber-400">{{ pending_embedding }}</span>
+    {% endcomponent %}
+
+    {% component "unfold/components/card.html" with title="Completed (All Time)" %}
+        <span id="kpi-completed-total" class="text-3xl font-bold text-green-600 dark:text-green-400">{{ completed_total }}</span>
+        <div class="text-xs text-gray-500 mt-1">of <span id="kpi-total-articles">{{ total_articles }}</span> articles</div>
+    {% endcomponent %}
+
+    {% component "unfold/components/card.html" with title="Error Rate (24h)" %}
+        <span id="kpi-error-rate" class="text-3xl font-bold {% if errors_24h > 0 %}text-red-600 dark:text-red-400{% else %}text-green-600 dark:text-green-400{% endif %}">{{ error_rate_24h }}</span>
+        <div class="text-xs text-gray-500 mt-1"><span id="kpi-errors-detail">{{ errors_24h }} / {{ total_runs_24h }}</span> runs</div>
+    {% endcomponent %}
+
+    {% component "unfold/components/card.html" with title="Active Feeds (24h)" %}
+        <span id="kpi-feeds-active" class="text-3xl font-bold text-primary-700 dark:text-primary-400">{{ feeds_active_24h }}</span>
+        <div class="text-xs text-gray-500 mt-1">of <span id="kpi-feeds-enabled">{{ feeds_enabled }}</span> enabled</div>
+    {% endcomponent %}
+</div>
+
+{# --- New Articles + Feed Fetches --- #}
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
+    {% component "unfold/components/card.html" with title="New Articles per Day (30 days)" %}
+        <div id="wrap-new-articles">
+            {% component "unfold/components/chart/bar.html" with data=new_articles_chart height=280 %}{% endcomponent %}
+        </div>
+    {% endcomponent %}
+
+    {% component "unfold/components/card.html" with title="Feed Fetches: Success vs Error (30 days)" %}
+        <div id="wrap-feed-fetches">
+            {% component "unfold/components/chart/bar.html" with data=feed_fetches_chart height=280 %}{% endcomponent %}
+        </div>
+    {% endcomponent %}
+</div>
+
+{# --- Extraction + Images --- #}
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
+    {% component "unfold/components/card.html" with title="Content Extraction (30 days)" %}
+        <div id="wrap-extraction">
+            {% component "unfold/components/chart/bar.html" with data=extraction_chart height=280 %}{% endcomponent %}
+        </div>
+    {% endcomponent %}
+
+    {% component "unfold/components/card.html" with title="Image Downloads (30 days)" %}
+        <div id="wrap-images">
+            {% component "unfold/components/chart/bar.html" with data=images_chart height=280 %}{% endcomponent %}
+        </div>
+    {% endcomponent %}
+</div>
+
+{# --- Embeddings + Tokens --- #}
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
+    {% component "unfold/components/card.html" with title="Embeddings (30 days)" %}
+        <div id="wrap-embeddings">
+            {% component "unfold/components/chart/line.html" with data=embeddings_chart height=280 %}{% endcomponent %}
+        </div>
+    {% endcomponent %}
+
+    {% component "unfold/components/card.html" with title="Embedding Tokens (30 days)" %}
+        <div id="wrap-tokens">
+            {% component "unfold/components/chart/line.html" with data=tokens_chart height=280 %}{% endcomponent %}
+        </div>
+    {% endcomponent %}
+</div>
+
+{# --- Pipeline Completion --- #}
+<div class="grid grid-cols-1 mb-8">
+    {% component "unfold/components/card.html" with title="Pipeline Completion per Day (30 days)" %}
+        <div id="wrap-completion">
+            {% component "unfold/components/chart/line.html" with data=completion_chart height=280 %}{% endcomponent %}
+        </div>
+    {% endcomponent %}
+</div>
+
+{# --- Tables --- #}
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
+    {% component "unfold/components/card.html" with title="Problem Feeds (7 days)" %}
+        <div id="table-problem-feeds">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-gray-200 dark:border-gray-700">
+                    <th class="text-left py-2 font-medium">Feed</th>
+                    <th class="text-right py-2 font-medium">Fetches</th>
+                    <th class="text-right py-2 font-medium">Errors</th>
+                    <th class="text-right py-2 font-medium">Rate</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in problem_feeds %}
+                <tr class="border-b border-gray-100 dark:border-gray-800">
+                    <td class="py-2 truncate max-w-xs">{{ row.title }}</td>
+                    <td class="text-right py-2">{{ row.total }}</td>
+                    <td class="text-right py-2 text-red-600 dark:text-red-400">{{ row.errors }}</td>
+                    <td class="text-right py-2 font-medium">{{ row.rate }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4" class="py-4 text-center text-gray-400">No problem feeds</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    {% endcomponent %}
+
+    {% component "unfold/components/card.html" with title="Recent Errors" %}
+        <div id="table-recent-errors">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-gray-200 dark:border-gray-700">
+                    <th class="text-left py-2 font-medium">Stage</th>
+                    <th class="text-left py-2 font-medium">Date</th>
+                    <th class="text-left py-2 font-medium">Error</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in recent_errors %}
+                <tr class="border-b border-gray-100 dark:border-gray-800">
+                    <td class="py-2 whitespace-nowrap">{{ row.stage }}</td>
+                    <td class="py-2 text-gray-500 whitespace-nowrap">{{ row.date }}</td>
+                    <td class="py-2 text-xs text-gray-600 dark:text-gray-400 break-all">{{ row.error }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="3" class="py-4 text-center text-gray-400">No errors</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    {% endcomponent %}
+</div>
+
+<script>
+(function() {
+    var API_URL = "{% url 'harvester_dashboard_api' %}";
+    var INTERVAL = 30000;
+
+    var CHART_MAP = {
+        "wrap-new-articles": "new_articles_chart",
+        "wrap-feed-fetches": "feed_fetches_chart",
+        "wrap-extraction": "extraction_chart",
+        "wrap-images": "images_chart",
+        "wrap-embeddings": "embeddings_chart",
+        "wrap-tokens": "tokens_chart",
+        "wrap-completion": "completion_chart",
+    };
+
+    function getChart(wrapperId) {
+        var canvas = document.querySelector("#" + wrapperId + " canvas");
+        return canvas ? Chart.getChart(canvas) : null;
+    }
+
+    function updateChart(wrapperId, jsonStr) {
+        var chart = getChart(wrapperId);
+        if (!chart) return;
+        var newData = JSON.parse(jsonStr);
+        chart.data.labels = newData.labels;
+        newData.datasets.forEach(function(ds, i) {
+            if (chart.data.datasets[i]) {
+                chart.data.datasets[i].data = ds.data;
+            }
+        });
+        chart.update("none");
+    }
+
+    function updateKPI(id, value) {
+        var el = document.getElementById(id);
+        if (el) el.textContent = value;
+    }
+
+    /* ── Safe DOM table builders ──────────────────────── */
+    function clearTbody(containerId) {
+        var el = document.getElementById(containerId);
+        if (!el) return null;
+        var tbody = el.querySelector("tbody");
+        if (!tbody) return null;
+        while (tbody.firstChild) tbody.removeChild(tbody.firstChild);
+        return tbody;
+    }
+
+    function makeCell(text, className) {
+        var td = document.createElement("td");
+        td.className = className;
+        td.textContent = text;
+        return td;
+    }
+
+    function makeEmptyRow(colspan, message) {
+        var tr = document.createElement("tr");
+        var td = document.createElement("td");
+        td.setAttribute("colspan", colspan);
+        td.className = "py-4 text-center text-gray-400";
+        td.textContent = message;
+        tr.appendChild(td);
+        return tr;
+    }
+
+    function updateProblemFeeds(feeds) {
+        var tbody = clearTbody("table-problem-feeds");
+        if (!tbody) return;
+        if (!feeds.length) {
+            tbody.appendChild(makeEmptyRow(4, "No problem feeds"));
+            return;
+        }
+        feeds.forEach(function(r) {
+            var tr = document.createElement("tr");
+            tr.className = "border-b border-gray-100 dark:border-gray-800";
+            tr.appendChild(makeCell(r.title, "py-2 truncate max-w-xs"));
+            tr.appendChild(makeCell(r.total, "text-right py-2"));
+            tr.appendChild(makeCell(r.errors, "text-right py-2 text-red-600 dark:text-red-400"));
+            tr.appendChild(makeCell(r.rate, "text-right py-2 font-medium"));
+            tbody.appendChild(tr);
+        });
+    }
+
+    function updateRecentErrors(errors) {
+        var tbody = clearTbody("table-recent-errors");
+        if (!tbody) return;
+        if (!errors.length) {
+            tbody.appendChild(makeEmptyRow(3, "No errors"));
+            return;
+        }
+        errors.forEach(function(r) {
+            var tr = document.createElement("tr");
+            tr.className = "border-b border-gray-100 dark:border-gray-800";
+            tr.appendChild(makeCell(r.stage, "py-2 whitespace-nowrap"));
+            tr.appendChild(makeCell(r.date, "py-2 text-gray-500 whitespace-nowrap"));
+            tr.appendChild(makeCell(r.error, "py-2 text-xs text-gray-600 dark:text-gray-400 break-all"));
+            tbody.appendChild(tr);
+        });
+    }
+
+    function updateStatus(ok) {
+        var st = document.getElementById("hd-status");
+        var dot = document.getElementById("hd-dot");
+        if (st) st.textContent = ok
+            ? "Updated " + new Date().toLocaleTimeString()
+            : "Update failed";
+        if (dot) {
+            dot.className = ok
+                ? "inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse"
+                : "inline-block w-2 h-2 rounded-full bg-red-500";
+        }
+    }
+
+    async function refresh() {
+        try {
+            var resp = await fetch(API_URL);
+            if (!resp.ok) { updateStatus(false); return; }
+            var data = await resp.json();
+
+            // KPIs
+            updateKPI("kpi-articles-today", data.articles_today);
+            updateKPI("kpi-pending-extraction", data.pending_extraction);
+            updateKPI("kpi-pending-embedding", data.pending_embedding);
+            updateKPI("kpi-completed-total", data.completed_total);
+            updateKPI("kpi-total-articles", data.total_articles);
+            updateKPI("kpi-error-rate", data.error_rate_24h);
+            updateKPI("kpi-errors-detail", data.errors_24h + " / " + data.total_runs_24h);
+            updateKPI("kpi-feeds-active", data.feeds_active_24h);
+            updateKPI("kpi-feeds-enabled", data.feeds_enabled);
+
+            // Error rate color
+            var errEl = document.getElementById("kpi-error-rate");
+            if (errEl) {
+                errEl.className = data.errors_24h > 0
+                    ? "text-3xl font-bold text-red-600 dark:text-red-400"
+                    : "text-3xl font-bold text-green-600 dark:text-green-400";
+            }
+
+            // Charts
+            for (var wrapId in CHART_MAP) {
+                updateChart(wrapId, data[CHART_MAP[wrapId]]);
+            }
+
+            // Tables
+            updateProblemFeeds(data.problem_feeds);
+            updateRecentErrors(data.recent_errors);
+
+            updateStatus(true);
+        } catch(e) {
+            console.error("Harvester dashboard refresh error:", e);
+            updateStatus(false);
+        }
+    }
+
+    setInterval(refresh, INTERVAL);
+})();
+</script>
+
+{% endblock %}

@@ -251,6 +251,11 @@ UNFOLD = {
                 "collapsible": True,
                 "items": [
                     {
+                        "title": _("Dashboard"),
+                        "icon": "monitoring",
+                        "link": reverse_lazy("harvester_dashboard"),
+                    },
+                    {
                         "title": _("Feed fetches"),
                         "icon": "rss_feed",
                         "link": reverse_lazy("admin:harvester_harvesterfeed_changelist"),
