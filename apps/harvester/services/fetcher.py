@@ -1,6 +1,8 @@
 import logging
+import random
 import re
-from concurrent.futures import ThreadPoolExecutor, as_completed
+import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from html import unescape
 
@@ -10,8 +12,9 @@ from django.db import IntegrityError
 from django.utils import timezone as django_tz
 
 from apps.harvester.models import HarvesterFeed, RunStatus
-from apps.feed.models import Article, ArticleImage, Feed
-from .http import random_headers
+from apps.feed.models import Article, ArticleImage, ArticleImageSource, ArticlePipeline, Feed
+from .http import get_domain, random_headers
+from .throttle import acquire_domain, release_domain
 
 logger = logging.getLogger(__name__)
 
@@ -72,8 +75,14 @@ def _fetch_single_feed(feed_id, url, title):
         return feed_id, [], f"{title}: {e}"
 
 
+def _get_rss_source():
+    src, _ = ArticleImageSource.objects.get_or_create(slug="rss-image", defaults={"name": "RSS Image"})
+    return src
+
+
 def _save_articles(feed_id, entries) -> tuple[int, list[int]]:
     """Save articles from parsed RSS entries. Returns (count, article_ids)."""
+    rss_source = _get_rss_source()
     new_count = 0
     article_ids = []
     for entry in entries:
@@ -116,11 +125,13 @@ def _save_articles(feed_id, entries) -> tuple[int, list[int]]:
                 published=published,
                 rss_content=rss_content,
             )
+            ArticlePipeline.objects.create(article=article)
             new_count += 1
             article_ids.append(article.id)
             if image_url:
                 ArticleImage.objects.create(
                     article=article,
+                    source=rss_source,
                     source_url=image_url[:2000],
                     is_primary=True,
                 )
@@ -142,7 +153,7 @@ class FeedFetcher:
             self.stdout.write(msg)
 
     def fetch_feeds(self, feeds: list[Feed]) -> list[HarvesterFeed]:
-        """Fetch specific feeds. Creates HarvesterFeed record for each.
+        """Fetch specific feeds with per-domain throttling.
 
         Returns list of HarvesterFeed objects.
         """
@@ -152,38 +163,67 @@ class FeedFetcher:
         self._write(f"Fetching {len(feeds)} feeds...\n")
         runs = []
 
+        # Build domain queues
+        feed_queue: list[Feed] = list(feeds)
+        random.shuffle(feed_queue)
+        domain_feeds: dict[str, list[Feed]] = {}
+        for f in feed_queue:
+            domain = get_domain(f.url)
+            domain_feeds.setdefault(domain, []).append(f)
+
+        domains = list(domain_feeds.keys())
+        in_flight: dict = {}  # future -> (Feed, domain)
+
         with ThreadPoolExecutor(max_workers=self.workers) as pool:
-            futures = {
-                pool.submit(_fetch_single_feed, f.id, f.url, f.title): f
-                for f in feeds
-            }
+            while domain_feeds or in_flight:
+                # Submit new tasks for domains we can acquire
+                random.shuffle(domains)
+                for domain in domains:
+                    if len(in_flight) >= self.workers:
+                        break
+                    if domain not in domain_feeds:
+                        continue
+                    if not acquire_domain(domain):
+                        continue
+                    feed = domain_feeds[domain].pop(0)
+                    if not domain_feeds[domain]:
+                        del domain_feeds[domain]
+                    future = pool.submit(_fetch_single_feed, feed.id, feed.url, feed.title)
+                    in_flight[future] = (feed, domain)
 
-            for future in as_completed(futures):
-                feed = futures[future]
-                feed_id, entries, error = future.result()
-                now = django_tz.now()
+                # Collect finished results (non-blocking)
+                finished = [f for f in in_flight if f.done()]
+                for future in finished:
+                    feed, domain = in_flight.pop(future)
+                    release_domain(domain)
 
-                if error:
-                    run = HarvesterFeed.objects.create(
-                        feed=feed,
-                        finished_at=now,
-                        status=RunStatus.ERROR,
-                        error_message=error,
-                    )
-                else:
-                    new_count, article_ids = _save_articles(feed_id, entries)
-                    run = HarvesterFeed.objects.create(
-                        feed=feed,
-                        finished_at=now,
-                        status=RunStatus.SUCCESS,
-                        new_articles=new_count,
-                    )
-                    if article_ids:
-                        run.articles.add(*article_ids)
+                    feed_id, entries, error = future.result()
+                    now = django_tz.now()
 
-                runs.append(run)
-                feed.last_fetched = now
-                feed.save(update_fields=["last_fetched"])
+                    if error:
+                        run = HarvesterFeed.objects.create(
+                            feed=feed,
+                            finished_at=now,
+                            status=RunStatus.ERROR,
+                            error_message=error,
+                        )
+                    else:
+                        new_count, article_ids = _save_articles(feed_id, entries)
+                        run = HarvesterFeed.objects.create(
+                            feed=feed,
+                            finished_at=now,
+                            status=RunStatus.SUCCESS,
+                            new_articles=new_count,
+                        )
+                        if article_ids:
+                            run.articles.add(*article_ids)
+
+                    runs.append(run)
+                    feed.last_fetched = now
+                    feed.save(update_fields=["last_fetched"])
+
+                if not finished:
+                    time.sleep(0.1)
 
         total_new = sum(c.new_articles for c in runs)
         self._write(f"Done: {total_new} new articles from {len(feeds)} feeds\n")

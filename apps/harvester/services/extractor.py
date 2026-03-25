@@ -12,15 +12,15 @@ from django.db.models import Q
 from django.utils import timezone as django_tz
 from readability import Document
 
-from apps.feed.models import Article, ArticleImage
+from apps.feed.models import Article, ArticleImage, ArticleImageSource, ArticlePipeline
 from .http import get_domain, random_headers
+from .throttle import acquire_domain, release_domain
 
 logger = logging.getLogger(__name__)
 
 TIMEOUT = 20
 MAX_WORKERS = 10
-DOMAIN_DELAY = 10.0  # min seconds between requests to same domain
-EXTRACT_BATCH_SIZE = 50
+EXTRACT_BATCH_SIZE = 10
 
 
 # Error categories
@@ -163,6 +163,13 @@ class ContentExtractor:
         if self.stdout:
             self.stdout.write(msg)
 
+    def _get_og_source(self):
+        if not hasattr(self, "_og_source"):
+            self._og_source, _ = ArticleImageSource.objects.get_or_create(
+                slug="og-image", defaults={"name": "OG Image"},
+            )
+        return self._og_source
+
     def extract_new(self, batch_size: int = 0) -> tuple[int, int, int, list[str]]:
         """Extract content for articles not yet fetched.
 
@@ -173,10 +180,10 @@ class ContentExtractor:
         """
         cutoff = django_tz.now() - timedelta(days=self.days)
         qs = (
-            Article.objects.filter(content_fetched=False)
+            Article.objects.filter(pipeline__content_extracted_at__isnull=True)
             .filter(Q(published__gte=cutoff) | Q(published__isnull=True))
             .exclude(url="")
-            .order_by("-published")
+            .order_by("?")
             .values_list("id", "url", "rss_content")
         )
         if batch_size:
@@ -206,28 +213,22 @@ class ContentExtractor:
         errors: list[str] = []
         error_counts: Counter = Counter()
         done_count = 0
-
-        domain_last_req: dict[str, float] = {}  # domain -> timestamp of last request
-        active_domains: set[str] = set()  # domains with in-flight requests
         in_flight: dict = {}  # future -> (aid, domain)
 
         with ThreadPoolExecutor(max_workers=self.workers) as pool:
             while domain_queues or in_flight:
-                # Submit new tasks for eligible domains
-                now = time.monotonic()
-                eligible = [
-                    d for d in domains
-                    if d in domain_queues
-                    and d not in active_domains
-                    and now - domain_last_req.get(d, 0) >= DOMAIN_DELAY
-                ]
-                random.shuffle(eligible)
-
-                for domain in eligible[:self.workers - len(in_flight)]:
+                # Submit new tasks for domains we can acquire
+                random.shuffle(domains)
+                for domain in domains:
+                    if len(in_flight) >= self.workers:
+                        break
+                    if domain not in domain_queues:
+                        continue
+                    if not acquire_domain(domain):
+                        continue
                     aid, url = domain_queues[domain].popleft()
                     if not domain_queues[domain]:
                         del domain_queues[domain]
-                    active_domains.add(domain)
                     future = pool.submit(_fetch_and_extract, aid, url)
                     in_flight[future] = (aid, domain)
 
@@ -235,8 +236,7 @@ class ContentExtractor:
                 finished = [f for f in in_flight if f.done()]
                 for future in finished:
                     aid, domain = in_flight.pop(future)
-                    active_domains.discard(domain)
-                    domain_last_req[domain] = time.monotonic()
+                    release_domain(domain)
 
                     article_id, clean_text, og_image, content_images, err_category, err_message = future.result()
                     rss_content = rss_lookup.get(article_id, "")
@@ -248,6 +248,7 @@ class ContentExtractor:
                         ArticleImage.objects.get_or_create(
                             article_id=article_id,
                             source_url=og_image[:2000],
+                            defaults={"source": self._get_og_source()},
                         )
 
                     if not ArticleImage.objects.filter(article_id=article_id).exists():
@@ -271,18 +272,15 @@ class ContentExtractor:
                             errors.append(f"[{err_category}] {err_message}")
                             error_counts[err_category] += 1
 
-                        Article.objects.filter(id=article_id).update(
-                            content=content,
-                            content_fetched=True,
-                            extract_error=error_msg,
-                        )
+                        Article.objects.filter(id=article_id).update(content=content)
                     else:
-                        Article.objects.filter(id=article_id).update(
-                            content=clean_text,
-                            content_fetched=True,
-                            extract_error="",
-                        )
+                        Article.objects.filter(id=article_id).update(content=clean_text)
                         extracted += 1
+
+                    ArticlePipeline.objects.update_or_create(
+                        article_id=article_id,
+                        defaults={"content_extracted_at": django_tz.now()},
+                    )
 
                     if done_count % 100 == 0:
                         self._write(

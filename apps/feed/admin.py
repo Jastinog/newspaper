@@ -3,7 +3,9 @@ from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from unfold.admin import ModelAdmin, TabularInline
 
-from .models import Article, ArticleChunk, ArticleImage, Category, Feed
+from unfold.admin import StackedInline as UnfoldStackedInline
+
+from .models import Article, ArticleChunk, ArticleImage, ArticleImageSource, ArticlePipeline, Category, Feed
 
 
 def _img_thumbnail(url, w=60, h=40):
@@ -41,6 +43,13 @@ class FeedAdmin(ModelAdmin):
     list_editable = ("enabled", "lean", "factuality")
 
 
+class ArticlePipelineInline(UnfoldStackedInline):
+    model = ArticlePipeline
+    extra = 0
+    max_num = 1
+    readonly_fields = ("content_extracted_at", "images_fetched_at", "embedded_at")
+
+
 class ArticleImageInline(TabularInline):
     model = ArticleImage
     extra = 0
@@ -54,30 +63,48 @@ class ArticleImageInline(TabularInline):
 
 @admin.register(Article)
 class ArticleAdmin(ModelAdmin):
-    list_display = ("id", "image_preview", "title", "feed", "published", "read", "starred", "embedded")
+    list_display = ("id", "image_preview", "title", "feed", "published")
     list_display_links = ("id", "image_preview", "title")
-    list_filter = ("feed__category", "read", "starred", "embedded")
+    list_filter = ("feed__category",)
     search_fields = ("title", "content")
     raw_id_fields = ("feed",)
-    inlines = [ArticleImageInline]
+    inlines = [ArticlePipelineInline, ArticleImageInline]
 
     def get_queryset(self, request):
-        return super().get_queryset(request).prefetch_related("images")
+        return super().get_queryset(request).prefetch_related("images", "images__source")
 
     @admin.display(description="")
     def image_preview(self, obj):
         imgs = [i for i in obj.images.all() if i.image]
         if not imgs:
             return ""
-        parts = [
-            format_html(
-                '<img src="{}" style="width:40px;height:40px;object-fit:cover;border-radius:3px;{}" />',
-                i.image.url,
-                "border:2px solid var(--primary-color,#1e88e5);" if i.is_primary else "opacity:0.6;",
+        parts = []
+        for i in imgs:
+            slug = i.source.slug if i.source else ""
+            if slug == "og-image":
+                border = "border:2px solid #1e88e5;"
+                label = "OG"
+            elif slug == "rss-image":
+                border = "border:2px solid #43a047;"
+                label = "RSS"
+            else:
+                border = "opacity:0.6;"
+                label = ""
+            img_html = format_html(
+                '<span style="display:inline-block;position:relative;margin-right:2px;">'
+                '<img src="{}" style="width:40px;height:40px;object-fit:cover;border-radius:3px;{}" />'
+                '<span style="position:absolute;bottom:0;right:0;font-size:8px;background:rgba(0,0,0,.6);color:#fff;padding:0 2px;border-radius:2px;">{}</span>'
+                '</span>',
+                i.image.url, border, label,
             )
-            for i in imgs
-        ]
-        return mark_safe(" ".join(parts))
+            parts.append(img_html)
+        return mark_safe("".join(parts))
+
+
+@admin.register(ArticleImageSource)
+class ArticleImageSourceAdmin(ModelAdmin):
+    list_display = ("id", "slug", "name")
+    list_display_links = ("id", "slug")
 
 
 @admin.register(ArticleChunk)
@@ -90,11 +117,12 @@ class ArticleChunkAdmin(ModelAdmin):
 
 @admin.register(ArticleImage)
 class ArticleImageAdmin(ModelAdmin):
-    list_display = ("id", "image_preview", "article", "is_primary", "downloaded", "width", "height", "file_size_display", "created_at")
+    list_display = ("id", "image_preview", "article", "source", "is_primary", "downloaded", "width", "height", "file_size_display", "created_at")
     list_display_links = ("id", "image_preview")
-    list_filter = ("is_primary", "downloaded")
+    list_filter = ("source", "is_primary", "downloaded")
     raw_id_fields = ("article",)
     readonly_fields = ("image_tag", "source_url", "width", "height", "file_size")
+    list_select_related = ("source",)
 
     @admin.display(description="")
     def image_preview(self, obj):

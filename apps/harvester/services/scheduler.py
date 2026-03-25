@@ -8,7 +8,7 @@ from apps.feed.models import Feed
 from .fetcher import FeedFetcher
 
 HARVEST_INTERVAL_MINUTES = 10
-HARVEST_BATCH_SIZE = 60
+HARVEST_BATCH_SIZE = 20
 
 
 class FeedHarvester:

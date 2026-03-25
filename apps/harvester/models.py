@@ -72,6 +72,17 @@ class HarvesterImage(HarvesterRun):
         return f"Download {self.status} ({self.started_at:%Y-%m-%d %H:%M})"
 
 
+class DomainThrottle(models.Model):
+    """Global per-domain rate limiting shared across all pipeline stages."""
+
+    domain = models.CharField(max_length=255, unique=True)
+    last_request_at = models.DateTimeField(default=timezone.now)
+    locked_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return self.domain
+
+
 class HarvesterEmbedding(HarvesterRun):
     """Tracks an embedding batch run."""
 

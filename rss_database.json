@@ -3,7 +3,7 @@
   "version": "1.2.0",
   "generated": "2026-03-25",
   "description": "Curated database of RSS feeds from around the world",
-  "total_feeds": 295,
+  "total_feeds": 283,
   "feeds": [
     {
       "id": "africanews",
@@ -1381,17 +1381,6 @@
       "reliability": 3
     },
     {
-      "id": "longreads",
-      "name": "Longreads",
-      "url": "https://longreads.com/feed/",
-      "website": "",
-      "description": "",
-      "country_id": "",
-      "language_id": "en",
-      "category": "media",
-      "reliability": 3
-    },
-    {
       "id": "rest-of-world",
       "name": "Rest of World",
       "url": "https://restofworld.org/feed/latest/",
@@ -1472,17 +1461,6 @@
       "id": "israel-hayom",
       "name": "Israel Hayom",
       "url": "https://www.israelhayom.com/feed/",
-      "website": "",
-      "description": "",
-      "country_id": "IL",
-      "language_id": "en",
-      "category": "mideast",
-      "reliability": 3
-    },
-    {
-      "id": "jerusalem-post",
-      "name": "Jerusalem Post",
-      "url": "https://www.jpost.com/rss/rssfeedsfrontpage.aspx",
       "website": "",
       "description": "",
       "country_id": "IL",
@@ -2635,17 +2613,6 @@
       "reliability": 5
     },
     {
-      "id": "ctv-news",
-      "name": "CTV News",
-      "url": "https://www.ctvnews.ca/rss/ctvnews-ca-top-stories-public-rss-1.822009",
-      "website": "https://www.ctvnews.ca",
-      "description": "Canada's most-watched private news network",
-      "country_id": "CA",
-      "language_id": "en",
-      "category": "world",
-      "reliability": 4
-    },
-    {
       "id": "global-news-ca",
       "name": "Global News Canada",
       "url": "https://globalnews.ca/feed/",
@@ -2662,17 +2629,6 @@
       "url": "https://nationalpost.com/feed/",
       "website": "https://nationalpost.com",
       "description": "Canadian national newspaper — news and analysis",
-      "country_id": "CA",
-      "language_id": "en",
-      "category": "world",
-      "reliability": 4
-    },
-    {
-      "id": "toronto-star",
-      "name": "Toronto Star",
-      "url": "https://www.thestar.com/content/thestar/feed.RSSManagerServlet.articles.topstories.rss",
-      "website": "https://www.thestar.com",
-      "description": "Canada's largest-circulation newspaper",
       "country_id": "CA",
       "language_id": "en",
       "category": "world",
@@ -2721,17 +2677,6 @@
       "language_id": "de",
       "category": "world",
       "reliability": 5
-    },
-    {
-      "id": "focus-de",
-      "name": "Focus Online",
-      "url": "https://rss.focus.de/fol/XML/rss_folnews.xml",
-      "website": "https://www.focus.de",
-      "description": "German weekly news magazine",
-      "country_id": "DE",
-      "language_id": "de",
-      "category": "world",
-      "reliability": 4
     },
     {
       "id": "el-confidencial",
@@ -2820,17 +2765,6 @@
       "language_id": "it",
       "category": "world",
       "reliability": 5
-    },
-    {
-      "id": "il-post",
-      "name": "Il Post",
-      "url": "https://www.ilpost.it/feed/",
-      "website": "https://www.ilpost.it",
-      "description": "Italian quality digital newspaper",
-      "country_id": "IT",
-      "language_id": "it",
-      "category": "world",
-      "reliability": 4
     },
     {
       "id": "the-local-it",
@@ -2930,17 +2864,6 @@
       "language_id": "en",
       "category": "world",
       "reliability": 4
-    },
-    {
-      "id": "kyodo-news",
-      "name": "Kyodo News",
-      "url": "https://english.kyodonews.net/rss/all.xml",
-      "website": "https://english.kyodonews.net",
-      "description": "Japan's largest news agency — English service",
-      "country_id": "JP",
-      "language_id": "en",
-      "category": "world",
-      "reliability": 5
     },
     {
       "id": "asahi-shimbun",
@@ -3097,17 +3020,6 @@
       "reliability": 3
     },
     {
-      "id": "r7-noticias",
-      "name": "R7 Noticias",
-      "url": "https://noticias.r7.com/feed.xml",
-      "website": "https://www.r7.com",
-      "description": "Major Brazilian news portal",
-      "country_id": "BR",
-      "language_id": "pt",
-      "category": "world",
-      "reliability": 3
-    },
-    {
       "id": "mexico-news-daily",
       "name": "Mexico News Daily",
       "url": "https://mexiconewsdaily.com/feed/",
@@ -3119,28 +3031,6 @@
       "reliability": 3
     },
     {
-      "id": "excelsior-mx",
-      "name": "Excelsior",
-      "url": "https://www.excelsior.com.mx/rss.xml",
-      "website": "https://www.excelsior.com.mx",
-      "description": "Major Mexican broadsheet newspaper",
-      "country_id": "MX",
-      "language_id": "es",
-      "category": "world",
-      "reliability": 4
-    },
-    {
-      "id": "guardian-ng",
-      "name": "Guardian Nigeria",
-      "url": "https://guardian.ng/feed/",
-      "website": "https://guardian.ng",
-      "description": "Nigeria's flagship newspaper",
-      "country_id": "NG",
-      "language_id": "en",
-      "category": "world",
-      "reliability": 4
-    },
-    {
       "id": "daily-post-ng",
       "name": "Daily Post Nigeria",
       "url": "https://dailypost.ng/feed",
@@ -3150,28 +3040,6 @@
       "language_id": "en",
       "category": "world",
       "reliability": 3
-    },
-    {
-      "id": "businesstech-za",
-      "name": "BusinessTech South Africa",
-      "url": "https://businesstech.co.za/news/feed/",
-      "website": "https://businesstech.co.za",
-      "description": "South African business and technology news",
-      "country_id": "ZA",
-      "language_id": "en",
-      "category": "finance",
-      "reliability": 4
-    },
-    {
-      "id": "ewn-za",
-      "name": "Eyewitness News",
-      "url": "https://ewn.co.za/RSS%20Feeds/Latest%20News",
-      "website": "https://ewn.co.za",
-      "description": "South African privately owned news service",
-      "country_id": "ZA",
-      "language_id": "en",
-      "category": "world",
-      "reliability": 4
     },
     {
       "id": "daily-star-bd",

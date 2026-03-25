@@ -14,16 +14,18 @@ from django.core.files.base import ContentFile
 from django.utils import timezone as django_tz
 from PIL import Image
 
+from django.db.models import Q
+
 from apps.feed.models import ArticleImage
 from .http import get_domain, random_headers
+from .throttle import acquire_domain, release_domain
 
 logger = logging.getLogger(__name__)
 
 TIMEOUT = 20
 MAX_FILE_SIZE = 15 * 1024 * 1024  # 15 MB
 MIN_DIMENSION = 100  # skip tracking pixels
-DOMAIN_DELAY = 10.0  # seconds between requests to same domain
-DOWNLOAD_BATCH_SIZE = 100
+DOWNLOAD_BATCH_SIZE = 10
 
 
 def _download_and_resize(source_url: str) -> tuple[bytes, int, int] | None:
@@ -101,7 +103,7 @@ class ImageDownloader:
     with a cooldown of DOMAIN_DELAY seconds between requests to the same domain.
     """
 
-    def __init__(self, workers: int = 10, days: int = 7, stdout=None):
+    def __init__(self, workers: int = 20, days: int = 30, stdout=None):
         self.workers = workers
         self.days = days
         self.stdout = stdout
@@ -159,7 +161,11 @@ class ImageDownloader:
             ArticleImage.objects.filter(
                 downloaded=False,
                 article__published__gte=cutoff,
+            ).filter(
+                Q(source__slug="rss-image")
+                | Q(source__slug="og-image", article__pipeline__content_extracted_at__isnull=False)
             ).values_list("id", "source_url")
+            .order_by("?")
         )
         if batch_size:
             qs = qs[:batch_size]
@@ -182,28 +188,22 @@ class ImageDownloader:
         downloaded = 0
         skipped = 0
         done_count = 0
-
-        domain_last_req: dict[str, float] = {}
-        active_domains: set[str] = set()
         in_flight: dict = {}  # future -> (img_id, domain)
 
         with ThreadPoolExecutor(max_workers=self.workers) as pool:
             while domain_queues or in_flight:
-                # Submit new tasks for eligible domains
-                now = time.monotonic()
-                eligible = [
-                    d for d in domains
-                    if d in domain_queues
-                    and d not in active_domains
-                    and now - domain_last_req.get(d, 0) >= DOMAIN_DELAY
-                ]
-                random.shuffle(eligible)
-
-                for domain in eligible[:self.workers - len(in_flight)]:
+                # Submit new tasks for domains we can acquire
+                random.shuffle(domains)
+                for domain in domains:
+                    if len(in_flight) >= self.workers:
+                        break
+                    if domain not in domain_queues:
+                        continue
+                    if not acquire_domain(domain):
+                        continue
                     img_id, url = domain_queues[domain].popleft()
                     if not domain_queues[domain]:
                         del domain_queues[domain]
-                    active_domains.add(domain)
                     future = pool.submit(_download_and_resize, url)
                     in_flight[future] = (img_id, domain)
 
@@ -211,8 +211,7 @@ class ImageDownloader:
                 finished = [f for f in in_flight if f.done()]
                 for future in finished:
                     img_id, domain = in_flight.pop(future)
-                    active_domains.discard(domain)
-                    domain_last_req[domain] = time.monotonic()
+                    release_domain(domain)
 
                     result = future.result()
                     if result is None:

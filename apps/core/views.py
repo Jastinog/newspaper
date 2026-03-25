@@ -86,7 +86,7 @@ def article_detail(request, pk, slug=""):
     if article.slug and article.slug != slug:
         return redirect(article.get_absolute_url(), permanent=True)
 
-    description = article.summary[:160] if article.summary else article.title
+    description = article.content[:160] if article.content else article.title
     seo = {
         "title": f"{article.title} — {SITE_NAME}",
         "description": description,

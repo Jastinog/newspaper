@@ -70,13 +70,7 @@ class Article(models.Model):
     url = models.URLField(max_length=2000, unique=True)
     rss_content = models.TextField(blank=True, default="")
     content = models.TextField(blank=True, default="")
-    content_fetched = models.BooleanField(default=False, db_index=True)
-    extract_error = models.CharField(max_length=500, blank=True, default="")
     published = models.DateTimeField(null=True, blank=True, db_index=True)
-    read = models.BooleanField(default=False, db_index=True)
-    starred = models.BooleanField(default=False, db_index=True)
-    summary = models.TextField(blank=True, default="")
-    embedded = models.BooleanField(default=False, db_index=True)
 
     class Meta:
         ordering = ["-published"]
@@ -98,8 +92,30 @@ class Article(models.Model):
         return reverse("article_detail_redirect", kwargs={"pk": self.pk})
 
 
+class ArticlePipeline(models.Model):
+    article = models.OneToOneField(Article, on_delete=models.CASCADE, related_name="pipeline")
+    content_extracted_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    images_fetched_at = models.DateTimeField(null=True, blank=True)
+    embedded_at = models.DateTimeField(null=True, blank=True, db_index=True)
+
+    def __str__(self):
+        return f"Pipeline for {self.article_id}"
+
+
+class ArticleImageSource(models.Model):
+    slug = models.SlugField(max_length=50, unique=True)
+    name = models.CharField(max_length=100)
+
+    def __str__(self):
+        return self.name
+
+
 class ArticleImage(models.Model):
     article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name="images")
+    source = models.ForeignKey(
+        ArticleImageSource, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="images",
+    )
     source_url = models.URLField(max_length=2000)
     image = models.ImageField(upload_to="articles/%Y/%m/", blank=True)
     content_hash = models.CharField(max_length=64, blank=True, default="", db_index=True)

@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 
-from apps.harvester.services.downloader import ImageDownloader
+from apps.harvester.services.downloader import DOWNLOAD_BATCH_SIZE, ImageDownloader
 
 
 class Command(BaseCommand):
@@ -12,8 +12,12 @@ class Command(BaseCommand):
             help="Number of concurrent download threads (default: 10)",
         )
         parser.add_argument(
-            "--days", type=int, default=7,
-            help="Only process articles from the last N days (default: 7)",
+            "--days", type=int, default=30,
+            help="Only process articles from the last N days (default: 30)",
+        )
+        parser.add_argument(
+            "--batch", type=int, default=DOWNLOAD_BATCH_SIZE,
+            help=f"Batch size (default: {DOWNLOAD_BATCH_SIZE})",
         )
 
     def handle(self, *args, **options):
@@ -22,7 +26,9 @@ class Command(BaseCommand):
             days=options["days"],
             stdout=self.stdout,
         )
-        processed, downloaded, skipped = downloader.download_new()
+        processed, downloaded, skipped = downloader.download_new(
+            batch_size=options["batch"],
+        )
         self.stdout.write(
             self.style.SUCCESS(
                 f"Processed {processed} images, downloaded {downloaded}, skipped {skipped}"

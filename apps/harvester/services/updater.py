@@ -2,7 +2,9 @@ import logging
 from dataclasses import dataclass, field
 
 from apps.billing.models import APIUsage
-from apps.feed.models import Article, ArticleChunk
+from django.utils import timezone as django_tz
+
+from apps.feed.models import Article, ArticleChunk, ArticlePipeline
 from apps.core.services.ai import EMBEDDING_MODEL, EmbeddingClient, calculate_cost
 from apps.core.services.ai.embeddings import BATCH_SIZE
 
@@ -44,7 +46,7 @@ class ArticleEmbedder:
         """Embed all unembedded articles. Returns (articles, chunks, tokens)."""
         client = EmbeddingClient(api_key=self.api_key)
         articles = list(
-            Article.objects.filter(embedded=False)
+            Article.objects.filter(pipeline__embedded_at__isnull=True)
             .exclude(content="")
             .values_list("id", "title", "content")
         )
@@ -82,7 +84,10 @@ class ArticleEmbedder:
             except Exception as e:
                 logger.warning("Embed failed for article %s: %s", article_id, e)
                 skipped += 1
-                Article.objects.filter(id=article_id).update(embedded=True)
+                ArticlePipeline.objects.update_or_create(
+                    article_id=article_id,
+                    defaults={"embedded_at": django_tz.now()},
+                )
                 continue
 
             chunk_objects = [
@@ -97,7 +102,10 @@ class ArticleEmbedder:
             ]
             ArticleChunk.objects.bulk_create(chunk_objects, ignore_conflicts=True)
 
-            Article.objects.filter(id=article_id).update(embedded=True)
+            ArticlePipeline.objects.update_or_create(
+                article_id=article_id,
+                defaults={"embedded_at": django_tz.now()},
+            )
 
             articles_done += 1
             total_chunks_saved += len(chunk_objects)

@@ -102,5 +102,5 @@ class TopicArticleCollector:
             "title": a.title,
             "feed": a.feed.title if a.feed else "",
             "published": a.published.strftime("%Y-%m-%d") if a.published else "",
-            "snippet": a.summary or (a.content[:300] if a.content else ""),
+            "snippet": a.content[:300] if a.content else "",
         }

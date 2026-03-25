@@ -220,6 +220,11 @@ UNFOLD = {
                         "icon": "image",
                         "link": reverse_lazy("admin:feed_articleimage_changelist"),
                     },
+                    {
+                        "title": _("Image sources"),
+                        "icon": "source",
+                        "link": reverse_lazy("admin:feed_articleimagesource_changelist"),
+                    },
                 ],
             },
             {
