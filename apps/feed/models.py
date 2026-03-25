@@ -94,9 +94,11 @@ class Article(models.Model):
 
 class ArticlePipeline(models.Model):
     article = models.OneToOneField(Article, on_delete=models.CASCADE, related_name="pipeline")
+    rss_images_at = models.DateTimeField(null=True, blank=True)
     content_extracted_at = models.DateTimeField(null=True, blank=True, db_index=True)
-    images_fetched_at = models.DateTimeField(null=True, blank=True)
+    og_images_at = models.DateTimeField(null=True, blank=True)
     embedded_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    completed_at = models.DateTimeField(null=True, blank=True, db_index=True)
 
     def __str__(self):
         return f"Pipeline for {self.article_id}"

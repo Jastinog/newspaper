@@ -1,1 +1,1 @@
-from .updater import UpdateResult, UpdateService  # noqa: F401
+from .embedder import ArticleEmbedder  # noqa: F401

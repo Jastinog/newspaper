@@ -1,9 +1,7 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
-from unfold.admin import ModelAdmin, TabularInline
-
-from unfold.admin import StackedInline as UnfoldStackedInline
+from unfold.admin import ModelAdmin, StackedInline, TabularInline
 
 from .models import Article, ArticleChunk, ArticleImage, ArticleImageSource, ArticlePipeline, Category, Feed
 
@@ -43,11 +41,11 @@ class FeedAdmin(ModelAdmin):
     list_editable = ("enabled", "lean", "factuality")
 
 
-class ArticlePipelineInline(UnfoldStackedInline):
+class ArticlePipelineInline(StackedInline):
     model = ArticlePipeline
     extra = 0
     max_num = 1
-    readonly_fields = ("content_extracted_at", "images_fetched_at", "embedded_at")
+    readonly_fields = ("rss_images_at", "content_extracted_at", "og_images_at", "embedded_at", "completed_at")
 
 
 class ArticleImageInline(TabularInline):

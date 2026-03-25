@@ -118,7 +118,7 @@ def _extract_content_images(html_content: str) -> list[str]:
     return urls
 
 
-def _fetch_and_extract(article_id: int, url: str) -> tuple[int, str, str, list[str], str | None, str | None]:
+def fetch_and_extract(article_id: int, url: str) -> tuple[int, str, str, list[str], str | None, str | None]:
     """Download page and extract main content. Runs in a thread.
 
     Returns (article_id, clean_text, og_image, content_images, error_category, error_message).
@@ -229,7 +229,7 @@ class ContentExtractor:
                     aid, url = domain_queues[domain].popleft()
                     if not domain_queues[domain]:
                         del domain_queues[domain]
-                    future = pool.submit(_fetch_and_extract, aid, url)
+                    future = pool.submit(fetch_and_extract, aid, url)
                     in_flight[future] = (aid, domain)
 
                 # Collect finished results (non-blocking)

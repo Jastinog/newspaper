@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 
-from apps.harvester.services.updater import ArticleEmbedder
+from apps.harvester.services.embedder import ArticleEmbedder
 
 
 class Command(BaseCommand):

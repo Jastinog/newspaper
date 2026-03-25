@@ -64,7 +64,7 @@ def _strip_html_basic(text: str) -> str:
     return text.strip()
 
 
-def _fetch_single_feed(feed_id, url, title):
+def fetch_single_feed(feed_id, url, title):
     """Fetch and parse a single RSS feed. Runs in a thread."""
     try:
         resp = requests.get(url, timeout=TIMEOUT, headers=random_headers())
@@ -80,7 +80,7 @@ def _get_rss_source():
     return src
 
 
-def _save_articles(feed_id, entries) -> tuple[int, list[int]]:
+def save_articles(feed_id, entries) -> tuple[int, list[int]]:
     """Save articles from parsed RSS entries. Returns (count, article_ids)."""
     rss_source = _get_rss_source()
     new_count = 0
@@ -188,7 +188,7 @@ class FeedFetcher:
                     feed = domain_feeds[domain].pop(0)
                     if not domain_feeds[domain]:
                         del domain_feeds[domain]
-                    future = pool.submit(_fetch_single_feed, feed.id, feed.url, feed.title)
+                    future = pool.submit(fetch_single_feed, feed.id, feed.url, feed.title)
                     in_flight[future] = (feed, domain)
 
                 # Collect finished results (non-blocking)
@@ -208,7 +208,7 @@ class FeedFetcher:
                             error_message=error,
                         )
                     else:
-                        new_count, article_ids = _save_articles(feed_id, entries)
+                        new_count, article_ids = save_articles(feed_id, entries)
                         run = HarvesterFeed.objects.create(
                             feed=feed,
                             finished_at=now,

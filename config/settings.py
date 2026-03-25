@@ -130,22 +130,6 @@ CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = "Europe/Kyiv"
 CELERY_BEAT_SCHEDULE = {
-    "harvest-feeds-every-minute": {
-        "task": "harvester.harvest",
-        "schedule": 60,
-    },
-    "extract-content-every-minute": {
-        "task": "harvester.extract",
-        "schedule": 60,
-    },
-    "download-images-every-minute": {
-        "task": "harvester.download",
-        "schedule": 60,
-    },
-    "embed-articles-every-minute": {
-        "task": "harvester.embed",
-        "schedule": 60,
-    },
     "digest-daily": {
         "task": "digest.generate",
         "schedule": crontab(hour=4, minute=0),  # 04:00 Kyiv time

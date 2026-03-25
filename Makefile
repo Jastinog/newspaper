@@ -3,7 +3,7 @@ run:
 	uv run python manage.py makemigrations
 	uv run python manage.py migrate
 	uv run python manage.py collectstatic --no-input --clear >> /dev/null
-	uv run python manage.py runserver 0.0.0.0:8002
+	PIPELINE_WORKER=1 uv run python manage.py runserver 0.0.0.0:8002
 
 # Initialize initial data
 init:

@@ -11,10 +11,9 @@ from datetime import timedelta
 import requests
 from django.conf import settings
 from django.core.files.base import ContentFile
+from django.db.models import Q
 from django.utils import timezone as django_tz
 from PIL import Image
-
-from django.db.models import Q
 
 from apps.feed.models import ArticleImage
 from .http import get_domain, random_headers
@@ -28,7 +27,7 @@ MIN_DIMENSION = 100  # skip tracking pixels
 DOWNLOAD_BATCH_SIZE = 10
 
 
-def _download_and_resize(source_url: str) -> tuple[bytes, int, int] | None:
+def download_and_resize(source_url: str) -> tuple[bytes, int, int] | None:
     """Download image, resize if needed, convert to WebP.
 
     Returns (webp_bytes, width, height) or None on failure.
@@ -96,6 +95,49 @@ def _unique_filename() -> str:
     return f"{uuid.uuid4().hex}.webp"
 
 
+def save_image_result(img_id: int, result) -> bool:
+    """Save a download result to the database.
+
+    Handles deduplication by content hash: if an identical image already
+    exists on disk, reuses the file path instead of writing a new copy.
+
+    Returns True if the image was saved successfully, False otherwise.
+    """
+    if result is None:
+        ArticleImage.objects.filter(id=img_id).update(downloaded=True)
+        return False
+
+    webp_bytes, width, height = result
+    content_hash = hashlib.sha256(webp_bytes).hexdigest()
+
+    existing = (
+        ArticleImage.objects
+        .filter(content_hash=content_hash)
+        .exclude(image="")
+        .first()
+    )
+
+    try:
+        img_obj = ArticleImage.objects.get(id=img_id)
+        img_obj.width = width
+        img_obj.height = height
+        img_obj.file_size = len(webp_bytes)
+        img_obj.content_hash = content_hash
+        img_obj.downloaded = True
+
+        if existing:
+            img_obj.image.name = existing.image.name
+            img_obj.save()
+        else:
+            img_obj.image.save(_unique_filename(), ContentFile(webp_bytes), save=True)
+
+        return True
+    except Exception as e:
+        logger.warning("Failed to save image %s: %s", img_id, e)
+        ArticleImage.objects.filter(id=img_id).update(downloaded=True)
+        return False
+
+
 class ImageDownloader:
     """Download and resize article images locally.
 
@@ -111,44 +153,6 @@ class ImageDownloader:
     def _write(self, msg: str):
         if self.stdout:
             self.stdout.write(msg)
-
-    def _save_result(self, img_id: int, result, downloaded_count: int) -> int:
-        """Save download result to DB. Returns updated downloaded_count."""
-        if result is None:
-            ArticleImage.objects.filter(id=img_id).update(downloaded=True)
-            return downloaded_count
-
-        webp_bytes, width, height = result
-        content_hash = hashlib.sha256(webp_bytes).hexdigest()
-
-        # Check for existing image with same content
-        existing = (
-            ArticleImage.objects
-            .filter(content_hash=content_hash)
-            .exclude(image="")
-            .first()
-        )
-
-        try:
-            img_obj = ArticleImage.objects.get(id=img_id)
-            img_obj.width = width
-            img_obj.height = height
-            img_obj.file_size = len(webp_bytes)
-            img_obj.content_hash = content_hash
-            img_obj.downloaded = True
-
-            if existing:
-                # Reuse existing file, no new write
-                img_obj.image.name = existing.image.name
-                img_obj.save()
-            else:
-                img_obj.image.save(_unique_filename(), ContentFile(webp_bytes), save=True)
-
-            return downloaded_count + 1
-        except Exception as e:
-            logger.warning("Failed to save image %s: %s", img_id, e)
-            ArticleImage.objects.filter(id=img_id).update(downloaded=True)
-            return downloaded_count
 
     def download_new(self, batch_size: int = 0) -> tuple[int, int, int]:
         """Download images not yet attempted.
@@ -204,7 +208,7 @@ class ImageDownloader:
                     img_id, url = domain_queues[domain].popleft()
                     if not domain_queues[domain]:
                         del domain_queues[domain]
-                    future = pool.submit(_download_and_resize, url)
+                    future = pool.submit(download_and_resize, url)
                     in_flight[future] = (img_id, domain)
 
                 # Collect finished results (non-blocking)
@@ -216,7 +220,8 @@ class ImageDownloader:
                     result = future.result()
                     if result is None:
                         skipped += 1
-                    downloaded = self._save_result(img_id, result, downloaded)
+                    if save_image_result(img_id, result):
+                        downloaded += 1
                     done_count += 1
 
                     if done_count % 200 == 0:

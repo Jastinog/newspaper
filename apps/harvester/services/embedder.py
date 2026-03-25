@@ -1,34 +1,15 @@
 import logging
-from dataclasses import dataclass, field
 
 from apps.billing.models import APIUsage
-from django.utils import timezone as django_tz
+from django.utils import timezone
 
 from apps.feed.models import Article, ArticleChunk, ArticlePipeline
 from apps.core.services.ai import EMBEDDING_MODEL, EmbeddingClient, calculate_cost
 from apps.core.services.ai.embeddings import BATCH_SIZE
 
 from .chunker import chunk_text
-from .downloader import ImageDownloader
-from .extractor import ContentExtractor
-from .fetcher import FeedFetcher
 
 logger = logging.getLogger(__name__)
-
-MAX_WORKERS = 20
-
-
-@dataclass
-class UpdateResult:
-    feeds_fetched: int = 0
-    new_articles: int = 0
-    fetch_errors: list[str] = field(default_factory=list)
-    articles_extracted: int = 0
-    extract_errors: list[str] = field(default_factory=list)
-    images_downloaded: int = 0
-    articles_embedded: int = 0
-    chunks_created: int = 0
-    total_tokens: int = 0
 
 
 class ArticleEmbedder:
@@ -86,7 +67,7 @@ class ArticleEmbedder:
                 skipped += 1
                 ArticlePipeline.objects.update_or_create(
                     article_id=article_id,
-                    defaults={"embedded_at": django_tz.now()},
+                    defaults={"embedded_at": timezone.now()},
                 )
                 continue
 
@@ -104,7 +85,7 @@ class ArticleEmbedder:
 
             ArticlePipeline.objects.update_or_create(
                 article_id=article_id,
-                defaults={"embedded_at": django_tz.now()},
+                defaults={"embedded_at": timezone.now()},
             )
 
             articles_done += 1
@@ -120,50 +101,3 @@ class ArticleEmbedder:
             msg += f" ({skipped} skipped)"
         self._write(msg + "\n")
         return articles_done, total_chunks_saved, total_tokens
-
-
-class UpdateService:
-    """Orchestrator: fetch RSS -> extract content -> embed."""
-
-    def __init__(self, workers: int = MAX_WORKERS, days: int = 30, api_key=None, stdout=None):
-        self.fetcher = FeedFetcher(workers=workers, stdout=stdout)
-        self.extractor = ContentExtractor(workers=workers, days=days, stdout=stdout)
-        self.downloader = ImageDownloader(workers=workers, days=days, stdout=stdout)
-        self.embedder = ArticleEmbedder(api_key=api_key, stdout=stdout)
-        self.stdout = stdout
-
-    def run(
-        self,
-        skip_fetch: bool = False,
-        skip_extract: bool = False,
-        skip_images: bool = False,
-        skip_embed: bool = False,
-    ) -> UpdateResult:
-        result = UpdateResult()
-
-        # Step 1: Fetch RSS feeds
-        if not skip_fetch:
-            feeds_count, new_articles, errors = self.fetcher.fetch_all()
-            result.feeds_fetched = feeds_count
-            result.new_articles = new_articles
-            result.fetch_errors = errors
-
-        # Step 2: Extract full content from URLs
-        if not skip_extract:
-            total, extracted, _fallback, ext_errors = self.extractor.extract_new()
-            result.articles_extracted = extracted
-            result.extract_errors = ext_errors
-
-        # Step 3: Download images
-        if not skip_images:
-            _processed, downloaded, _skipped = self.downloader.download_new()
-            result.images_downloaded = downloaded
-
-        # Step 4: Embed articles
-        if not skip_embed:
-            articles, chunks, tokens = self.embedder.embed_new()
-            result.articles_embedded = articles
-            result.chunks_created = chunks
-            result.total_tokens = tokens
-
-        return result

@@ -103,7 +103,7 @@ def download_images():
 @shared_task(name="harvester.embed")
 def embed_articles():
     """Embed unembedded articles: chunk, embed, save."""
-    from apps.harvester.services.updater import ArticleEmbedder
+    from apps.harvester.services.embedder import ArticleEmbedder
 
     run = HarvesterEmbedding.objects.create(status=RunStatus.SUCCESS)
 
