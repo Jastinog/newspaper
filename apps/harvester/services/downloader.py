@@ -27,14 +27,53 @@ MIN_DIMENSION = 100  # skip tracking pixels
 DOWNLOAD_BATCH_SIZE = 10
 
 
-def articles_with_downloaded_rss_image():
-    """Article IDs that already have a usable RSS image (OG is a fallback)."""
-    return (
-        ArticleImage.objects
-        .filter(source__slug="rss-image", downloaded=True)
-        .exclude(image="")
-        .values_list("article_id", flat=True)
+def select_primary_image(article_id: int) -> None:
+    """Compare downloaded images for an article and keep the best one."""
+    images = list(
+        ArticleImage.objects.filter(
+            article_id=article_id,
+            downloaded=True,
+        ).exclude(image="").select_related("source")
     )
+
+    if not images:
+        return
+
+    if len(images) == 1:
+        if not images[0].is_primary:
+            ArticleImage.objects.filter(id=images[0].id).update(is_primary=True)
+        return
+
+    # Best image wins: largest pixel area, then file_size as tiebreaker
+    images.sort(key=lambda img: (img.width * img.height, img.file_size), reverse=True)
+    winner = images[0]
+    losers = images[1:]
+
+    ArticleImage.objects.filter(article_id=article_id).exclude(id=winner.id).update(is_primary=False)
+    if not winner.is_primary:
+        ArticleImage.objects.filter(id=winner.id).update(is_primary=True)
+
+    for loser in losers:
+        _remove_image(loser)
+
+    logger.info(
+        "Article %s: kept %s image (%dx%d), removed %d worse",
+        article_id, winner.source.slug if winner.source else "content",
+        winner.width, winner.height, len(losers),
+    )
+
+
+def _remove_image(img: ArticleImage) -> None:
+    """Delete an ArticleImage record and its file (if not shared)."""
+    file_name = img.image.name
+    img.delete()
+
+    if file_name and not ArticleImage.objects.filter(image=file_name).exists():
+        from django.core.files.storage import default_storage
+        try:
+            default_storage.delete(file_name)
+        except FileNotFoundError:
+            pass
 
 
 def download_and_resize(source_url: str) -> tuple[bytes, int, int] | None:
@@ -178,9 +217,7 @@ class ImageDownloader:
             ).filter(
                 Q(source__slug="rss-image")
                 | Q(source__slug="og-image", article__pipeline__content_extracted_at__isnull=False)
-            ).exclude(
-                Q(source__slug="og-image", article_id__in=articles_with_downloaded_rss_image())
-            ).values_list("id", "source_url")
+            ).values_list("id", "source_url", "article_id")
             .order_by("?")
         )
         if batch_size:
@@ -193,9 +230,11 @@ class ImageDownloader:
 
         # Group by domain
         domain_queues: dict[str, deque] = defaultdict(deque)
-        for img_id, url in pending:
+        article_ids_in_batch = set()
+        for img_id, url, article_id in pending:
             domain = get_domain(url)
             domain_queues[domain].append((img_id, url))
+            article_ids_in_batch.add(article_id)
 
         domains = list(domain_queues.keys())
         random.shuffle(domains)
@@ -245,6 +284,10 @@ class ImageDownloader:
                 # If nothing finished, sleep briefly to avoid busy-waiting
                 if not finished:
                     time.sleep(0.1)
+
+        # Select best image for each article in the batch
+        for article_id in article_ids_in_batch:
+            select_primary_image(article_id)
 
         self._write(f"Done: {downloaded}/{len(pending)} images downloaded, {skipped} skipped\n")
         return len(pending), downloaded, skipped

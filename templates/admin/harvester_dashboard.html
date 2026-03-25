@@ -6,10 +6,41 @@
 
 {% block content %}
 
-{# --- Auto-refresh indicator --- #}
-<div class="flex items-center justify-end mb-4 gap-2">
-    <span id="hd-status" class="text-xs text-gray-400"></span>
-    <span id="hd-dot" class="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+{# --- Pipeline control + auto-refresh indicator --- #}
+<div class="flex items-center justify-between mb-4">
+    <div class="flex items-center gap-3">
+        <span id="pipeline-label" class="text-sm font-medium text-gray-700 dark:text-gray-300">
+            {% if not pipeline_running %}Pipeline not running{% elif pipeline_active %}Pipeline active{% else %}Pipeline paused{% endif %}
+        </span>
+        <button id="pipeline-toggle"
+                onclick="togglePipeline()"
+                {% if not pipeline_running %}disabled{% endif %}
+                class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed {% if pipeline_active %}bg-green-500{% else %}bg-gray-300 dark:bg-gray-600{% endif %}">
+            <span class="pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow ring-0 transition-transform duration-200 ease-in-out {% if pipeline_active %}translate-x-5{% else %}translate-x-0{% endif %}"></span>
+        </button>
+    </div>
+    <div class="flex items-center gap-2">
+        <span id="hd-status" class="text-xs text-gray-400"></span>
+        <span id="hd-dot" class="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+    </div>
+</div>
+
+{# --- Stage Controls --- #}
+<div class="mb-8">
+    {% component "unfold/components/card.html" with title="Stage Controls" %}
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+        {% for stage_id, stage_label in stage_labels %}
+        <div class="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+            <span class="text-sm text-gray-700 dark:text-gray-300">{{ stage_label }}</span>
+            <button id="stage-{{ stage_id }}"
+                    onclick="toggleStage('{{ stage_id }}')"
+                    class="stage-toggle relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none {% if stage_id in stage_toggles_on %}bg-green-500{% else %}bg-gray-300 dark:bg-gray-600{% endif %}">
+                <span class="pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow ring-0 transition-transform duration-200 ease-in-out {% if stage_id in stage_toggles_on %}translate-x-4{% else %}translate-x-0{% endif %}"></span>
+            </button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endcomponent %}
 </div>
 
 {# --- KPI Cards --- #}
@@ -182,6 +213,78 @@
 </div>
 
 <script>
+var TOGGLE_URL = "{% url 'harvester_toggle' %}";
+var STAGE_TOGGLE_URL = "{% url 'harvester_stage_toggle' %}";
+var CSRF = "{{ csrf_token }}";
+
+function setToggle(btn, enabled, onTranslate, offTranslate) {
+    if (!btn) return;
+    var knob = btn.querySelector("span");
+    if (enabled) {
+        btn.className = btn.className.replace("bg-gray-300", "").replace("dark:bg-gray-600", "").trimEnd();
+        if (!btn.className.includes("bg-green-500")) btn.className += " bg-green-500";
+        knob.className = knob.className.replace(offTranslate, onTranslate);
+    } else {
+        btn.className = btn.className.replace("bg-green-500", "").trimEnd();
+        if (!btn.className.includes("bg-gray-300")) btn.className += " bg-gray-300 dark:bg-gray-600";
+        knob.className = knob.className.replace(onTranslate, offTranslate);
+    }
+}
+
+function updateStageToggle(stageId, enabled) {
+    setToggle(document.getElementById("stage-" + stageId), enabled, "translate-x-4", "translate-x-0");
+}
+
+async function toggleStage(stageId) {
+    var btn = document.getElementById("stage-" + stageId);
+    if (!btn) return;
+    btn.disabled = true;
+    try {
+        var resp = await fetch(STAGE_TOGGLE_URL, {
+            method: "POST",
+            headers: {"X-CSRFToken": CSRF, "Content-Type": "application/json"},
+            body: JSON.stringify({stage: stageId}),
+        });
+        if (!resp.ok) return;
+        var data = await resp.json();
+        updateStageToggle(stageId, data.enabled);
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+async function togglePipeline() {
+    var btn = document.getElementById("pipeline-toggle");
+    btn.disabled = true;
+    try {
+        var resp = await fetch(TOGGLE_URL, {
+            method: "POST",
+            headers: {"X-CSRFToken": CSRF},
+        });
+        if (!resp.ok) return;
+        var data = await resp.json();
+        updatePipelineUI(data.active, data.running);
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+function updatePipelineUI(active, running) {
+    var btn = document.getElementById("pipeline-toggle");
+    var label = document.getElementById("pipeline-label");
+    if (!btn || !label) return;
+
+    btn.disabled = !running;
+    if (!running) {
+        label.textContent = "Pipeline not running";
+    } else if (active) {
+        label.textContent = "Pipeline active";
+    } else {
+        label.textContent = "Pipeline paused";
+    }
+    setToggle(btn, active, "translate-x-5", "translate-x-0");
+}
+
 (function() {
     var API_URL = "{% url 'harvester_dashboard_api' %}";
     var INTERVAL = 30000;
@@ -331,6 +434,16 @@
             // Tables
             updateProblemFeeds(data.problem_feeds);
             updateRecentErrors(data.recent_errors);
+
+            // Pipeline state
+            updatePipelineUI(data.pipeline_active, data.pipeline_running);
+
+            // Stage toggles
+            if (data.stage_toggles) {
+                for (var stage in data.stage_toggles) {
+                    updateStageToggle(stage, data.stage_toggles[stage]);
+                }
+            }
 
             updateStatus(true);
         } catch(e) {

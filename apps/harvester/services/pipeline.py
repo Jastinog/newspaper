@@ -9,10 +9,10 @@ from apps.billing.models import APIUsage
 from apps.core.services.ai import EMBEDDING_MODEL, EmbeddingClient, calculate_cost
 from apps.core.services.ai.embeddings import BATCH_SIZE
 from apps.feed.models import Article, ArticleChunk, ArticleImage, ArticleImageSource, ArticlePipeline, Feed
-from apps.harvester.models import HarvesterFeed, RunStatus
+from apps.harvester.models import HarvesterFeed, PipelineSettings, RunStatus
 
 from .chunker import chunk_text
-from .downloader import articles_with_downloaded_rss_image, download_and_resize, save_image_result
+from .downloader import download_and_resize, save_image_result, select_primary_image
 from .extractor import fetch_and_extract
 from .fetcher import fetch_single_feed, save_articles
 from .http import get_domain
@@ -26,6 +26,12 @@ ERROR_SLEEP = 10
 FEED_INTERVAL_MINUTES = 10
 CANDIDATE_POOL = 30
 DAYS_LOOKBACK = 30
+
+_instance: "HarvestManager | None" = None
+
+
+def get_manager() -> "HarvestManager | None":
+    return _instance
 
 
 def _cutoff_days():
@@ -47,12 +53,21 @@ class HarvestManager:
     """
 
     def __init__(self):
+        global _instance
         self._og_source = None
+        _instance = self
+
+    @property
+    def is_active(self) -> bool:
+        return PipelineSettings.load().is_active
 
     def run(self):
         logger.info("HarvestManager started")
         while True:
             try:
+                if not self.is_active:
+                    time.sleep(IDLE_SLEEP)
+                    continue
                 did_work = self.dispatch()
                 time.sleep(WORK_SLEEP if did_work else IDLE_SLEEP)
             except Exception:
@@ -60,13 +75,16 @@ class HarvestManager:
                 time.sleep(ERROR_SLEEP)
 
     def dispatch(self) -> bool:
+        s = PipelineSettings.load()
         return (
-            self._embed_one()
-            or self._download_image("og-image", "og_images_at",
-                                    article__pipeline__content_extracted_at__isnull=False)
-            or self._extract_one()
-            or self._download_image("rss-image", "rss_images_at")
-            or self._fetch_one_feed()
+            (s.enable_embedding and self._embed_one())
+            or (s.enable_og_image_download and self._download_image(
+                "og-image", "og_images_at",
+                article__pipeline__content_extracted_at__isnull=False))
+            or (s.enable_content_extraction and self._extract_one())
+            or (s.enable_rss_image_download and self._download_image(
+                "rss-image", "rss_images_at"))
+            or (s.enable_feed_fetching and self._fetch_one_feed())
         )
 
     # ------------------------------------------------------------------
@@ -150,9 +168,6 @@ class HarvestManager:
             **extra_filters,
         )
 
-        if source_slug == "og-image":
-            qs = qs.exclude(article_id__in=articles_with_downloaded_rss_image())
-
         candidates = list(
             qs.values_list("id", "source_url", "article_id")
             .order_by("?")[:CANDIDATE_POOL]
@@ -168,6 +183,8 @@ class HarvestManager:
             try:
                 result = download_and_resize(source_url)
                 save_image_result(img_id, result)
+                if source_slug == "og-image":
+                    select_primary_image(article_id)
                 ArticlePipeline.objects.filter(article_id=article_id).update(
                     **{pipeline_field: timezone.now()},
                 )

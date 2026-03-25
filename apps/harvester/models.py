@@ -1,3 +1,6 @@
+import threading
+import time
+
 from django.db import models
 from django.utils import timezone
 
@@ -93,3 +96,64 @@ class HarvesterEmbedding(HarvesterRun):
 
     def __str__(self):
         return f"Embed {self.status} ({self.started_at:%Y-%m-%d %H:%M})"
+
+
+class PipelineSettings(models.Model):
+    """Singleton (pk=1): controls the entire harvester pipeline."""
+
+    is_active = models.BooleanField(default=True, verbose_name="Pipeline active")
+    enable_feed_fetching = models.BooleanField(default=True, verbose_name="Feed fetching")
+    enable_rss_image_download = models.BooleanField(default=True, verbose_name="RSS image download")
+    enable_content_extraction = models.BooleanField(default=True, verbose_name="Content extraction")
+    enable_og_image_download = models.BooleanField(default=True, verbose_name="OG image download")
+    enable_embedding = models.BooleanField(default=True, verbose_name="Embedding")
+    updated_at = models.DateTimeField(auto_now=True)
+
+    _thread_local = threading.local()
+
+    class Meta:
+        verbose_name = "Pipeline Settings"
+        verbose_name_plural = "Pipeline Settings"
+
+    def __str__(self):
+        return "Pipeline Settings"
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+        self._bust_cache()
+
+    def delete(self, *args, **kwargs):
+        pass
+
+    @classmethod
+    def load(cls):
+        """Return the singleton row, creating it if needed. Cached 5s per thread."""
+        now = time.monotonic()
+        local = cls._thread_local
+        if hasattr(local, "obj") and (now - local.ts) < 5:
+            return local.obj
+        obj, _ = cls.objects.get_or_create(pk=1)
+        local.obj = obj
+        local.ts = now
+        return obj
+
+    @classmethod
+    def set_field(cls, **kwargs):
+        """Update fields and bust the thread-local cache."""
+        cls.objects.filter(pk=1).update(**kwargs)
+        cls._bust_cache()
+
+    @classmethod
+    def _bust_cache(cls):
+        cls._thread_local.__dict__.clear()
+
+
+STAGE_FIELDS = [
+    ("enable_feed_fetching", "Feed Fetching"),
+    ("enable_rss_image_download", "RSS Images"),
+    ("enable_content_extraction", "Extraction"),
+    ("enable_og_image_download", "OG Images"),
+    ("enable_embedding", "Embedding"),
+]
+STAGE_FIELD_NAMES = frozenset(name for name, _ in STAGE_FIELDS)

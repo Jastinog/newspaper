@@ -1,12 +1,16 @@
 from django.contrib import admin
+from django.shortcuts import redirect
+from django.urls import reverse
 from django.utils.html import format_html
 from unfold.admin import ModelAdmin, TabularInline
 
 from .models import (
+    STAGE_FIELDS,
     HarvesterContent,
     HarvesterEmbedding,
     HarvesterFeed,
     HarvesterImage,
+    PipelineSettings,
     RunStatus,
 )
 
@@ -132,3 +136,26 @@ class HarvesterEmbeddingAdmin(ModelAdmin):
     @admin.display(description="Duration")
     def duration_display(self, obj):
         return _duration_display(obj)
+
+
+# --- Pipeline Settings ---
+
+@admin.register(PipelineSettings)
+class PipelineSettingsAdmin(ModelAdmin):
+    list_display = ["__str__", "is_active", "updated_at"]
+    fieldsets = [
+        ("Master", {"fields": ["is_active"]}),
+        ("Stages", {"fields": [name for name, _ in STAGE_FIELDS]}),
+    ]
+
+    def has_add_permission(self, request):
+        return not PipelineSettings.objects.exists()
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def changelist_view(self, request, extra_context=None):
+        obj, _ = PipelineSettings.objects.get_or_create(pk=1)
+        return redirect(
+            reverse("admin:harvester_pipelinesettings_change", args=[obj.pk])
+        )

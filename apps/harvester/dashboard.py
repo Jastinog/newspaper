@@ -7,6 +7,7 @@ from django.utils import timezone
 
 from apps.feed.models import Article, ArticlePipeline, Feed
 from apps.harvester.models import (
+    PipelineSettings, STAGE_FIELDS,
     HarvesterContent,
     HarvesterEmbedding,
     HarvesterFeed,
@@ -383,7 +384,19 @@ def build_harvester_context(request):
     # ── Total articles in DB ─────────────────────────────────
     total_articles = Article.objects.count()
 
+    # ── Pipeline state ────────────────────────────────────────
+    from apps.harvester.services.pipeline import get_manager
+    ps = PipelineSettings.load()
+    pipeline_running = get_manager() is not None
+    pipeline_active = ps.is_active
+
     return {
+        # Pipeline control
+        "pipeline_running": pipeline_running,
+        "pipeline_active": pipeline_active,
+        "stage_toggles": {name: getattr(ps, name) for name, _ in STAGE_FIELDS},
+        "stage_labels": STAGE_FIELDS,
+        "stage_toggles_on": {name for name, _ in STAGE_FIELDS if getattr(ps, name)},
         # KPI
         "articles_today": f"{articles_today:,}",
         "pending_extraction": f"{pending_extraction:,}",
