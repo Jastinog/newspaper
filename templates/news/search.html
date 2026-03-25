@@ -1,0 +1,83 @@
+{% extends "news/base.html" %}
+{% load i18n static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'news/css/search-bar.css' %}">
+<link rel="stylesheet" href="{% static 'news/css/search-results.css' %}">
+{% endblock %}
+
+{% block content %}
+{% with autofocus=True %}
+    {% include "news/_search_bar.html" %}
+{% endwith %}
+
+{% if query %}
+    {% if queries %}
+    <div class="search-queries">
+        {% for q in queries %}
+            <span class="search-query-tag">{{ q }}</span>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if results %}
+        <div class="search-meta">
+            <span>{{ results|length }} {% trans "results" %} &middot; {{ elapsed_ms }} {% trans "ms" %}</span>
+            <div class="search-sort">
+                <a href="?q={{ query|urlencode }}&sort=date" class="{% if sort == 'date' %}active{% endif %}">{% trans "New" %}</a>
+                <a href="?q={{ query|urlencode }}&sort=relevance" class="{% if sort == 'relevance' %}active{% endif %}">{% trans "Relevant" %}</a>
+            </div>
+        </div>
+
+        <div class="search-rule"></div>
+
+        <div class="search-results">
+            {% for r in results %}
+                {% with article=r.article score=r.score snippet=r.snippet %}
+                <div class="search-result">
+                    <a href="{{ article.get_absolute_url }}" class="result-visual">
+                        {% if article.primary_images and article.primary_images.0.image %}
+                            <img class="result-image" src="{{ article.primary_images.0.image.url }}" alt="" loading="lazy">
+                        {% else %}
+                            <div class="result-placeholder">
+                                <span class="result-placeholder-letter">{{ article.title|first }}</span>
+                            </div>
+                        {% endif %}
+                    </a>
+                    <div class="result-content">
+                        <div class="result-source">
+                            {{ article.feed.title }}
+                            {% if article.feed.category %}
+                                &middot; <span class="source-category">{{ article.feed.category.name }}</span>
+                            {% endif %}
+                        </div>
+                        <a href="{{ article.get_absolute_url }}" class="result-title">{{ article.title }}</a>
+                        <div class="result-snippet">{{ snippet }}</div>
+                        <div class="result-footer">
+                            {% if article.published %}
+                                <span class="result-date">{{ article.published|timesince }} {% trans "ago" %}</span>
+                            {% endif %}
+                            <span class="result-score">
+                                {{ score|floatformat:0 }}%
+                                <span class="result-score-bar">
+                                    <span class="result-score-fill" style="width: {{ score|floatformat:0 }}%"></span>
+                                </span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                {% endwith %}
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="search-empty">
+            <p>{% trans "No articles found for your query." %}</p>
+            <p style="font-size: 0.8rem; color: var(--fg-faint);">{% trans "Try different keywords or a broader topic." %}</p>
+        </div>
+    {% endif %}
+{% else %}
+    <div class="search-empty">
+        <p>{% trans "Enter a topic to search across all news sources." %}</p>
+    </div>
+{% endif %}
+{% endblock %}

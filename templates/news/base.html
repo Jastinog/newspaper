@@ -1,0 +1,81 @@
+{% load i18n static %}
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE }}" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ seo.title|default:"Newspaper" }}</title>
+    <meta name="description" content="{{ seo.description|default:"Daily AI-curated news digest from 100+ RSS sources worldwide" }}">
+    {% if seo.canonical %}<link rel="canonical" href="{{ seo.canonical }}">{% endif %}
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="{{ seo.title|default:"Newspaper" }}">
+    <meta property="og:description" content="{{ seo.description|default:"Daily AI-curated news digest" }}">
+    <meta property="og:type" content="{{ seo.og_type|default:"website" }}">
+    {% if seo.canonical %}<meta property="og:url" content="{{ seo.canonical }}">{% endif %}
+    <meta property="og:site_name" content="Newspaper">
+    {% if seo.published_time %}<meta property="article:published_time" content="{{ seo.published_time }}">{% endif %}
+    {% if seo.section %}<meta property="article:section" content="{{ seo.section }}">{% endif %}
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="{{ seo.title|default:"Newspaper" }}">
+    <meta name="twitter:description" content="{{ seo.description|default:"Daily AI-curated news digest" }}">
+
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📰</text></svg>">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=PT+Serif:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+
+    {% block json_ld %}{% endblock %}
+
+    <!-- Prevent FOUC: apply saved theme before any rendering -->
+    <script>(function(){var t=localStorage.getItem('newspaper-theme');if(t)document.documentElement.setAttribute('data-theme',t);})()</script>
+
+    <!-- Base styles -->
+    <link rel="stylesheet" href="{% static 'news/css/icons.css' %}">
+    <link rel="stylesheet" href="{% static 'news/css/base.css' %}">
+    <link rel="stylesheet" href="{% static 'news/css/layout.css' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body data-error-generation="{% trans "Generation error" %}" data-dd-ready="{% trans "Deep dive ready" %}" data-dd-read="{% trans "Read" %}" data-dd-close="{% trans "Close" %}" data-similar-label="{% trans "Similar news" %}" data-similar-empty="{% trans "No similar news found" %}" data-similar-sources="{% trans "Source articles" %}" data-similar-current="{% trans "Current" %}" data-similar-digest="{% trans "Digest news" %}" data-similar-articles="{% trans "Articles" %}" data-similar-loading="{% trans "Loading…" %}">
+    <header>
+        <div class="masthead-rule-top"></div>
+        <div class="container">
+            <div class="masthead">
+                <div class="lang-switcher">
+                    <form method="post" action="{% url 'set_language' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.path }}">
+                        {% get_available_languages as languages %}
+                        {% for code, name in languages %}
+                            <button type="submit" name="language" value="{{ code }}" class="{% if code == LANGUAGE_CODE %}active{% endif %}">{{ code|upper }}</button>
+                        {% endfor %}
+                    </form>
+                </div>
+                <div class="masthead-date">{% block masthead_date %}{% now "l, F j, Y" %}{% endblock %}</div>
+                <div class="site-title"><a href="/">{% trans "Newspaper" %}</a></div>
+                <div class="masthead-subtitle">{% trans "Daily News Digest" %}</div>
+                <button class="theme-toggle" onclick="toggleTheme()" title="{% trans "Toggle dark/light theme" %}" aria-label="{% trans "Toggle theme" %}">
+                    <span class="theme-icon"></span>
+                </button>
+            </div>
+        </div>
+        <div class="masthead-rule-bottom"></div>
+    </header>
+    <main>
+        <div class="container">
+            <script src="{% static 'websocket/js/ws.js' %}"></script>
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+    <footer>
+        <div class="container">{% trans "Newspaper" %} &mdash; {% trans "RSS aggregator" %}</div>
+    </footer>
+    <script src="{% static 'news/js/theme.js' %}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

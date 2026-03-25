@@ -6,7 +6,6 @@ from collections import Counter, defaultdict, deque
 from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 from html import unescape
-from urllib.parse import urlparse
 
 import requests
 from django.db.models import Q
@@ -14,24 +13,15 @@ from django.utils import timezone as django_tz
 from readability import Document
 
 from apps.feed.models import Article, ArticleImage
-from .http import BROWSER_UA
+from .http import get_domain, random_headers
 
 logger = logging.getLogger(__name__)
 
 TIMEOUT = 20
 MAX_WORKERS = 10
-DOMAIN_DELAY = 8.0  # min seconds between requests to same domain
+DOMAIN_DELAY = 10.0  # min seconds between requests to same domain
+EXTRACT_BATCH_SIZE = 50
 
-# Real browser headers to avoid bot detection
-HEADERS = {
-    "User-Agent": BROWSER_UA,
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-    "Accept-Language": "en-US,en;q=0.9",
-    "Accept-Encoding": "gzip, deflate",
-    "DNT": "1",
-    "Connection": "keep-alive",
-    "Upgrade-Insecure-Requests": "1",
-}
 
 # Error categories
 ERR_TIMEOUT = "timeout"
@@ -43,11 +33,6 @@ ERR_TOO_SHORT = "too_short"
 ERR_CONNECTION = "connection"
 ERR_READABILITY = "readability"
 ERR_OTHER = "other"
-
-
-def _get_domain(url: str) -> str:
-    """Extract domain from URL."""
-    return urlparse(url).netloc.lower()
 
 
 def _classify_error(error: Exception) -> tuple[str, str]:
@@ -139,7 +124,7 @@ def _fetch_and_extract(article_id: int, url: str) -> tuple[int, str, str, list[s
     Returns (article_id, clean_text, og_image, content_images, error_category, error_message).
     """
     try:
-        resp = requests.get(url, timeout=TIMEOUT, headers=HEADERS)
+        resp = requests.get(url, timeout=TIMEOUT, headers=random_headers())
         resp.raise_for_status()
 
         html = _clean_for_xml(resp.text).strip()
@@ -178,25 +163,29 @@ class ContentExtractor:
         if self.stdout:
             self.stdout.write(msg)
 
-    def extract_new(self) -> tuple[int, int, list[str]]:
+    def extract_new(self, batch_size: int = 0) -> tuple[int, int, int, list[str]]:
         """Extract content for articles not yet fetched.
 
         Only processes articles from the last self.days days (or with no date).
         Uses domain-based scheduling to avoid hammering any single host.
 
-        Returns (total, extracted, errors).
+        Returns (total, extracted, fallback_count, errors).
         """
         cutoff = django_tz.now() - timedelta(days=self.days)
-        articles = list(
+        qs = (
             Article.objects.filter(content_fetched=False)
             .filter(Q(published__gte=cutoff) | Q(published__isnull=True))
             .exclude(url="")
+            .order_by("-published")
             .values_list("id", "url", "rss_content")
         )
+        if batch_size:
+            qs = qs[:batch_size]
+        articles = list(qs)
 
         if not articles:
             self._write("No articles to extract.\n")
-            return 0, 0, []
+            return 0, 0, 0, []
 
         self._write(f"Extracting content for {len(articles)} articles...\n")
 
@@ -204,7 +193,7 @@ class ContentExtractor:
         domain_queues: dict[str, deque] = defaultdict(deque)
         rss_lookup: dict[int, str] = {}
         for aid, url, rss_content in articles:
-            domain = _get_domain(url)
+            domain = get_domain(url)
             domain_queues[domain].append((aid, url))
             rss_lookup[aid] = rss_content
 
@@ -319,4 +308,4 @@ class ContentExtractor:
             for cat, count in error_counts.most_common():
                 self._write(f"  {cat}: {count}\n")
 
-        return len(articles), extracted, errors
+        return len(articles), extracted, fallback_count, errors

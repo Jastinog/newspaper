@@ -1,7 +1,7 @@
 from django.apps import AppConfig
 
 
-class CrawlerConfig(AppConfig):
+class HarvesterConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
-    name = "apps.crawler"
-    label = "crawler"
+    name = "apps.harvester"
+    label = "harvester"

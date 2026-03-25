@@ -126,6 +126,7 @@ class UpdateService:
 
     def run(
         self,
+        skip_fetch: bool = False,
         skip_extract: bool = False,
         skip_images: bool = False,
         skip_embed: bool = False,
@@ -133,20 +134,21 @@ class UpdateService:
         result = UpdateResult()
 
         # Step 1: Fetch RSS feeds
-        feeds_count, new_articles, errors = self.fetcher.fetch_all()
-        result.feeds_fetched = feeds_count
-        result.new_articles = new_articles
-        result.fetch_errors = errors
+        if not skip_fetch:
+            feeds_count, new_articles, errors = self.fetcher.fetch_all()
+            result.feeds_fetched = feeds_count
+            result.new_articles = new_articles
+            result.fetch_errors = errors
 
         # Step 2: Extract full content from URLs
         if not skip_extract:
-            total, extracted, ext_errors = self.extractor.extract_new()
+            total, extracted, _fallback, ext_errors = self.extractor.extract_new()
             result.articles_extracted = extracted
             result.extract_errors = ext_errors
 
         # Step 3: Download images
         if not skip_images:
-            _processed, downloaded = self.downloader.download_new()
+            _processed, downloaded, _skipped = self.downloader.download_new()
             result.images_downloaded = downloaded
 
         # Step 4: Embed articles

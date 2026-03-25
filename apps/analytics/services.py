@@ -21,7 +21,7 @@ def resolve_path(path: str):
         match = resolve(path)
         view_name = match.url_name or ""
         if view_name in ("article_detail", "article_detail_redirect"):
-            from apps.news.models import Article
+            from apps.feed.models import Article
             article = (
                 Article.objects.filter(pk=match.kwargs.get("pk"))
                 .select_related("feed__category")
@@ -30,7 +30,7 @@ def resolve_path(path: str):
             if article and article.feed_id:
                 category = article.feed.category
         elif view_name == "category_detail":
-            from apps.news.models import Category
+            from apps.feed.models import Category
             category = Category.objects.filter(slug=match.kwargs.get("slug")).first()
     except Resolver404:
         pass

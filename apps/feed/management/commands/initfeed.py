@@ -1,6 +1,6 @@
 import json
-from pathlib import Path
 
+from django.conf import settings
 from django.core.management.base import BaseCommand
 
 from apps.core.models import Language
@@ -15,7 +15,7 @@ class Command(BaseCommand):
     help = "Load RSS feeds from rss_database.json"
 
     def handle(self, *args, **options):
-        json_path = Path(__file__).parent / "rss_database.json"
+        json_path = settings.BASE_DIR / "rss_database.json"
         with open(json_path) as f:
             data = json.load(f)
 

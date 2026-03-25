@@ -1,0 +1,53 @@
+{% extends "news/base.html" %}
+{% load markdown_extras i18n static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'news/css/article.css' %}">
+<link rel="stylesheet" href="{% static 'news/css/research.css' %}">
+{% endblock %}
+
+{% block content %}
+<a href="{% url 'index' %}" class="back-link">&larr; {% trans "Back to digest" %}</a>
+
+<article>
+    <div class="research-badge">{% trans "Research" %}</div>
+
+    <div class="article-header">
+        <h1>{{ dive.title }}</h1>
+        {% if dive.subtitle %}
+            <div class="subtitle">{{ dive.subtitle }}</div>
+        {% endif %}
+        <div class="meta">
+            {% blocktrans count num_sources=sources|length %}Synthesized from {{ num_sources }} source{% plural %}Synthesized from {{ num_sources }} sources{% endblocktrans %} &middot; {{ dive.created_at|date:"j F Y" }}
+        </div>
+    </div>
+
+    <div class="article-content article-body">
+        {{ dive.content|markdown }}
+    </div>
+
+    {% if sources %}
+    <div class="research-sources">
+        <h2>{% trans "Sources" %}</h2>
+        <ul>
+        {% for source in sources %}
+            <li>
+                <span class="source-text">
+                    <a href="{{ source.article.get_absolute_url }}">{{ source.article.title }}</a>
+                    <span class="source-feed">&mdash; {{ source.article.feed.title }}{% if source.article.feed.lean %} <span class="lean-badge lean-{{ source.article.feed.lean }}">{{ source.article.feed.get_lean_display }}</span>{% endif %}</span>
+                </span>
+                <span class="source-relevance">
+                    <span class="relevance-bar" style="--fill:{{ source.relevance_pct }}%"></span>
+                    {{ source.relevance_pct }}%
+                </span>
+            </li>
+        {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <div class="research-back">
+        <a href="{% url 'index' %}">&larr; {% trans "Back to digest" %}</a>
+    </div>
+</article>
+{% endblock %}

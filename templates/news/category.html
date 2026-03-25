@@ -1,0 +1,27 @@
+{% extends "news/base.html" %}
+{% load i18n static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'news/css/category.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="category-header">
+    <h1>{{ category.name }}</h1>
+    <p>{{ articles|length }} {% trans "latest articles" %}</p>
+</div>
+
+<ul class="article-list">
+{% for article in articles %}
+    <li>
+        <a href="{{ article.get_absolute_url }}">{{ article.title }}</a>
+        <div class="meta">
+            {{ article.feed.title }}
+            {% if article.published %} &middot; {{ article.published|timesince }} {% trans "ago" %}{% endif %}
+        </div>
+    </li>
+{% empty %}
+    <li style="text-align:center; color: var(--fg-muted);">{% trans "No articles yet." %}</li>
+{% endfor %}
+</ul>
+{% endblock %}

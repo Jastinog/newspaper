@@ -2,7 +2,8 @@ import os
 from pathlib import Path
 
 from celery.schedules import crontab
-
+from django.urls import reverse_lazy
+from django.utils.translation import gettext_lazy as _
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -39,7 +40,7 @@ INSTALLED_APPS = [
     "apps.digest",
     "apps.research",
     "apps.billing",
-    "apps.crawler",
+    "apps.harvester",
     "apps.analytics",
     "apps.websocket",
     "apps.account",
@@ -129,9 +130,21 @@ CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = "Europe/Kyiv"
 CELERY_BEAT_SCHEDULE = {
-    "update-news-every-hour": {
-        "task": "crawler.update",
-        "schedule": 3600,  # every hour
+    "harvest-feeds-every-minute": {
+        "task": "harvester.harvest",
+        "schedule": 60,
+    },
+    "extract-content-every-minute": {
+        "task": "harvester.extract",
+        "schedule": 60,
+    },
+    "download-images-every-minute": {
+        "task": "harvester.download",
+        "schedule": 60,
+    },
+    "embed-articles-every-minute": {
+        "task": "harvester.embed",
+        "schedule": 60,
     },
     "digest-daily": {
         "task": "digest.generate",
@@ -144,7 +157,188 @@ UNFOLD = {
     "SITE_HEADER": "Newspaper",
     "SHOW_HISTORY": True,
     "SHOW_VIEW_ON_SITE": True,
+    "BORDER_RADIUS": "6px",
     "DASHBOARD_CALLBACK": "apps.billing.dashboard.dashboard_callback",
+    "COLORS": {
+        "primary": {
+            "50": "oklch(97.5% .008 75)",
+            "100": "oklch(94% .02 75)",
+            "200": "oklch(88% .04 70)",
+            "300": "oklch(80% .07 65)",
+            "400": "oklch(72% .11 55)",
+            "500": "oklch(62% .14 50)",
+            "600": "oklch(53% .13 45)",
+            "700": "oklch(45% .11 42)",
+            "800": "oklch(38% .08 40)",
+            "900": "oklch(30% .06 40)",
+            "950": "oklch(22% .04 40)",
+        },
+    },
+    "SIDEBAR": {
+        "show_search": True,
+        "show_all_applications": False,
+        "navigation": [
+            {
+                "title": _("Main"),
+                "separator": True,
+                "collapsible": False,
+                "items": [
+                    {
+                        "title": _("Dashboard"),
+                        "icon": "dashboard",
+                        "link": reverse_lazy("admin:index"),
+                    },
+                ],
+            },
+            {
+                "title": _("Content"),
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": _("Feeds"),
+                        "icon": "rss_feed",
+                        "link": reverse_lazy("admin:feed_feed_changelist"),
+                    },
+                    {
+                        "title": _("Categories"),
+                        "icon": "category",
+                        "link": reverse_lazy("admin:feed_category_changelist"),
+                    },
+                    {
+                        "title": _("Articles"),
+                        "icon": "article",
+                        "link": reverse_lazy("admin:feed_article_changelist"),
+                    },
+                    {
+                        "title": _("Article chunks"),
+                        "icon": "segment",
+                        "link": reverse_lazy("admin:feed_articlechunk_changelist"),
+                    },
+                    {
+                        "title": _("Article images"),
+                        "icon": "image",
+                        "link": reverse_lazy("admin:feed_articleimage_changelist"),
+                    },
+                ],
+            },
+            {
+                "title": _("Digests"),
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": _("Digests"),
+                        "icon": "auto_stories",
+                        "link": reverse_lazy("admin:digest_digest_changelist"),
+                    },
+                    {
+                        "title": _("Sections"),
+                        "icon": "view_list",
+                        "link": reverse_lazy("admin:digest_digestsection_changelist"),
+                    },
+                    {
+                        "title": _("Topics"),
+                        "icon": "topic",
+                        "link": reverse_lazy("admin:digest_digesttopic_changelist"),
+                    },
+                ],
+            },
+            {
+                "title": _("Research"),
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": _("Researches"),
+                        "icon": "science",
+                        "link": reverse_lazy("admin:research_research_changelist"),
+                    },
+                ],
+            },
+            {
+                "title": _("Harvester"),
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": _("Feed fetches"),
+                        "icon": "rss_feed",
+                        "link": reverse_lazy("admin:harvester_harvesterfeed_changelist"),
+                    },
+                    {
+                        "title": _("Content extracts"),
+                        "icon": "article",
+                        "link": reverse_lazy("admin:harvester_harvestercontent_changelist"),
+                    },
+                    {
+                        "title": _("Image downloads"),
+                        "icon": "download",
+                        "link": reverse_lazy("admin:harvester_harvesterimage_changelist"),
+                    },
+                    {
+                        "title": _("Embeds"),
+                        "icon": "hub",
+                        "link": reverse_lazy("admin:harvester_harvesterembedding_changelist"),
+                    },
+                ],
+            },
+            {
+                "title": _("Analytics"),
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": _("Clients"),
+                        "icon": "devices",
+                        "link": reverse_lazy("admin:analytics_client_changelist"),
+                    },
+                    {
+                        "title": _("Sessions"),
+                        "icon": "timer",
+                        "link": reverse_lazy("admin:analytics_session_changelist"),
+                    },
+                    {
+                        "title": _("Activities"),
+                        "icon": "touch_app",
+                        "link": reverse_lazy("admin:analytics_activity_changelist"),
+                    },
+                ],
+            },
+            {
+                "title": _("System"),
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": _("Users"),
+                        "icon": "person",
+                        "link": reverse_lazy("admin:account_user_changelist"),
+                    },
+                    {
+                        "title": _("Languages"),
+                        "icon": "translate",
+                        "link": reverse_lazy("admin:core_language_changelist"),
+                    },
+                    {
+                        "title": _("Regions"),
+                        "icon": "public",
+                        "link": reverse_lazy("admin:location_region_changelist"),
+                    },
+                    {
+                        "title": _("Countries"),
+                        "icon": "flag",
+                        "link": reverse_lazy("admin:location_country_changelist"),
+                    },
+                    {
+                        "title": _("API usage"),
+                        "icon": "data_usage",
+                        "link": reverse_lazy("admin:billing_apiusage_changelist"),
+                    },
+                ],
+            },
+        ],
+    },
 }
 
 REST_FRAMEWORK = {

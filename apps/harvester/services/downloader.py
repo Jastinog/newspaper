@@ -7,7 +7,6 @@ import uuid
 from collections import defaultdict, deque
 from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
-from urllib.parse import urlparse
 
 import requests
 from django.conf import settings
@@ -16,23 +15,15 @@ from django.utils import timezone as django_tz
 from PIL import Image
 
 from apps.feed.models import ArticleImage
-from .http import BROWSER_UA
+from .http import get_domain, random_headers
 
 logger = logging.getLogger(__name__)
 
 TIMEOUT = 20
 MAX_FILE_SIZE = 15 * 1024 * 1024  # 15 MB
 MIN_DIMENSION = 100  # skip tracking pixels
-DOMAIN_DELAY = 8.0  # seconds between requests to same domain
-
-HEADERS = {
-    "User-Agent": BROWSER_UA,
-    "Accept": "image/webp,image/avif,image/apng,image/*,*/*;q=0.8",
-}
-
-
-def _get_domain(url: str) -> str:
-    return urlparse(url).netloc.lower()
+DOMAIN_DELAY = 10.0  # seconds between requests to same domain
+DOWNLOAD_BATCH_SIZE = 100
 
 
 def _download_and_resize(source_url: str) -> tuple[bytes, int, int] | None:
@@ -41,7 +32,7 @@ def _download_and_resize(source_url: str) -> tuple[bytes, int, int] | None:
     Returns (webp_bytes, width, height) or None on failure.
     """
     try:
-        resp = requests.get(source_url, timeout=TIMEOUT, headers=HEADERS, stream=True)
+        resp = requests.get(source_url, timeout=TIMEOUT, headers=random_headers(), stream=True)
         resp.raise_for_status()
 
         # Check Content-Length before downloading full body
@@ -157,28 +148,31 @@ class ImageDownloader:
             ArticleImage.objects.filter(id=img_id).update(downloaded=True)
             return downloaded_count
 
-    def download_new(self) -> tuple[int, int]:
+    def download_new(self, batch_size: int = 0) -> tuple[int, int, int]:
         """Download images not yet attempted.
 
         Uses domain-based scheduling to avoid hammering any single host.
-        Returns (processed, downloaded).
+        Returns (processed, downloaded, skipped).
         """
         cutoff = django_tz.now() - timedelta(days=self.days)
-        pending = list(
+        qs = (
             ArticleImage.objects.filter(
                 downloaded=False,
                 article__published__gte=cutoff,
             ).values_list("id", "source_url")
         )
+        if batch_size:
+            qs = qs[:batch_size]
+        pending = list(qs)
 
         if not pending:
             self._write("No images to download.\n")
-            return 0, 0
+            return 0, 0, 0
 
         # Group by domain
         domain_queues: dict[str, deque] = defaultdict(deque)
         for img_id, url in pending:
-            domain = _get_domain(url)
+            domain = get_domain(url)
             domain_queues[domain].append((img_id, url))
 
         domains = list(domain_queues.keys())
@@ -186,6 +180,7 @@ class ImageDownloader:
         self._write(f"Downloading {len(pending)} images from {len(domains)} domains...\n")
 
         downloaded = 0
+        skipped = 0
         done_count = 0
 
         domain_last_req: dict[str, float] = {}
@@ -219,7 +214,10 @@ class ImageDownloader:
                     active_domains.discard(domain)
                     domain_last_req[domain] = time.monotonic()
 
-                    downloaded = self._save_result(img_id, future.result(), downloaded)
+                    result = future.result()
+                    if result is None:
+                        skipped += 1
+                    downloaded = self._save_result(img_id, result, downloaded)
                     done_count += 1
 
                     if done_count % 200 == 0:
@@ -232,5 +230,5 @@ class ImageDownloader:
                 if not finished:
                     time.sleep(0.1)
 
-        self._write(f"Done: {downloaded}/{len(pending)} images downloaded\n")
-        return len(pending), downloaded
+        self._write(f"Done: {downloaded}/{len(pending)} images downloaded, {skipped} skipped\n")
+        return len(pending), downloaded, skipped

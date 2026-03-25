@@ -1,0 +1,43 @@
+{% extends "news/base.html" %}
+{% load static i18n %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'news/css/article.css' %}">
+<link rel="stylesheet" href="{% static 'news/css/research-loading.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="loading-container">
+    <div class="loading-topic">{{ item.topic }}</div>
+
+    <!-- Pre-generation state: button to start -->
+    <div id="generatePrompt">
+        <p class="generate-description">{% trans "AI-powered deep analysis of this topic based on collected sources." %}</p>
+        <button class="generate-btn" id="generateBtn">{% trans "Generate analysis" %}</button>
+        <p class="generate-note">{% trans "Uses AI tokens for generation" %}</p>
+        <a href="{% url 'index' %}" class="back-link">&larr; {% trans "Back to digest" %}</a>
+    </div>
+
+    <!-- Generation in progress state -->
+    <div id="generatingState" class="generating-state">
+        <div id="loadingOverlay" class="loading-overlay-inline">
+            <canvas id="orbitCanvas"></canvas>
+        </div>
+        <div class="loading-label" id="loadingLabel">{% trans "Gathering information from sources..." %}</div>
+        <div class="dd-progress-loading" id="deepDiveProgress" style="display:none">
+            <div class="dd-progress-bar"><div class="dd-progress-bar-fill"></div></div>
+            <div class="dd-progress-steps"></div>
+        </div>
+    </div>
+
+    <div class="loading-error" id="loadingError">
+        {% trans "Generation error." %} <a href="{% url 'index' %}">{% trans "Back to digest" %}</a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>var RESEARCH_ITEM_ID = {{ item.id }};</script>
+<script src="{% static 'news/js/orbit-animation.js' %}"></script>
+<script src="{% static 'news/js/research-loading.js' %}"></script>
+{% endblock %}

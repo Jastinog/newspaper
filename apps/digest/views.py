@@ -1,85 +1,13 @@
 from django.db.models import Prefetch
-from django.shortcuts import get_object_or_404, redirect, render
+from django.shortcuts import get_object_or_404
 from django.urls import reverse
-from django.utils.translation import get_language, gettext_lazy as _
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 from apps.feed.models import Article, ArticleChunk, ArticleImage
 from apps.research.services.search import SimilaritySearch
 
-from .models import Digest, DigestItem
-
-SITE_NAME = _("Newspaper")
-SITE_DESCRIPTION = _("Daily AI-curated news digest from 100+ RSS sources worldwide")
-
-
-# ── Template Views ────────────────────────────────────────
-
-
-def _latest_digest(qs, date=None):
-    """Return the best-matching digest from a queryset, optionally filtered by date."""
-    prefetches = ("sections__items__image", "sections__items__articles__feed")
-    qs = qs.prefetch_related(*prefetches)
-    if date:
-        return qs.filter(date=date).first()
-    return qs.order_by("-date").first()
-
-
-def index(request, date=None):
-    from datetime import datetime as dt
-
-    current_lang = get_language() or "en"
-
-    parsed = None
-    if date:
-        try:
-            parsed = dt.strptime(date, "%Y-%m-%d").date()
-        except ValueError:
-            return redirect("index")
-
-    digest = _latest_digest(Digest.objects.filter(language__code=current_lang), date=parsed)
-
-    # Fallback to English if no digest for current language
-    if not digest and current_lang != "en":
-        digest = _latest_digest(Digest.objects.filter(language__code="en"), date=parsed)
-
-    # Prev/next navigation
-    prev_date = next_date = None
-    if digest:
-        prev_digest = Digest.objects.filter(language=digest.language, date__lt=digest.date).order_by("-date").only("date").first()
-        next_digest = Digest.objects.filter(language=digest.language, date__gt=digest.date).order_by("date").only("date").first()
-        if prev_digest:
-            prev_date = prev_digest.date
-        if next_digest:
-            next_date = next_digest.date
-
-    # Section filter
-    active_section = None
-    filtered_items = None
-    section_id = request.GET.get("section")
-    if digest and section_id:
-        for s in digest.sections.all():
-            if str(s.id) == section_id:
-                active_section = s
-                filtered_items = s.items.all()
-                break
-
-    seo = {
-        "title": f"{SITE_NAME} — {_('Daily News Digest')}",
-        "description": SITE_DESCRIPTION,
-        "canonical": request.build_absolute_uri("/"),
-        "og_type": "website",
-    }
-
-    return render(request, "news/index.html", {
-        "digest": digest,
-        "prev_date": prev_date,
-        "next_date": next_date,
-        "active_section": active_section,
-        "filtered_items": filtered_items,
-        "seo": seo,
-    })
+from .models import DigestItem
 
 
 # ── Similar Items API ─────────────────────────────────────

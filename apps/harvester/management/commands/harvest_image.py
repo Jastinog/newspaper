@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 
-from apps.crawler.services.downloader import ImageDownloader
+from apps.harvester.services.downloader import ImageDownloader
 
 
 class Command(BaseCommand):
@@ -22,9 +22,9 @@ class Command(BaseCommand):
             days=options["days"],
             stdout=self.stdout,
         )
-        processed, downloaded = downloader.download_new()
+        processed, downloaded, skipped = downloader.download_new()
         self.stdout.write(
             self.style.SUCCESS(
-                f"Processed {processed} articles, downloaded {downloaded} images"
+                f"Processed {processed} images, downloaded {downloaded}, skipped {skipped}"
             )
         )

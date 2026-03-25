@@ -1,11 +1,10 @@
-from django.db.models import Count, Prefetch
-from django.shortcuts import get_object_or_404, redirect, render
-from django.utils.translation import gettext_lazy as _
+from django.db.models import Count
+from django.shortcuts import get_object_or_404
 from rest_framework import generics
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from .models import Article, ArticleImage, Category, Feed
+from .models import Article, Category, Feed
 from .serializers import (
     ArticleDetailSerializer,
     ArticleListSerializer,
@@ -13,107 +12,6 @@ from .serializers import (
     CategorySerializer,
     FeedSerializer,
 )
-from .services.search import SearchService
-
-SITE_NAME = _("Newspaper")
-SITE_DESCRIPTION = _("Daily AI-curated news digest from 100+ RSS sources worldwide")
-
-
-# ── Template Views ────────────────────────────────────────
-
-
-def article_detail(request, pk, slug=""):
-    article = get_object_or_404(
-        Article.objects.select_related("feed", "feed__category"), pk=pk,
-    )
-    if article.slug and article.slug != slug:
-        return redirect(article.get_absolute_url(), permanent=True)
-
-    description = article.summary[:160] if article.summary else article.title
-    seo = {
-        "title": f"{article.title} — {SITE_NAME}",
-        "description": description,
-        "canonical": request.build_absolute_uri(article.get_absolute_url()),
-        "og_type": "article",
-        "published_time": article.published.isoformat() if article.published else "",
-        "section": article.feed.category.name if article.feed.category else "",
-    }
-
-    return render(request, "news/article.html", {"article": article, "seo": seo})
-
-
-def article_detail_redirect(request, pk):
-    article = get_object_or_404(Article, pk=pk)
-    return redirect(article.get_absolute_url(), permanent=True)
-
-
-def category_detail(request, slug):
-    category = get_object_or_404(Category, slug=slug)
-    articles = (
-        Article.objects
-        .filter(feed__category=category)
-        .select_related("feed")
-        .order_by("-published")[:100]
-    )
-
-    seo = {
-        "title": f"{category.name} — {SITE_NAME}",
-        "description": f"Latest {category.name} news from {SITE_NAME}",
-        "canonical": request.build_absolute_uri(category.get_absolute_url()),
-        "og_type": "website",
-    }
-
-    return render(request, "news/category.html", {
-        "category": category,
-        "articles": articles,
-        "seo": seo,
-    })
-
-
-def search(request):
-    query = request.GET.get("q", "").strip()
-
-    if not query:
-        seo = {
-            "title": f"{_('Search')} — {SITE_NAME}",
-            "description": SITE_DESCRIPTION,
-        }
-        return render(request, "news/search.html", {"query": "", "seo": seo})
-
-    sort = request.GET.get("sort", "date")
-    if sort not in ("date", "relevance"):
-        sort = "date"
-
-    service = SearchService()
-    results = service.search_articles(query, top_k=30, sort=sort)
-
-    seo = {
-        "title": f"{query} — {_('Search')} — {SITE_NAME}",
-        "description": f"{_('Search results for')} {query}",
-    }
-
-    return render(request, "news/search.html", {
-        "query": query,
-        "sort": sort,
-        "results": results.get("articles", []),
-        "queries": results.get("queries", []),
-        "elapsed_ms": results.get("elapsed_ms", 0),
-        "seo": seo,
-    })
-
-
-def robots_txt(request):
-    from django.http import HttpResponse
-    lines = [
-        "User-agent: *",
-        "Allow: /",
-        "Disallow: /admin/",
-        "Disallow: /api/",
-        "Disallow: /analytics/",
-        "",
-        f"Sitemap: {request.build_absolute_uri('/sitemap.xml')}",
-    ]
-    return HttpResponse("\n".join(lines), content_type="text/plain")
 
 
 # ── API Views ─────────────────────────────────────────────

@@ -9,9 +9,7 @@ urlpatterns = [
     path("api/", include("apps.feed.api_urls")),
     path("api/", include("apps.digest.api_urls")),
     path("analytics/", include("apps.analytics.urls")),
-    path("", include("apps.research.urls")),
-    path("", include("apps.feed.urls")),
-    path("", include("apps.digest.urls")),
+    path("", include("apps.core.urls")),
 ]
 
 if settings.DEBUG:
