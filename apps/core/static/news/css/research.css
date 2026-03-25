@@ -1,0 +1,184 @@
+/* === RESEARCH DETAIL PAGE === */
+/* Extends article.css — requires article.css to be loaded first */
+
+.research-badge {
+    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--accent);
+    text-align: center;
+    margin-bottom: 0.8rem;
+}
+
+.article-header .subtitle {
+    font-family: "PT Serif", Georgia, serif;
+    font-size: clamp(1rem, 2vw, 1.15rem);
+    font-style: italic;
+    color: var(--fg-dim);
+    line-height: 1.5;
+    margin-bottom: 0.8rem;
+}
+
+.article-content h2 {
+    font-family: "PT Serif", Georgia, serif;
+    font-size: clamp(1.15rem, 2.5vw, 1.4rem);
+    font-weight: 700;
+    margin: 2rem 0 0.8rem;
+    line-height: 1.3;
+    text-shadow: var(--emboss-subtle);
+}
+
+.article-content h3 {
+    font-family: "PT Serif", Georgia, serif;
+    font-size: clamp(1rem, 2vw, 1.15rem);
+    font-weight: 700;
+    margin: 1.5rem 0 0.6rem;
+    line-height: 1.35;
+    text-shadow: var(--emboss-subtle);
+}
+
+.article-content p {
+    margin-bottom: 1rem;
+}
+
+.article-content ul, .article-content ol {
+    margin: 0.5rem 0 1rem 1.5rem;
+}
+
+.article-content li {
+    margin-bottom: 0.3rem;
+}
+
+.article-content blockquote {
+    border-left: 3px solid var(--accent);
+    padding-left: 1rem;
+    margin: 1rem 0;
+    color: var(--fg-dim);
+    font-style: italic;
+}
+
+/* Sources section */
+.research-sources {
+    max-width: 680px;
+    margin: 2.5rem auto 0;
+    padding-top: 1.5rem;
+    border-top: 2px solid var(--border);
+}
+
+.research-sources h2 {
+    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--fg-muted);
+    margin-bottom: 0.8rem;
+}
+
+.research-sources ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.research-sources li {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border-faint);
+    font-size: 0.9rem;
+}
+
+.research-sources li:last-child {
+    border-bottom: none;
+}
+
+.source-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.research-sources li a {
+    color: var(--link);
+    text-decoration: none;
+}
+.research-sources li a:hover {
+    text-decoration: underline;
+}
+
+.research-sources .source-feed {
+    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    font-size: 0.7rem;
+    color: var(--fg-faint);
+}
+
+.lean-badge {
+    display: inline-block;
+    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    font-size: 0.55rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0.1rem 0.35rem;
+    border-radius: 2px;
+    vertical-align: middle;
+    margin-left: 0.3rem;
+    color: #fff;
+}
+.lean-badge.lean-left { background: #2962ff; }
+.lean-badge.lean-center_left { background: #42a5f5; }
+.lean-badge.lean-center { background: #9e9e9e; }
+.lean-badge.lean-center_right { background: #ef6c00; }
+.lean-badge.lean-right { background: #c62828; }
+
+.source-relevance {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    font-size: 0.7rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--fg-muted);
+    min-width: 7rem;
+    justify-content: flex-end;
+}
+
+.relevance-bar {
+    width: 5rem;
+    height: 4px;
+    border-radius: 2px;
+    background: linear-gradient(
+        to right,
+        var(--accent) var(--fill),
+        var(--border) var(--fill)
+    );
+}
+
+.research-back {
+    max-width: 680px;
+    margin: 2rem auto 0;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.research-back a {
+    color: var(--link);
+    text-decoration: none;
+}
+.research-back a:hover {
+    text-decoration: underline;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+    .research-sources { margin-top: 1.5rem; padding-top: 1rem; }
+}
