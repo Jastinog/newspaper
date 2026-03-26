@@ -159,10 +159,18 @@ STAGE_FIELDS = [
 STAGE_FIELD_NAMES = frozenset(name for name, _ in STAGE_FIELDS)
 
 
+# Pipeline event stage keys — single source of truth for Python side.
+STAGE_FEED = "feed"
+STAGE_RSS_IMG = "rss_img"
+STAGE_EXTRACT = "extract"
+STAGE_OG_IMG = "og_img"
+STAGE_EMBED = "embed"
+
+
 class PipelineEvent(models.Model):
     """Individual pipeline stage execution for timeline visualization."""
 
-    stage = models.CharField(max_length=20, db_index=True)
+    stage = models.CharField(max_length=20)
     started_at = models.DateTimeField(db_index=True)
     finished_at = models.DateTimeField()
     duration_ms = models.PositiveIntegerField()
@@ -170,4 +178,3 @@ class PipelineEvent(models.Model):
 
     class Meta:
         ordering = ["-started_at"]
-        indexes = [models.Index(fields=["-started_at", "stage"])]

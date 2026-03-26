@@ -76,7 +76,7 @@ def _build_timeline_data(now, minutes=5):
         PipelineEvent.objects
         .filter(started_at__gte=window_start)
         .values("stage", "started_at", "finished_at", "duration_ms", "success")
-        .order_by("started_at")
+        .order_by("started_at")[:2000]
     )
     return json.dumps({
         "window_start": window_start.timestamp() * 1000,

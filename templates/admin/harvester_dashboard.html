@@ -714,11 +714,10 @@ function renderTimeline(raw) {
     var sum = document.createElement("div");
     sum.className = "tl-summary";
     sum.textContent = total + " operations" + (errs > 0 ? " \u00b7 " + errs + " errors" : "");
-    if (errs > 0) { sum.style.color = ""; }
+    if (errs > 0) sum.style.color = "#ef4444";
     frag.appendChild(sum);
 
-    while (el.firstChild) el.removeChild(el.firstChild);
-    el.appendChild(frag);
+    el.replaceChildren(frag);
 }
 
 renderTimeline({{ timeline_data|safe }});

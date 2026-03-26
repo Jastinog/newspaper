@@ -11,7 +11,10 @@ from apps.billing.models import APIUsage
 from apps.core.services.ai import EMBEDDING_MODEL, EmbeddingClient, calculate_cost
 from apps.core.services.ai.embeddings import BATCH_SIZE
 from apps.feed.models import Article, ArticleChunk, ArticleImage, ArticleImageSource, ArticlePipeline, Feed
-from apps.harvester.models import HarvesterFeed, PipelineEvent, PipelineSettings, RunStatus
+from apps.harvester.models import (
+    HarvesterFeed, PipelineEvent, PipelineSettings, RunStatus,
+    STAGE_EMBED, STAGE_EXTRACT, STAGE_FEED, STAGE_OG_IMG, STAGE_RSS_IMG,
+)
 
 from .chunker import chunk_text
 from .downloader import download_and_resize, save_image_result, select_primary_image
@@ -41,19 +44,6 @@ def _cutoff_days():
     return timezone.now() - timedelta(days=DAYS_LOOKBACK)
 
 
-def _resolve_stage(fn, args):
-    name = fn.__name__
-    if name == "_embed_one":
-        return "embed"
-    if name == "_extract_one":
-        return "extract"
-    if name == "_fetch_one_feed":
-        return "feed"
-    if name == "_download_image":
-        return "og_img" if args and args[0] == "og-image" else "rss_img"
-    return "unknown"
-
-
 def _record_event(stage, started_at, success):
     finished_at = timezone.now()
     duration_ms = max(1, int((finished_at - started_at).total_seconds() * 1000))
@@ -66,10 +56,9 @@ def _record_event(stage, started_at, success):
         logger.debug("Failed to record pipeline event", exc_info=True)
 
 
-def _run_stage(fn, *args, **kwargs):
+def _run_stage(stage, fn, *args, **kwargs):
     """Run a pipeline stage in a worker thread with DB connection management."""
     close_old_connections()
-    stage = _resolve_stage(fn, args)
     started_at = timezone.now()
     try:
         result = fn(*args, **kwargs)
@@ -80,6 +69,19 @@ def _run_stage(fn, *args, **kwargs):
         logger.exception("Pipeline stage %s failed", fn.__name__)
         _record_event(stage, started_at, success=False)
         return False
+    finally:
+        close_old_connections()
+
+
+def _cleanup_old_events():
+    """Delete stale PipelineEvent rows (runs in a worker thread)."""
+    close_old_connections()
+    try:
+        PipelineEvent.objects.filter(
+            started_at__lt=timezone.now() - timedelta(hours=1),
+        ).delete()
+    except Exception:
+        logger.debug("Failed to clean up pipeline events", exc_info=True)
     finally:
         close_old_connections()
 
@@ -125,28 +127,31 @@ class HarvestManager:
         now_mono = time.monotonic()
         if now_mono - self._last_cleanup > 300:
             self._last_cleanup = now_mono
-            PipelineEvent.objects.filter(
-                started_at__lt=timezone.now() - timedelta(hours=1),
-            ).delete()
+            self._executor.submit(_cleanup_old_events)
 
         s = PipelineSettings.load()
         futures = []
 
         if s.enable_embedding:
-            futures.append(self._executor.submit(_run_stage, self._embed_one))
+            futures.append(self._executor.submit(
+                _run_stage, STAGE_EMBED, self._embed_one))
         if s.enable_og_image_download:
             futures.append(self._executor.submit(
-                _run_stage, self._download_image, "og-image", "og_images_at",
+                _run_stage, STAGE_OG_IMG, self._download_image,
+                "og-image", "og_images_at",
                 article__pipeline__content_extracted_at__isnull=False,
             ))
         if s.enable_content_extraction:
-            futures.append(self._executor.submit(_run_stage, self._extract_one))
+            futures.append(self._executor.submit(
+                _run_stage, STAGE_EXTRACT, self._extract_one))
         if s.enable_rss_image_download:
             futures.append(self._executor.submit(
-                _run_stage, self._download_image, "rss-image", "rss_images_at",
+                _run_stage, STAGE_RSS_IMG, self._download_image,
+                "rss-image", "rss_images_at",
             ))
         if s.enable_feed_fetching:
-            futures.append(self._executor.submit(_run_stage, self._fetch_one_feed))
+            futures.append(self._executor.submit(
+                _run_stage, STAGE_FEED, self._fetch_one_feed))
 
         if not futures:
             return False
