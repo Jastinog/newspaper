@@ -374,6 +374,11 @@
     flex: 1 1 0%;
 }
 .dark .tl-track { background: rgba(255,255,255,0.03); }
+a.tl-bar {
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+}
 .tl-bar {
     position: absolute;
     top: 2px;
@@ -696,12 +701,17 @@ function renderTimeline(raw) {
             var left = Math.max(0, (ev.start - wS) / wMs * 100);
             var w = Math.max(0.15, (ev.end - ev.start) / wMs * 100);
             w = Math.min(w, 100 - left);
-            var bar = document.createElement("div");
+            var bar = document.createElement(ev.article_url ? "a" : "div");
             bar.className = "tl-bar";
+            if (ev.article_url) {
+                bar.href = ev.article_url;
+                bar.target = "_blank";
+            }
             bar.style.left = left + "%";
             bar.style.width = w + "%";
             bar.style.backgroundColor = ev.ok ? cfg.color : "rgba(239,68,68,0.85)";
-            bar.title = cfg.label + ": " + ev.duration_ms + "ms" + (ev.ok ? "" : " ERROR");
+            bar.title = cfg.label + ": " + ev.duration_ms + "ms" + (ev.ok ? "" : " ERROR")
+                + (ev.article_id ? " (article #" + ev.article_id + ")" : "");
             track.appendChild(bar);
         });
         row.appendChild(track);

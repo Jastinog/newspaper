@@ -1,6 +1,6 @@
 import logging
 import time
-from concurrent.futures import ThreadPoolExecutor, wait
+from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import timedelta
 
 from django.db import close_old_connections
@@ -44,13 +44,13 @@ def _cutoff_days():
     return timezone.now() - timedelta(days=DAYS_LOOKBACK)
 
 
-def _record_event(stage, started_at, success):
+def _record_event(stage, started_at, success, article_id=None):
     finished_at = timezone.now()
     duration_ms = max(1, int((finished_at - started_at).total_seconds() * 1000))
     try:
         PipelineEvent.objects.create(
             stage=stage, started_at=started_at, finished_at=finished_at,
-            duration_ms=duration_ms, success=success,
+            duration_ms=duration_ms, success=success, article_id=article_id,
         )
     except Exception:
         logger.debug("Failed to record pipeline event", exc_info=True)
@@ -63,7 +63,8 @@ def _run_stage(stage, fn, *args, **kwargs):
     try:
         result = fn(*args, **kwargs)
         if result:
-            _record_event(stage, started_at, success=True)
+            article_id = result if isinstance(result, int) else None
+            _record_event(stage, started_at, success=True, article_id=article_id)
         return result
     except Exception:
         logger.exception("Pipeline stage %s failed", fn.__name__)
@@ -87,13 +88,13 @@ def _cleanup_old_events():
 
 
 class HarvestManager:
-    """Article-centric pipeline that dispatches all stages concurrently.
+    """Article-centric pipeline with independent, non-blocking stages.
 
     Pipeline per article:
       fetch -> download RSS image -> extract content -> download OG image -> embed -> completed
 
-    All enabled stages run in parallel each cycle, so embedding does not
-    block downloads, extractions, or feed fetching.
+    Each stage runs independently: when one finishes, it is re-submitted
+    immediately without waiting for slower stages to complete.
     """
 
     def __init__(self):
@@ -103,6 +104,8 @@ class HarvestManager:
             max_workers=MAX_WORKERS, thread_name_prefix="harvest",
         )
         self._last_cleanup = 0.0
+        self._running: dict[str, Future] = {}
+        self._stage_idle: dict[str, float] = {}
         _instance = self
 
     @property
@@ -116,48 +119,58 @@ class HarvestManager:
                 if not self.is_active:
                     time.sleep(IDLE_SLEEP)
                     continue
-                did_work = self.dispatch()
-                time.sleep(WORK_SLEEP if did_work else IDLE_SLEEP)
+                self.dispatch()
+                time.sleep(WORK_SLEEP if self._running else IDLE_SLEEP)
             except Exception:
                 logger.exception("HarvestManager error")
                 time.sleep(ERROR_SLEEP)
 
-    def dispatch(self) -> bool:
-        """Submit all enabled stages concurrently and wait for completion."""
+    def dispatch(self) -> None:
+        """Submit enabled stages and collect results without blocking.
+
+        Each stage runs independently: as soon as one finishes, it is
+        re-submitted on the next tick (~50 ms) without waiting for the others.
+        Stages that found no work back off for IDLE_SLEEP before retrying.
+        """
         now_mono = time.monotonic()
         if now_mono - self._last_cleanup > 300:
             self._last_cleanup = now_mono
             self._executor.submit(_cleanup_old_events)
 
+        # Harvest results from completed futures
+        for stage in list(self._running):
+            future = self._running[stage]
+            if future.done():
+                try:
+                    if not future.result():
+                        self._stage_idle[stage] = now_mono
+                except Exception:
+                    pass
+                del self._running[stage]
+
+        # Submit new work for stages that aren't currently running
         s = PipelineSettings.load()
-        futures = []
 
-        if s.enable_embedding:
-            futures.append(self._executor.submit(
-                _run_stage, STAGE_EMBED, self._embed_one))
-        if s.enable_og_image_download:
-            futures.append(self._executor.submit(
-                _run_stage, STAGE_OG_IMG, self._download_image,
-                "og-image", "og_images_at",
-                article__pipeline__content_extracted_at__isnull=False,
-            ))
-        if s.enable_content_extraction:
-            futures.append(self._executor.submit(
-                _run_stage, STAGE_EXTRACT, self._extract_one))
-        if s.enable_rss_image_download:
-            futures.append(self._executor.submit(
-                _run_stage, STAGE_RSS_IMG, self._download_image,
-                "rss-image", "rss_images_at",
-            ))
-        if s.enable_feed_fetching:
-            futures.append(self._executor.submit(
-                _run_stage, STAGE_FEED, self._fetch_one_feed))
-
-        if not futures:
-            return False
-
-        done, _ = wait(futures)
-        return any(f.result() for f in done)
+        for stage, enabled, fn, args, kwargs in [
+            (STAGE_EMBED, s.enable_embedding,
+             self._embed_one, (), {}),
+            (STAGE_OG_IMG, s.enable_og_image_download,
+             self._download_image, ("og-image", "og_images_at"),
+             {"article__pipeline__content_extracted_at__isnull": False}),
+            (STAGE_EXTRACT, s.enable_content_extraction,
+             self._extract_one, (), {}),
+            (STAGE_RSS_IMG, s.enable_rss_image_download,
+             self._download_image, ("rss-image", "rss_images_at"), {}),
+            (STAGE_FEED, s.enable_feed_fetching,
+             self._fetch_one_feed, (), {}),
+        ]:
+            if not enabled or stage in self._running:
+                continue
+            if now_mono - self._stage_idle.get(stage, 0) < IDLE_SLEEP:
+                continue
+            self._running[stage] = self._executor.submit(
+                _run_stage, stage, fn, *args, **kwargs)
+            self._stage_idle.pop(stage, None)
 
     # ------------------------------------------------------------------
     # Stage 1 (highest priority): Embed one article -> mark completed
@@ -207,7 +220,7 @@ class HarvestManager:
                 )
         except Exception as e:
             logger.warning("Embed failed for article %s: %s", article.id, e)
-            return True
+            return False
 
         chunk_objects = [
             ArticleChunk(
@@ -221,7 +234,7 @@ class HarvestManager:
         ]
         ArticleChunk.objects.bulk_create(chunk_objects, ignore_conflicts=True)
         logger.info("Embedded article %s (%d chunks, %d tokens)", article.id, len(chunks), total_tokens)
-        return True
+        return article.id
 
     # ------------------------------------------------------------------
     # Stages 2 & 4: Download one image (OG or RSS)
@@ -266,7 +279,7 @@ class HarvestManager:
                 logger.info("Downloaded %s %s from %s", source_slug, img_id, domain)
             finally:
                 release_domain(domain)
-            return True
+            return article_id
 
         return False
 
@@ -302,7 +315,7 @@ class HarvestManager:
                 logger.info("Extracted article %s from %s", article_id, domain)
             finally:
                 release_domain(domain)
-            return True
+            return aid
 
         return False
 

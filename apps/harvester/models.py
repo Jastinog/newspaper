@@ -171,6 +171,7 @@ class PipelineEvent(models.Model):
     """Individual pipeline stage execution for timeline visualization."""
 
     stage = models.CharField(max_length=20)
+    article_id = models.PositiveIntegerField(null=True, blank=True)
     started_at = models.DateTimeField(db_index=True)
     finished_at = models.DateTimeField()
     duration_ms = models.PositiveIntegerField()

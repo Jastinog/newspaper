@@ -3,6 +3,7 @@ from datetime import timedelta
 
 from django.db.models import Count, Q, Sum
 from django.db.models.functions import TruncDate, TruncMinute
+from django.urls import reverse
 from django.utils import timezone
 
 from apps.feed.models import Article, ArticlePipeline, Feed
@@ -75,7 +76,7 @@ def _build_timeline_data(now, minutes=5):
     events = list(
         PipelineEvent.objects
         .filter(started_at__gte=window_start)
-        .values("stage", "started_at", "finished_at", "duration_ms", "success")
+        .values("stage", "started_at", "finished_at", "duration_ms", "success", "article_id")
         .order_by("started_at")[:2000]
     )
     return json.dumps({
@@ -88,6 +89,11 @@ def _build_timeline_data(now, minutes=5):
                 "end": e["finished_at"].timestamp() * 1000,
                 "duration_ms": e["duration_ms"],
                 "ok": e["success"],
+                "article_id": e["article_id"],
+                "article_url": (
+                    reverse("admin:feed_article_change", args=[e["article_id"]])
+                    if e["article_id"] else None
+                ),
             }
             for e in events
         ],

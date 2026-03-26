@@ -22,7 +22,7 @@ from .throttle import acquire_domain, release_domain
 logger = logging.getLogger(__name__)
 
 TIMEOUT = 20
-MAX_FILE_SIZE = 15 * 1024 * 1024  # 15 MB
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 MIN_DIMENSION = 100  # skip tracking pixels
 DOWNLOAD_BATCH_SIZE = 10
 
