@@ -10,6 +10,8 @@
     var itemId = window.RESEARCH_ITEM_ID;
     if (!itemId) return;
 
+    var langPrefix = document.body.dataset.langPrefix || '';
+
     var STEP_DEFS = [
         { icon: '\u2049', label: 'Search queries' },
         { icon: '\u27A4', label: 'Embeddings' },
@@ -84,7 +86,7 @@
         var inProgress = msg.generating || [];
 
         if (ready.indexOf(itemId) !== -1) {
-            window.location.href = '/research/' + itemId + '/';
+            window.location.href = langPrefix + '/research/' + itemId + '/';
             return;
         }
 
@@ -103,7 +105,7 @@
     });
 
     WS.on('research.ready', function (msg) {
-        if (msg.item_id === itemId) window.location.href = msg.url;
+        if (msg.item_id === itemId) window.location.href = langPrefix + '/research/' + itemId + '/';
     });
 
     WS.on('research.error', function (msg) {

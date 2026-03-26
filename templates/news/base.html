@@ -41,7 +41,7 @@
     <link rel="stylesheet" href="{% static 'news/css/layout.css' %}">
     {% block extra_css %}{% endblock %}
 </head>
-<body data-error-generation="{% trans "Generation error" %}" data-dd-ready="{% trans "Deep dive ready" %}" data-dd-read="{% trans "Read" %}" data-dd-close="{% trans "Close" %}" data-similar-label="{% trans "Similar news" %}" data-similar-empty="{% trans "No similar news found" %}" data-similar-sources="{% trans "Source articles" %}" data-similar-current="{% trans "Current" %}" data-similar-digest="{% trans "Digest news" %}" data-similar-articles="{% trans "Articles" %}" data-similar-loading="{% trans "Loading…" %}">
+<body data-lang-prefix="/{{ LANGUAGE_CODE }}" data-error-generation="{% trans "Generation error" %}" data-dd-ready="{% trans "Deep dive ready" %}" data-dd-read="{% trans "Read" %}" data-dd-close="{% trans "Close" %}" data-similar-label="{% trans "Similar news" %}" data-similar-empty="{% trans "No similar news found" %}" data-similar-sources="{% trans "Source articles" %}" data-similar-current="{% trans "Current" %}" data-similar-digest="{% trans "Digest news" %}" data-similar-articles="{% trans "Articles" %}" data-similar-loading="{% trans "Loading…" %}">
     <header>
         <div class="masthead-rule-top"></div>
         <div class="container">
@@ -57,7 +57,7 @@
                     </form>
                 </div>
                 <div class="masthead-date">{% block masthead_date %}{% now "l, F j, Y" %}{% endblock %}</div>
-                <div class="site-title"><a href="/">{% trans "Newspaper" %}</a></div>
+                <div class="site-title"><a href="{% url 'index' %}">{% trans "Newspaper" %}</a></div>
                 <div class="masthead-subtitle">{% trans "Daily News Digest" %}</div>
                 <button class="theme-toggle" onclick="toggleTheme()" title="{% trans "Toggle dark/light theme" %}" aria-label="{% trans "Toggle theme" %}">
                     <span class="theme-icon"></span>

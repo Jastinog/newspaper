@@ -24,6 +24,7 @@
 
     /* ── State ────────────────────────────────────────── */
 
+    var langPrefix = bodyData('langPrefix', '');
     var pending = {};
 
     var STEP_ICONS = {
@@ -169,7 +170,7 @@
             if (!p.url && !p.error) {
                 var id = parseInt(keys[i], 10);
                 if (readyIds.indexOf(id) !== -1) {
-                    p.url = '/research/' + id + '/';
+                    p.url = langPrefix + '/research/' + id + '/';
                     cleanupProgress(id);
                     markReady(id);
                 } else {
@@ -194,11 +195,12 @@
 
         if (!hasPending(msg.item_id)) return;
         var p = pending[msg.item_id];
-        p.url = msg.url;
+        var url = langPrefix + '/research/' + msg.item_id + '/';
+        p.url = url;
         p.step = p.totalSteps || 6;
 
         cleanupProgress(msg.item_id);
-        showModal(p, msg.url);
+        showModal(p, url);
 
         delete pending[msg.item_id];
     });

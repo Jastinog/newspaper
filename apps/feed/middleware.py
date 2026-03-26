@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.shortcuts import redirect
+from django.utils.translation import get_language
 
 from apps.analytics.utils import get_client_ip, resolve_geo
 
@@ -57,5 +58,6 @@ class Redirect404Middleware:
             response.status_code == 404
             and not any(request.path.startswith(p) for p in _NO_REDIRECT_PREFIXES)
         ):
-            return redirect("/")
+            lang = get_language() or settings.LANGUAGE_CODE
+            return redirect(f"/{lang}/")
         return response

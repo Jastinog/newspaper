@@ -12,6 +12,10 @@ urlpatterns = [
     path("search/", views.search, name="search"),
     path("research/<int:item_id>/", views.research, name="research"),
     path("category/<slug:slug>/", views.category_detail, name="category_detail"),
+]
+
+# These should NOT be language-prefixed
+seo_urlpatterns = [
     path("robots.txt", views.robots_txt, name="robots_txt"),
     path(
         "sitemap.xml",
