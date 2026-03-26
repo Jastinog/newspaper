@@ -185,6 +185,14 @@
     {% endcomponent %}
 </div>
 
+{# --- Pipeline Timeline --- #}
+<div class="mb-8">
+    {% component "unfold/components/card.html" with title="Pipeline Timeline (last 5 minutes)" %}
+    <div id="pipeline-timeline" style="min-height: 170px; font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;">
+    </div>
+    {% endcomponent %}
+</div>
+
 {# --- KPI Cards --- #}
 <div class="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
     {% component "unfold/components/card.html" with title="Articles Today" %}
@@ -353,6 +361,56 @@
         </div>
     {% endcomponent %}
 </div>
+
+<style>
+/* ── Timeline swimlane ─────────────────────────────────── */
+.tl-track {
+    position: relative;
+    height: 22px;
+    border-radius: 4px;
+    background: rgba(128,128,128,0.05);
+    min-width: 0;
+    overflow: hidden;
+    flex: 1 1 0%;
+}
+.dark .tl-track { background: rgba(255,255,255,0.03); }
+.tl-bar {
+    position: absolute;
+    top: 2px;
+    bottom: 2px;
+    border-radius: 2px;
+    min-width: 2px;
+    transition: opacity 0.15s;
+    cursor: default;
+}
+.tl-bar:hover { opacity: 0.7; }
+.tl-label {
+    width: 64px;
+    flex-shrink: 0;
+    text-align: right;
+    padding-right: 10px;
+    font-size: 11px;
+    color: #6b7280;
+    white-space: nowrap;
+}
+.dark .tl-label { color: #9ca3af; }
+.tl-axis {
+    margin-left: 64px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: #9ca3af;
+}
+.dark .tl-axis { color: #6b7280; }
+.tl-summary {
+    margin-left: 64px;
+    margin-top: 6px;
+    font-size: 11px;
+    color: #9ca3af;
+}
+.dark .tl-summary { color: #6b7280; }
+.tl-row { display: flex; align-items: center; margin-bottom: 3px; }
+</style>
 
 <script>
 var TOGGLE_URL = "{% url 'harvester_toggle' %}";
@@ -559,6 +617,9 @@ function updatePipelineUI(active, running) {
                 updateChart(wrapId, data[CHART_MAP[wrapId]]);
             }
 
+            // Timeline
+            if (data.timeline_data) renderTimeline(data.timeline_data);
+
             // Tables
             updateProblemFeeds(data.problem_feeds);
             updateRecentErrors(data.recent_errors);
@@ -582,6 +643,85 @@ function updatePipelineUI(active, running) {
 
     setInterval(refresh, INTERVAL);
 })();
+
+/* ── Timeline renderer ──────────────────────────────────── */
+var TL_STAGES = [
+    {key: "feed",    label: "Feed",    color: "rgba(59,130,246,0.82)"},
+    {key: "rss_img", label: "RSS Img", color: "rgba(245,158,11,0.82)"},
+    {key: "extract", label: "Extract", color: "rgba(16,185,129,0.82)"},
+    {key: "og_img",  label: "OG Img",  color: "rgba(139,92,246,0.82)"},
+    {key: "embed",   label: "Embed",   color: "rgba(6,182,212,0.82)"},
+];
+
+function renderTimeline(raw) {
+    var el = document.getElementById("pipeline-timeline");
+    if (!el || !raw) return;
+    var d = (typeof raw === "string") ? JSON.parse(raw) : raw;
+    var wS = d.window_start, wE = d.window_end, wMs = wE - wS;
+    if (wMs <= 0) return;
+
+    var groups = {};
+    TL_STAGES.forEach(function(s) { groups[s.key] = []; });
+    d.events.forEach(function(ev) {
+        if (groups[ev.stage]) groups[ev.stage].push(ev);
+    });
+
+    /* Time axis */
+    var ax = document.createElement("div");
+    ax.className = "tl-axis mb-2";
+    for (var i = 0; i <= 5; i++) {
+        var t = new Date(wS + wMs * i / 5);
+        var sp = document.createElement("span");
+        sp.textContent = t.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit", second:"2-digit"});
+        ax.appendChild(sp);
+    }
+
+    /* Swimlane rows */
+    var frag = document.createDocumentFragment();
+    frag.appendChild(ax);
+
+    TL_STAGES.forEach(function(cfg) {
+        var row = document.createElement("div");
+        row.className = "tl-row";
+
+        var lbl = document.createElement("div");
+        lbl.className = "tl-label";
+        lbl.textContent = cfg.label;
+        row.appendChild(lbl);
+
+        var track = document.createElement("div");
+        track.className = "tl-track";
+
+        groups[cfg.key].forEach(function(ev) {
+            var left = Math.max(0, (ev.start - wS) / wMs * 100);
+            var w = Math.max(0.15, (ev.end - ev.start) / wMs * 100);
+            w = Math.min(w, 100 - left);
+            var bar = document.createElement("div");
+            bar.className = "tl-bar";
+            bar.style.left = left + "%";
+            bar.style.width = w + "%";
+            bar.style.backgroundColor = ev.ok ? cfg.color : "rgba(239,68,68,0.85)";
+            bar.title = cfg.label + ": " + ev.duration_ms + "ms" + (ev.ok ? "" : " ERROR");
+            track.appendChild(bar);
+        });
+        row.appendChild(track);
+        frag.appendChild(row);
+    });
+
+    /* Summary */
+    var total = d.events.length;
+    var errs = d.events.filter(function(e) { return !e.ok; }).length;
+    var sum = document.createElement("div");
+    sum.className = "tl-summary";
+    sum.textContent = total + " operations" + (errs > 0 ? " \u00b7 " + errs + " errors" : "");
+    if (errs > 0) { sum.style.color = ""; }
+    frag.appendChild(sum);
+
+    while (el.firstChild) el.removeChild(el.firstChild);
+    el.appendChild(frag);
+}
+
+renderTimeline({{ timeline_data|safe }});
 </script>
 
 {% endblock %}

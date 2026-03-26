@@ -157,3 +157,17 @@ STAGE_FIELDS = [
     ("enable_embedding", "Embedding"),
 ]
 STAGE_FIELD_NAMES = frozenset(name for name, _ in STAGE_FIELDS)
+
+
+class PipelineEvent(models.Model):
+    """Individual pipeline stage execution for timeline visualization."""
+
+    stage = models.CharField(max_length=20, db_index=True)
+    started_at = models.DateTimeField(db_index=True)
+    finished_at = models.DateTimeField()
+    duration_ms = models.PositiveIntegerField()
+    success = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["-started_at"]
+        indexes = [models.Index(fields=["-started_at", "stage"])]

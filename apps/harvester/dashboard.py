@@ -7,7 +7,7 @@ from django.utils import timezone
 
 from apps.feed.models import Article, ArticlePipeline, Feed
 from apps.harvester.models import (
-    PipelineSettings, STAGE_FIELDS,
+    PipelineSettings, PipelineEvent, STAGE_FIELDS,
     HarvesterContent,
     HarvesterEmbedding,
     HarvesterFeed,
@@ -68,6 +68,30 @@ def _line_ds(label, data, color):
 
 def _chart(labels, datasets):
     return json.dumps({"labels": labels, "datasets": datasets})
+
+
+def _build_timeline_data(now, minutes=5):
+    window_start = now - timedelta(minutes=minutes)
+    events = list(
+        PipelineEvent.objects
+        .filter(started_at__gte=window_start)
+        .values("stage", "started_at", "finished_at", "duration_ms", "success")
+        .order_by("started_at")
+    )
+    return json.dumps({
+        "window_start": window_start.timestamp() * 1000,
+        "window_end": now.timestamp() * 1000,
+        "events": [
+            {
+                "stage": e["stage"],
+                "start": e["started_at"].timestamp() * 1000,
+                "end": e["finished_at"].timestamp() * 1000,
+                "duration_ms": e["duration_ms"],
+                "ok": e["success"],
+            }
+            for e in events
+        ],
+    })
 
 
 def build_harvester_context(request):
@@ -424,4 +448,6 @@ def build_harvester_context(request):
         # Tables
         "problem_feeds": problem_feeds,
         "recent_errors": recent_errors,
+        # Timeline
+        "timeline_data": _build_timeline_data(now),
     }

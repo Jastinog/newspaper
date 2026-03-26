@@ -1,7 +1,9 @@
 import logging
 import time
+from concurrent.futures import ThreadPoolExecutor, wait
 from datetime import timedelta
 
+from django.db import close_old_connections
 from django.db.models import Q
 from django.utils import timezone
 
@@ -9,7 +11,7 @@ from apps.billing.models import APIUsage
 from apps.core.services.ai import EMBEDDING_MODEL, EmbeddingClient, calculate_cost
 from apps.core.services.ai.embeddings import BATCH_SIZE
 from apps.feed.models import Article, ArticleChunk, ArticleImage, ArticleImageSource, ArticlePipeline, Feed
-from apps.harvester.models import HarvesterFeed, PipelineSettings, RunStatus
+from apps.harvester.models import HarvesterFeed, PipelineEvent, PipelineSettings, RunStatus
 
 from .chunker import chunk_text
 from .downloader import download_and_resize, save_image_result, select_primary_image
@@ -20,12 +22,13 @@ from .throttle import acquire_domain, release_domain
 
 logger = logging.getLogger(__name__)
 
-IDLE_SLEEP = 5
-WORK_SLEEP = 0.5
+IDLE_SLEEP = 1        # seconds – quick re-check when no work found
+WORK_SLEEP = 0.05     # seconds – minimal pause between busy cycles
 ERROR_SLEEP = 10
 FEED_INTERVAL_MINUTES = 10
 CANDIDATE_POOL = 30
 DAYS_LOOKBACK = 30
+MAX_WORKERS = 6       # concurrent stage threads
 
 _instance: "HarvestManager | None" = None
 
@@ -38,23 +41,66 @@ def _cutoff_days():
     return timezone.now() - timedelta(days=DAYS_LOOKBACK)
 
 
+def _resolve_stage(fn, args):
+    name = fn.__name__
+    if name == "_embed_one":
+        return "embed"
+    if name == "_extract_one":
+        return "extract"
+    if name == "_fetch_one_feed":
+        return "feed"
+    if name == "_download_image":
+        return "og_img" if args and args[0] == "og-image" else "rss_img"
+    return "unknown"
+
+
+def _record_event(stage, started_at, success):
+    finished_at = timezone.now()
+    duration_ms = max(1, int((finished_at - started_at).total_seconds() * 1000))
+    try:
+        PipelineEvent.objects.create(
+            stage=stage, started_at=started_at, finished_at=finished_at,
+            duration_ms=duration_ms, success=success,
+        )
+    except Exception:
+        logger.debug("Failed to record pipeline event", exc_info=True)
+
+
+def _run_stage(fn, *args, **kwargs):
+    """Run a pipeline stage in a worker thread with DB connection management."""
+    close_old_connections()
+    stage = _resolve_stage(fn, args)
+    started_at = timezone.now()
+    try:
+        result = fn(*args, **kwargs)
+        if result:
+            _record_event(stage, started_at, success=True)
+        return result
+    except Exception:
+        logger.exception("Pipeline stage %s failed", fn.__name__)
+        _record_event(stage, started_at, success=False)
+        return False
+    finally:
+        close_old_connections()
+
+
 class HarvestManager:
-    """Article-centric pipeline that processes one unit of work at a time.
+    """Article-centric pipeline that dispatches all stages concurrently.
 
     Pipeline per article:
       fetch -> download RSS image -> extract content -> download OG image -> embed -> completed
 
-    Priority order (finish articles before starting new ones):
-      1. embed         -- no domain needed, finishes the article
-      2. download OG   -- after content extracted
-      3. extract       -- advances fresh articles
-      4. download RSS  -- right after fetch
-      5. fetch feed    -- brings new articles into the pipeline
+    All enabled stages run in parallel each cycle, so embedding does not
+    block downloads, extractions, or feed fetching.
     """
 
     def __init__(self):
         global _instance
         self._og_source = None
+        self._executor = ThreadPoolExecutor(
+            max_workers=MAX_WORKERS, thread_name_prefix="harvest",
+        )
+        self._last_cleanup = 0.0
         _instance = self
 
     @property
@@ -75,17 +121,38 @@ class HarvestManager:
                 time.sleep(ERROR_SLEEP)
 
     def dispatch(self) -> bool:
+        """Submit all enabled stages concurrently and wait for completion."""
+        now_mono = time.monotonic()
+        if now_mono - self._last_cleanup > 300:
+            self._last_cleanup = now_mono
+            PipelineEvent.objects.filter(
+                started_at__lt=timezone.now() - timedelta(hours=1),
+            ).delete()
+
         s = PipelineSettings.load()
-        return (
-            (s.enable_embedding and self._embed_one())
-            or (s.enable_og_image_download and self._download_image(
-                "og-image", "og_images_at",
-                article__pipeline__content_extracted_at__isnull=False))
-            or (s.enable_content_extraction and self._extract_one())
-            or (s.enable_rss_image_download and self._download_image(
-                "rss-image", "rss_images_at"))
-            or (s.enable_feed_fetching and self._fetch_one_feed())
-        )
+        futures = []
+
+        if s.enable_embedding:
+            futures.append(self._executor.submit(_run_stage, self._embed_one))
+        if s.enable_og_image_download:
+            futures.append(self._executor.submit(
+                _run_stage, self._download_image, "og-image", "og_images_at",
+                article__pipeline__content_extracted_at__isnull=False,
+            ))
+        if s.enable_content_extraction:
+            futures.append(self._executor.submit(_run_stage, self._extract_one))
+        if s.enable_rss_image_download:
+            futures.append(self._executor.submit(
+                _run_stage, self._download_image, "rss-image", "rss_images_at",
+            ))
+        if s.enable_feed_fetching:
+            futures.append(self._executor.submit(_run_stage, self._fetch_one_feed))
+
+        if not futures:
+            return False
+
+        done, _ = wait(futures)
+        return any(f.result() for f in done)
 
     # ------------------------------------------------------------------
     # Stage 1 (highest priority): Embed one article -> mark completed
