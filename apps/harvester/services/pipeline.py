@@ -92,19 +92,28 @@ class HarvestManager:
     # ------------------------------------------------------------------
 
     def _embed_one(self) -> bool:
-        row = (
-            Article.objects
-            .filter(pipeline__embedded_at__isnull=True)
-            .exclude(content="")
-            .values_list("id", "title", "content")
-            .first()
-        )
-        if not row:
-            return False
+        # Atomically claim one unembedded article to prevent concurrent embedding
+        from django.db import transaction
 
-        article_id, title, content = row
-        chunks = chunk_text(title, content)
-        now = timezone.now()
+        with transaction.atomic():
+            pipeline = (
+                ArticlePipeline.objects
+                .select_for_update(skip_locked=True)
+                .filter(embedded_at__isnull=True)
+                .exclude(article__content="")
+                .select_related("article")
+                .first()
+            )
+            if not pipeline:
+                return False
+            # Mark as embedded immediately to prevent other workers from picking it up
+            now = timezone.now()
+            pipeline.embedded_at = now
+            pipeline.completed_at = now
+            pipeline.save(update_fields=["embedded_at", "completed_at"])
+
+        article = pipeline.article
+        chunks = chunk_text(article.title, article.content)
 
         try:
             client = EmbeddingClient()
@@ -125,15 +134,12 @@ class HarvestManager:
                     cost_usd=calculate_cost(EMBEDDING_MODEL, tokens),
                 )
         except Exception as e:
-            logger.warning("Embed failed for article %s: %s", article_id, e)
-            ArticlePipeline.objects.filter(article_id=article_id).update(
-                embedded_at=now, completed_at=now,
-            )
+            logger.warning("Embed failed for article %s: %s", article.id, e)
             return True
 
         chunk_objects = [
             ArticleChunk(
-                article_id=article_id,
+                article_id=article.id,
                 chunk_index=idx,
                 chunk_text=text,
                 embedding=emb,
@@ -142,10 +148,7 @@ class HarvestManager:
             for idx, (text, emb) in enumerate(zip(chunks, all_embeddings))
         ]
         ArticleChunk.objects.bulk_create(chunk_objects, ignore_conflicts=True)
-        ArticlePipeline.objects.filter(article_id=article_id).update(
-            embedded_at=now, completed_at=now,
-        )
-        logger.info("Embedded article %s (%d chunks, %d tokens)", article_id, len(chunks), total_tokens)
+        logger.info("Embedded article %s (%d chunks, %d tokens)", article.id, len(chunks), total_tokens)
         return True
 
     # ------------------------------------------------------------------

@@ -396,7 +396,7 @@ def build_harvester_context(request):
         "pipeline_active": pipeline_active,
         "stage_toggles": {name: getattr(ps, name) for name, _ in STAGE_FIELDS},
         "stage_labels": STAGE_FIELDS,
-        "stage_toggles_on": {name for name, _ in STAGE_FIELDS if getattr(ps, name)},
+        "stage_toggles_on": [name for name, _ in STAGE_FIELDS if getattr(ps, name)],
         # KPI
         "articles_today": f"{articles_today:,}",
         "pending_extraction": f"{pending_extraction:,}",

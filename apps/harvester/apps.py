@@ -11,6 +11,9 @@ class HarvesterConfig(AppConfig):
     def ready(self):
         if os.environ.get("PIPELINE_WORKER") != "1":
             return
+        # Only start in the actual server process, not the auto-reloader parent
+        if os.environ.get("RUN_MAIN") != "true":
+            return
         if getattr(self.__class__, "_started", False):
             return
         self.__class__._started = True
