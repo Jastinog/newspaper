@@ -101,15 +101,63 @@
     margin-bottom: 1.5rem;
 }
 
+/* === PIN BUTTON === */
+.pin-section-btn {
+    flex-shrink: 0;
+    width: 8px;
+    height: 8px;
+    margin-right: 0.4rem;
+    padding: 0;
+    border: 1.5px solid var(--section-heading-fg);
+    background: none;
+    border-radius: 1px;
+    cursor: pointer;
+    opacity: 0.3;
+    transition: opacity 0.2s;
+}
+.digest-section:hover .pin-section-btn {
+    opacity: 0.6;
+}
+.pin-section-btn:hover {
+    opacity: 1;
+}
+.digest-section.pinned .pin-section-btn {
+    background: var(--section-heading-fg);
+    opacity: 0.6;
+}
+.pin-nav-dot {
+    display: inline-block;
+    width: 4px;
+    height: 4px;
+    background: var(--accent);
+    border-radius: 1px;
+    vertical-align: middle;
+    margin-right: 0.15rem;
+}
+
+/* === PINNED SECTIONS === */
+.pinned-sections {
+    margin-bottom: 0.5rem;
+}
+.pinned-sections .summary ul {
+    column-gap: 1.5rem;
+}
+.pinned-divider {
+    border-top: 2px dashed var(--border);
+    margin-bottom: 1.5rem;
+}
+
 /* === DIGEST GRID === */
 .digest-grid {
-    columns: 1;
     column-gap: 1.5rem;
 }
 
+.pinned-sections .digest-section,
+.digest-grid .digest-section {
+    padding: 0 0 1.5rem;
+}
 .digest-grid .digest-section {
     break-inside: avoid;
-    padding: 0 0 1.5rem;
 }
 
 /* === SECTION STYLES === */
@@ -124,11 +172,15 @@
     position: sticky;
     top: 0;
     z-index: 100;
+    display: flex;
+    align-items: center;
     overflow: hidden;
 }
 .digest-section h3 span {
-    display: block;
+    flex: 1;
+    min-width: 0;
     white-space: nowrap;
+    overflow: hidden;
     mask-image: linear-gradient(to right, black 80%, transparent);
     -webkit-mask-image: linear-gradient(to right, black 80%, transparent);
 }
@@ -153,6 +205,7 @@
 }
 
 .digest-section .summary li {
+    break-inside: avoid;
     padding: 0.5rem 0;
     border-bottom: 1px solid var(--border-faint);
     margin-bottom: 0.4rem;
@@ -297,7 +350,8 @@
 /* Tablet portrait: 2 columns */
 @media (min-width: 600px) and (max-width: 899px) {
     .digest-grid,
-    .filtered-grid {
+    .filtered-grid,
+    .pinned-sections .summary ul {
         columns: 2;
     }
 }
@@ -305,7 +359,8 @@
 /* Tablet landscape: 3 columns */
 @media (min-width: 900px) and (max-width: 1199px) {
     .digest-grid,
-    .filtered-grid {
+    .filtered-grid,
+    .pinned-sections .summary ul {
         columns: 3;
     }
 }
@@ -313,7 +368,8 @@
 /* Desktop: 5 columns */
 @media (min-width: 1200px) {
     .digest-grid,
-    .filtered-grid {
+    .filtered-grid,
+    .pinned-sections .summary ul {
         columns: 5;
     }
 }

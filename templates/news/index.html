@@ -37,8 +37,8 @@
         <div class="section-nav-track">
             <div class="section-nav-list" id="sectionNavList">
             <a class="section-nav-item {% if not active_section %}active{% endif %}" href="{% url 'index' %}">{% trans "All" %}</a>
-            {% for group in section_groups %}
-                <a class="section-nav-item {% if active_section.id == group.section.id %}active{% endif %}" href="?section={{ group.section.id }}">{{ group.name }}</a>
+            {% for group in all_groups %}
+                <a class="section-nav-item {% if active_section.id == group.section.id %}active{% endif %}{% if group.section.slug in pinned_slugs %} pinned{% endif %}" href="?section={{ group.section.id }}">{% if group.section.slug in pinned_slugs %}<span class="pin-nav-dot"></span> {% endif %}{{ group.name }}</a>
             {% endfor %}
             </div>
         </div>
@@ -58,10 +58,29 @@
         {% endfor %}
     </ul>
     {% else %}
+
+    {% if pinned_groups %}
+    <div class="pinned-sections">
+    {% for group in pinned_groups %}
+        <div class="digest-section pinned">
+            <h3><button class="pin-section-btn" data-section-slug="{{ group.section.slug }}" title="{% trans 'Unpin section' %}"></button><span>{{ group.name }}</span></h3>
+            <div class="summary">
+                <ul>
+                {% for item in group.items %}
+                    <li>{% include "news/_digest_item.html" %}</li>
+                {% endfor %}
+                </ul>
+            </div>
+        </div>
+    {% endfor %}
+    </div>
+    <div class="pinned-divider"></div>
+    {% endif %}
+
     <div class="digest-grid">
     {% for group in section_groups %}
         <div class="digest-section">
-            <h3><span>{{ group.name }}</span></h3>
+            <h3><button class="pin-section-btn" data-section-slug="{{ group.section.slug }}" title="{% trans 'Pin section' %}"></button><span>{{ group.name }}</span></h3>
             <div class="summary">
                 <ul>
                 {% for item in group.items %}
@@ -86,6 +105,7 @@
 {% if digest %}
     <script src="{% static 'news/js/research.js' %}"></script>
     <script src="{% static 'news/js/section-nav.js' %}"></script>
+    <script src="{% static 'news/js/pin-sections.js' %}"></script>
     <script src="{% static 'news/js/back-to-top.js' %}"></script>
     <script src="https://cdn.jsdelivr.net/npm/force-graph/dist/force-graph.min.js"></script>
     <script src="{% static 'news/js/similar-news.js' %}"></script>

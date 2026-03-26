@@ -49,9 +49,15 @@ def index(request, date=None):
 
     # Group items by section
     section_groups = []
+    pinned_groups = []
     active_section = None
     filtered_items = None
     section_id = request.GET.get("section")
+
+    # Pinned sections from cookie
+    pinned_slugs = set(
+        s for s in request.COOKIES.get("pinned_sections", "").split(",") if s
+    )
 
     if digest:
         items = list(digest.items.select_related("section", "image").prefetch_related(
@@ -69,15 +75,20 @@ def index(request, date=None):
             filtered_items = [i for i in items if str(i.section_id) == section_id]
             if filtered_items:
                 active_section = filtered_items[0].section
-        else:
-            for _sec_id, group_items in groupby(items, key=lambda i: i.section_id):
-                group_list = list(group_items)
-                if group_list:
-                    section_groups.append({
-                        "section": group_list[0].section,
-                        "name": group_list[0].loc_section_name,
-                        "items": group_list,
-                    })
+
+        # Always build section_groups (needed for nav bar even when filtering)
+        for _sec_id, group_items in groupby(items, key=lambda i: i.section_id):
+            group_list = list(group_items)
+            if group_list:
+                group = {
+                    "section": group_list[0].section,
+                    "name": group_list[0].loc_section_name,
+                    "items": group_list,
+                }
+                if group_list[0].section and group_list[0].section.slug in pinned_slugs:
+                    pinned_groups.append(group)
+                else:
+                    section_groups.append(group)
 
     headline = digest.get_headline(current_lang) if digest else ""
 
@@ -88,10 +99,16 @@ def index(request, date=None):
         "og_type": "website",
     }
 
+    # All sections for nav bar (pinned + unpinned, sorted by order)
+    all_groups = sorted(pinned_groups + section_groups, key=lambda g: g["section"].order)
+
     return render(request, "news/index.html", {
         "digest": digest,
         "headline": headline,
         "section_groups": section_groups,
+        "pinned_groups": pinned_groups,
+        "all_groups": all_groups,
+        "pinned_slugs": pinned_slugs,
         "prev_date": prev_date,
         "next_date": next_date,
         "active_section": active_section,
