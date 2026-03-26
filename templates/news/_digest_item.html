@@ -8,6 +8,6 @@
     {% elif item.importance >= 4 %}<span class="importance-bar medium" data-label="{% trans 'Worth noting' %}"></span>
     {% else %}<span class="importance-bar low" data-label="{% trans 'For context' %}"></span>
     {% endif %}
-    <a href="{% url 'research' item.id %}" class="research-hint research-link" data-item-id="{{ item.id }}">{% trans "details" %} &rarr;</a>
-    <button class="similar-btn" data-item-id="{{ item.id }}" aria-label="{% trans 'Similar news' %}" title="{% trans 'Similar news' %}"><span class="fa-s fa-atom"></span></button>
+    <a href="{% url 'research' item.id %}" class="research-hint research-link" data-item-id="{{ item.id }}">{% trans "research" %} &rarr;</a>
+    <button class="similar-btn" data-item-id="{{ item.id }}" aria-label="{% trans 'Similar news' %}" title="{% trans 'Similar news' %}"><span class="ph-thin ph-git-branch"></span></button>
 </span>

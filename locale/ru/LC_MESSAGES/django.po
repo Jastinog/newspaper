@@ -211,8 +211,8 @@ msgstr "Собираем информацию из источников..."
 msgid "Generation error."
 msgstr "Ошибка генерации."
 
-msgid "details"
-msgstr "подробнее"
+msgid "research"
+msgstr "исследовать"
 
 msgid "No digest yet. Run the digest command to generate one."
 msgstr "Дайджест ещё не создан. Запустите команду генерации дайджеста."
