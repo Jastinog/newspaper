@@ -30,7 +30,6 @@ class DigestSitemap(Sitemap):
     def items(self):
         return (
             Digest.objects
-            .filter(language__code="en")
             .order_by("-date")
             .only("date", "created_at")
         )
@@ -81,7 +80,7 @@ class ArticleSitemap(Sitemap):
     def items(self):
         other_count = (
             1
-            + Digest.objects.filter(language__code="en").count()
+            + Digest.objects.count()
             + Category.objects.count()
             + Research.objects.count()
         )

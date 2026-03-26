@@ -1,41 +1,197 @@
 from django.db import models
 from pgvector.django import VectorField
 
+from apps.core.services.utils import get_translated_field
 
-class Digest(models.Model):
-    date = models.DateField()
-    language = models.ForeignKey(
-        "core.Language", on_delete=models.CASCADE, related_name="digests",
-    )
-    headline = models.TextField(blank=True, default="")
-    created_at = models.DateTimeField(auto_now_add=True)
+
+# ── Default prompts (used as defaults for DigestConfig fields) ───
+
+
+DEFAULT_PROMPT_ANALYSIS = (
+    "You are a news analyst. Given articles from the \"{section}\" digest section, "
+    "identify {min}-{max} distinct news stories.\n\n"
+    "For each story provide:\n"
+    "- \"label\": brief story label (2-5 words, English)\n"
+    "- \"article_ids\": array of article IDs covering this story\n"
+    "- \"search_queries\": 2-3 search queries to find the most relevant articles "
+    "about this specific story\n\n"
+    "Output ONLY valid JSON:\n"
+    '{"stories": [{"label": "...", "article_ids": [...], '
+    '"search_queries": ["...", "..."]}, ...]}'
+)
+
+DEFAULT_PROMPT_GENERATION = (
+    "You are a world-class news analyst. Write a detailed news item about the "
+    "following story based on the provided articles.\n\n"
+    "Provide:\n"
+    '- "topic": short event label (2-5 words)\n'
+    '- "summary": what happened, context, why it matters (4-5 sentences)\n'
+    '- "importance": integer 1-9 '
+    "(1-3=minor, 4-5=notable, 6=significant, 7-9=major/breaking)\n"
+    '- "article_ids": array of relevant article IDs from the input\n\n'
+    "Output ONLY valid JSON."
+)
+
+DEFAULT_PROMPT_HEADLINE = (
+    "You are a news editor. Based on today's top stories, write a 2-3 sentence "
+    "headline summarizing the overall news picture.\n\n"
+    'Output ONLY valid JSON: {"headline": "..."}'
+)
+
+DEFAULT_PROMPT_TRANSLATION = (
+    "You are a professional translator. Translate the following news item "
+    "from English to {language}.\n"
+    "Maintain journalistic style, factual accuracy, and nuance. "
+    "Adapt idioms and cultural references naturally. "
+    "Do not add or remove information.\n\n"
+    "Provide:\n"
+    '- "topic": translated short event label\n'
+    '- "summary": translated summary\n\n'
+    "Output ONLY valid JSON."
+)
+
+
+# ── Configuration ────────────────────────────────────────────────
+
+
+class DigestConfig(models.Model):
+    """Singleton storing all digest pipeline settings and prompts."""
+
+    # LLM
+    chat_model = models.CharField(max_length=100, default="gpt-4.1-mini")
+    temperature = models.FloatField(default=0.3)
+    max_tokens_analysis = models.PositiveIntegerField(default=2000)
+    max_tokens_generation = models.PositiveIntegerField(default=1500)
+    max_tokens_headline = models.PositiveIntegerField(default=1000)
+    max_tokens_translation = models.PositiveIntegerField(default=1000)
+
+    # Collection
+    hours_lookback = models.PositiveIntegerField(default=36)
+    articles_per_section = models.PositiveIntegerField(default=25)
+    similarity_threshold = models.FloatField(default=0.25)
+    chunks_per_query = models.PositiveIntegerField(default=60)
+    article_snippet_length = models.PositiveIntegerField(default=300)
+    context_trim_length = models.PositiveIntegerField(default=1500)
+    refine_search_top_k = models.PositiveIntegerField(default=10)
+
+    # Generation
+    items_per_section_min = models.PositiveIntegerField(default=4)
+    items_per_section_max = models.PositiveIntegerField(default=10)
+    max_workers = models.PositiveIntegerField(default=5)
+
+    # Prompts
+    system_prompt_analysis = models.TextField(default=DEFAULT_PROMPT_ANALYSIS)
+    system_prompt_generation = models.TextField(default=DEFAULT_PROMPT_GENERATION)
+    system_prompt_headline = models.TextField(default=DEFAULT_PROMPT_HEADLINE)
+    system_prompt_translation = models.TextField(default=DEFAULT_PROMPT_TRANSLATION)
 
     class Meta:
-        ordering = ["-date"]
-        unique_together = [("date", "language")]
-
+        verbose_name = "Digest Configuration"
+        verbose_name_plural = "Digest Configuration"
 
     def __str__(self):
-        return f"Digest {self.date} [{self.language.code}]"
+        return "Digest Configuration"
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def get(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+
+# ── Sections ─────────────────────────────────────────────────────
 
 
 class DigestSection(models.Model):
-    digest = models.ForeignKey(Digest, on_delete=models.CASCADE, related_name="sections")
-    title = models.CharField(max_length=300)
+    """Configurable digest section (rubric) — managed via admin."""
+
+    slug = models.SlugField(max_length=100, unique=True, default="")
+    description = models.TextField(blank=True, default="")
     order = models.PositiveIntegerField(default=0)
+    enabled = models.BooleanField(default=True)
+    system_prompt_override = models.TextField(blank=True, default="")
 
     class Meta:
         ordering = ["order"]
 
+    def __str__(self):
+        return self.get_name("en")
+
+    def get_name(self, language):
+        """Get section name for a Language instance or code string. Prefetch-safe."""
+        return get_translated_field(self.translations.all(), "name", language, fallback=self.slug)
+
+
+class DigestSectionTranslation(models.Model):
+    section = models.ForeignKey(DigestSection, on_delete=models.CASCADE, related_name="translations")
+    language = models.ForeignKey("core.Language", on_delete=models.CASCADE, related_name="section_translations")
+    name = models.CharField(max_length=200)
+
+    class Meta:
+        unique_together = [("section", "language")]
 
     def __str__(self):
-        return f"{self.digest.date} — {self.title}"
+        return f"{self.section.slug} [{self.language.code}]: {self.name}"
+
+
+class SectionEmbedding(models.Model):
+    """Search embeddings for a digest section (multiple per section for different angles)."""
+
+    section = models.ForeignKey(DigestSection, on_delete=models.CASCADE, related_name="embeddings")
+    description = models.TextField(help_text="Search query describing this angle of the section")
+    embedding = VectorField(dimensions=1536, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["section__order"]
+
+    def __str__(self):
+        return f"{self.section.slug}: {self.description[:60]}"
+
+
+# ── Digest ───────────────────────────────────────────────────────
+
+
+class Digest(models.Model):
+    """One digest per date. Language-specific content in DigestTranslation."""
+
+    date = models.DateField(unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-date"]
+
+    def __str__(self):
+        return f"Digest {self.date}"
+
+    def get_headline(self, language):
+        """Get headline for a Language instance or code string. Prefetch-safe."""
+        return get_translated_field(self.translations.all(), "headline", language)
+
+
+class DigestTranslation(models.Model):
+    digest = models.ForeignKey(Digest, on_delete=models.CASCADE, related_name="translations")
+    language = models.ForeignKey("core.Language", on_delete=models.CASCADE, related_name="digest_translations")
+    headline = models.TextField(blank=True, default="")
+
+    class Meta:
+        unique_together = [("digest", "language")]
+
+    def __str__(self):
+        return f"Digest {self.digest.date} [{self.language.code}]"
+
+
+# ── Digest Items ─────────────────────────────────────────────────
 
 
 class DigestItem(models.Model):
-    section = models.ForeignKey(DigestSection, on_delete=models.CASCADE, related_name="items")
-    topic = models.CharField(max_length=500)
-    summary = models.TextField()
+    """Single news story in digest. Language-specific text in DigestItemTranslation."""
+
+    digest = models.ForeignKey(Digest, on_delete=models.CASCADE, related_name="items", null=True)
+    section = models.ForeignKey(DigestSection, on_delete=models.CASCADE, related_name="items", null=True)
     order = models.PositiveIntegerField(default=0)
     importance = models.PositiveSmallIntegerField(default=0)
     freshness = models.FloatField(default=0, db_index=True)
@@ -46,11 +202,10 @@ class DigestItem(models.Model):
     articles = models.ManyToManyField("feed.Article", blank=True, related_name="digest_items")
 
     class Meta:
-        ordering = ["-freshness", "order"]
-
+        ordering = ["section__order", "-freshness", "order"]
 
     def __str__(self):
-        return self.topic
+        return self.get_topic("en") or f"Item #{self.pk}"
 
     @property
     def best_image_url(self):
@@ -58,36 +213,23 @@ class DigestItem(models.Model):
             return self.image.image.url
         return ""
 
+    def get_topic(self, language):
+        """Get topic text for a language. Prefetch-safe."""
+        return get_translated_field(self.translations.all(), "topic", language)
 
-class DigestTopic(models.Model):
-    """Configurable digest topic/rubric — managed via admin."""
-    name_en = models.CharField(max_length=200)
-    name_ru = models.CharField(max_length=200, blank=True, default="")
-    name_uk = models.CharField(max_length=200, blank=True, default="")
-    order = models.PositiveIntegerField(default=0)
-    enabled = models.BooleanField(default=True)
-
-    class Meta:
-        ordering = ["order"]
+    def get_summary(self, language):
+        """Get summary text for a language. Prefetch-safe."""
+        return get_translated_field(self.translations.all(), "summary", language)
 
 
-    def __str__(self):
-        return self.name_en
-
-    def get_name(self, lang: str) -> str:
-        return getattr(self, f"name_{lang}", None) or self.name_en
-
-
-class TopicEmbedding(models.Model):
-    """Search embeddings for a digest topic (multiple per topic for different angles)."""
-    topic = models.ForeignKey(DigestTopic, on_delete=models.CASCADE, related_name="embeddings")
-    description = models.TextField(help_text="Search query describing this angle of the topic")
-    embedding = VectorField(dimensions=1536, null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+class DigestItemTranslation(models.Model):
+    item = models.ForeignKey(DigestItem, on_delete=models.CASCADE, related_name="translations")
+    language = models.ForeignKey("core.Language", on_delete=models.CASCADE, related_name="item_translations")
+    topic = models.CharField(max_length=500)
+    summary = models.TextField()
 
     class Meta:
-        ordering = ["topic__order"]
-
+        unique_together = [("item", "language")]
 
     def __str__(self):
-        return f"{self.topic.name_en}: {self.description[:60]}"
+        return f"{self.topic} [{self.language.code}]"

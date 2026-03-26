@@ -37,16 +37,16 @@
         <div class="section-nav-track">
             <div class="section-nav-list" id="sectionNavList">
             <a class="section-nav-item {% if not active_section %}active{% endif %}" href="{% url 'index' %}">{% trans "All" %}</a>
-            {% for section in digest.sections.all %}
-                <a class="section-nav-item {% if active_section.id == section.id %}active{% endif %}" href="?section={{ section.id }}">{{ section.title }}</a>
+            {% for group in section_groups %}
+                <a class="section-nav-item {% if active_section.id == group.section.id %}active{% endif %}" href="?section={{ group.section.id }}">{{ group.name }}</a>
             {% endfor %}
             </div>
         </div>
         <button class="section-nav-arrow hidden" id="sectionNavRight" aria-label="Scroll right">&rsaquo;</button>
     </div>
 
-    {% if not active_section and digest.headline %}
-        <div class="digest-headline">{{ digest.headline }}</div>
+    {% if not active_section and headline %}
+        <div class="digest-headline">{{ headline }}</div>
     {% endif %}
 
     <div class="digest-headline-rule"></div>
@@ -59,12 +59,12 @@
     </ul>
     {% else %}
     <div class="digest-grid">
-    {% for section in digest.sections.all %}
+    {% for group in section_groups %}
         <div class="digest-section">
-            <h3><span>{{ section.title }}</span></h3>
+            <h3><span>{{ group.name }}</span></h3>
             <div class="summary">
                 <ul>
-                {% for item in section.items.all %}
+                {% for item in group.items %}
                     <li>{% include "news/_digest_item.html" %}</li>
                 {% endfor %}
                 </ul>

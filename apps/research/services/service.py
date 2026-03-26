@@ -206,11 +206,14 @@ class ResearchService:
 
         # 1. Generate search queries
         self._progress(progress_callback, 1, "queries", "Generating search queries…")
-        queries, query_gen_usage = self.query_gen.generate(item.topic, item.section.title, item.summary)
-        logger.info("Generated %d search queries for '%s'", len(queries), item.topic)
+        item_topic = item.get_topic("en")
+        item_summary = item.get_summary("en")
+        section_name = item.section.get_name("en") if item.section else ""
+        queries, query_gen_usage = self.query_gen.generate(item_topic, section_name, item_summary)
+        logger.info("Generated %d search queries for '%s'", len(queries), item_topic)
 
         if not queries:
-            raise RuntimeError(f"No queries generated for: {item.topic}")
+            raise RuntimeError(f"No queries generated for: {item_topic}")
 
         # 2. Embed queries
         self._progress(progress_callback, 2, "embedding", "Creating embeddings…",
@@ -227,7 +230,7 @@ class ResearchService:
         logger.info("Found %d relevant chunks", len(search_results))
 
         if not search_results:
-            raise RuntimeError(f"No relevant chunks found for: {item.topic}")
+            raise RuntimeError(f"No relevant chunks found for: {item_topic}")
 
         # 4. Load chunk texts and group by article
         self._progress(progress_callback, 4, "grouping", "Grouping content…",
@@ -255,9 +258,8 @@ class ResearchService:
         # 5. Synthesize article
         self._progress(progress_callback, 5, "synthesis", "Synthesizing article…",
                         f"{len(chunks_by_article)} sources")
-        language_obj = getattr(item.section.digest, "language", None)
-        language = language_obj.code if language_obj else "uk"
-        result = self.synthesizer.synthesize(item.topic, item.section.title, chunks_by_article, language=language)
+        language = "en"  # Research always synthesizes in English (default language)
+        result = self.synthesizer.synthesize(item_topic, section_name, chunks_by_article, language=language)
 
         elapsed_ms = int((time.time() - start) * 1000)
 

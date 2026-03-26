@@ -1,6 +1,7 @@
 from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
+from django.utils.translation import get_language
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
@@ -39,9 +40,11 @@ def _serialize_article(article, score=0):
 def similar_items_api(request, item_id):
     """Tree: center -> similar digest items -> their articles."""
     item = get_object_or_404(
-        DigestItem.objects.select_related("section__digest"),
+        DigestItem.objects.select_related("digest", "section"),
         pk=item_id,
     )
+
+    lang = get_language() or "en"
 
     article_ids = list(item.articles.values_list("id", flat=True))
     if not article_ids:
@@ -80,18 +83,19 @@ def similar_items_api(request, item_id):
         DigestItem.objects
         .filter(
             articles__id__in=found_ids,
-            section__digest__language=item.section.digest.language,
+            digest=item.digest,
         )
         .exclude(id=item.id)
-        .select_related("section__digest", "image")
+        .select_related("digest", "section", "image")
         .prefetch_related(
+            "translations",
             Prefetch(
                 "articles",
                 queryset=Article.objects.select_related("feed").prefetch_related(_primary_image_prefetch()),
             ),
         )
         .distinct()
-        .order_by("-section__digest__date", "-importance")[:8]
+        .order_by("-digest__date", "-importance")[:8]
     )
 
     items_data = []
@@ -104,11 +108,11 @@ def similar_items_api(request, item_id):
 
         items_data.append({
             "id": si.id,
-            "topic": si.topic,
-            "summary": si.summary[:200],
+            "topic": si.get_topic(lang),
+            "summary": si.get_summary(lang)[:200],
             "image_url": si.best_image_url,
-            "section": si.section.title,
-            "date": si.section.digest.date.isoformat(),
+            "section": si.section.get_name(lang),
+            "date": si.digest.date.isoformat(),
             "research_url": reverse("research", args=[si.id]),
             "score": round(best * 100),
             "articles": [

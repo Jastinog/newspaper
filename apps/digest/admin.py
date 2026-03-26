@@ -4,7 +4,10 @@ from unfold.admin import ModelAdmin, TabularInline
 
 from apps.core.services.ai import EmbeddingClient
 
-from .models import Digest, DigestItem, DigestSection, DigestTopic, TopicEmbedding
+from .models import (
+    Digest, DigestConfig, DigestItem, DigestItemTranslation,
+    DigestSection, DigestSectionTranslation, DigestTranslation, SectionEmbedding,
+)
 
 
 def _img_thumbnail(url, w=60, h=40):
@@ -16,51 +19,48 @@ def _img_thumbnail(url, w=60, h=40):
     )
 
 
-class DigestItemInline(TabularInline):
-    model = DigestItem
-    extra = 0
-    readonly_fields = ("topic", "summary", "order", "item_image_preview")
-
-    def get_queryset(self, request):
-        return super().get_queryset(request).select_related("image")
-
-    @admin.display(description="Image")
-    def item_image_preview(self, obj):
-        return _img_thumbnail(obj.best_image_url, w=80, h=50)
+# ── DigestConfig (singleton) ────────────────────────────────────
 
 
-class DigestSectionInline(TabularInline):
-    model = DigestSection
-    extra = 0
-    show_change_link = True
+@admin.register(DigestConfig)
+class DigestConfigAdmin(ModelAdmin):
+    list_display = ("__str__",)
+
+    fieldsets = (
+        ("LLM", {"fields": ("chat_model", "temperature")}),
+        ("Token Limits", {"fields": (
+            "max_tokens_analysis", "max_tokens_generation",
+            "max_tokens_headline", "max_tokens_translation",
+        )}),
+        ("Collection", {"fields": (
+            "hours_lookback", "articles_per_section", "similarity_threshold",
+            "chunks_per_query", "article_snippet_length", "context_trim_length",
+            "refine_search_top_k",
+        )}),
+        ("Generation", {"fields": ("items_per_section_min", "items_per_section_max", "max_workers")}),
+        ("Prompts", {"fields": (
+            "system_prompt_analysis", "system_prompt_generation",
+            "system_prompt_headline", "system_prompt_translation",
+        )}),
+    )
+
+    def has_add_permission(self, request):
+        return not DigestConfig.objects.exists()
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
-@admin.register(DigestSection)
-class DigestSectionAdmin(ModelAdmin):
-    list_display = ("id", "title", "digest", "order", "item_count")
-    list_display_links = ("id", "title")
-    raw_id_fields = ("digest",)
-    inlines = [DigestItemInline]
-
-    @admin.display(description="Items")
-    def item_count(self, obj):
-        return obj.items.count()
+# ── DigestSection ────────────────────────────────────────────────
 
 
-@admin.register(Digest)
-class DigestAdmin(ModelAdmin):
-    list_display = ("id", "date", "language", "headline_short", "created_at")
-    list_display_links = ("id", "date")
-    list_filter = ("language",)
-    inlines = [DigestSectionInline]
-
-    @admin.display(description="Headline")
-    def headline_short(self, obj):
-        return obj.headline[:100] if obj.headline else ""
+class DigestSectionTranslationInline(TabularInline):
+    model = DigestSectionTranslation
+    extra = 1
 
 
-class TopicEmbeddingInline(TabularInline):
-    model = TopicEmbedding
+class SectionEmbeddingInline(TabularInline):
+    model = SectionEmbedding
     extra = 1
     fields = ("description", "has_embedding")
     readonly_fields = ("has_embedding",)
@@ -70,12 +70,12 @@ class TopicEmbeddingInline(TabularInline):
         return obj.embedding is not None
 
 
-@admin.action(description="Generate embeddings for selected topics")
+@admin.action(description="Generate embeddings for selected sections")
 def generate_embeddings(modeladmin, request, queryset):
     client = EmbeddingClient()
     total = 0
-    for topic in queryset:
-        pending = list(topic.embeddings.filter(embedding__isnull=True))
+    for section in queryset:
+        pending = list(section.embeddings.filter(embedding__isnull=True))
         if not pending:
             continue
         descriptions = [e.description for e in pending]
@@ -87,16 +87,22 @@ def generate_embeddings(modeladmin, request, queryset):
     modeladmin.message_user(request, f"Generated {total} embeddings.")
 
 
-@admin.register(DigestTopic)
-class DigestTopicAdmin(ModelAdmin):
-    list_display = ("id", "name_en", "order", "enabled", "embedding_count")
-    list_display_links = ("id", "name_en")
+@admin.register(DigestSection)
+class DigestSectionAdmin(ModelAdmin):
+    list_display = ("id", "slug", "section_name", "order", "enabled", "embedding_count")
+    list_display_links = ("id", "slug")
     list_editable = ("order", "enabled")
-    inlines = [TopicEmbeddingInline]
+    prepopulated_fields = {"slug": []}
+    inlines = [DigestSectionTranslationInline, SectionEmbeddingInline]
     actions = [generate_embeddings]
 
     def get_queryset(self, request):
-        return super().get_queryset(request).prefetch_related("embeddings")
+        return super().get_queryset(request).prefetch_related("embeddings", "translations")
+
+    @admin.display(description="Name")
+    def section_name(self, obj):
+        t = obj.translations.filter(language__is_default=True).first()
+        return t.name if t else obj.slug
 
     @admin.display(description="Embeddings")
     def embedding_count(self, obj):
@@ -106,3 +112,62 @@ class DigestTopicAdmin(ModelAdmin):
         if total == ready:
             return str(total)
         return f"{ready}/{total}"
+
+
+# ── Digest ───────────────────────────────────────────────────────
+
+
+class DigestTranslationInline(TabularInline):
+    model = DigestTranslation
+    extra = 0
+
+
+class DigestItemInlineShort(TabularInline):
+    model = DigestItem
+    extra = 0
+    fields = ("section", "importance", "order", "item_image_preview")
+    readonly_fields = ("item_image_preview",)
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related("image", "section")
+
+    @admin.display(description="Image")
+    def item_image_preview(self, obj):
+        return _img_thumbnail(obj.best_image_url, w=80, h=50)
+
+
+@admin.register(Digest)
+class DigestAdmin(ModelAdmin):
+    list_display = ("id", "date", "item_count", "created_at")
+    list_display_links = ("id", "date")
+    inlines = [DigestTranslationInline, DigestItemInlineShort]
+
+    @admin.display(description="Items")
+    def item_count(self, obj):
+        return obj.items.count()
+
+
+# ── DigestItem ───────────────────────────────────────────────────
+
+
+class DigestItemTranslationInline(TabularInline):
+    model = DigestItemTranslation
+    extra = 0
+    readonly_fields = ("language", "topic", "summary")
+
+
+@admin.register(DigestItem)
+class DigestItemAdmin(ModelAdmin):
+    list_display = ("id", "item_topic", "section", "importance", "digest")
+    list_display_links = ("id", "item_topic")
+    list_filter = ("section", "digest__date")
+    raw_id_fields = ("digest", "image")
+    inlines = [DigestItemTranslationInline]
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related("section", "digest").prefetch_related("translations")
+
+    @admin.display(description="Topic")
+    def item_topic(self, obj):
+        t = obj.translations.filter(language__is_default=True).first()
+        return t.topic[:80] if t else f"Item #{obj.pk}"

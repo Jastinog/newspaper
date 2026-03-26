@@ -5,43 +5,40 @@ from datetime import datetime, timedelta, timezone
 from pgvector.django import CosineDistance
 
 from apps.feed.models import Article, ArticleChunk
-from apps.digest.models import DigestTopic
+from apps.digest.models import DigestConfig, DigestSection
 
 logger = logging.getLogger(__name__)
 
-CHUNKS_PER_QUERY = 60
 
+class SectionArticleCollector:
+    """Collects articles per section using embedding similarity — no duplicates across sections."""
 
-class TopicArticleCollector:
-    """Collects articles per topic using embedding similarity — no duplicates across topics."""
-
-    def __init__(self, hours=36, per_topic=25, threshold=0.25):
-        self.hours = hours
-        self.per_topic = per_topic
-        self.threshold = threshold
+    def __init__(self, config: DigestConfig = None):
+        self.config = config or DigestConfig.get()
 
     def collect(self) -> list[tuple]:
-        """Return [(DigestTopic, [article_dicts])] with each article in exactly one topic."""
-        cutoff = datetime.now(timezone.utc) - timedelta(hours=self.hours)
+        """Return [(DigestSection, [article_dicts])] with each article in exactly one section."""
+        cfg = self.config
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=cfg.hours_lookback)
 
-        # 1. Load enabled topics with their embeddings
-        topics = list(
-            DigestTopic.objects.filter(enabled=True).prefetch_related("embeddings")
+        # 1. Load enabled sections with their embeddings
+        sections = list(
+            DigestSection.objects.filter(enabled=True).prefetch_related("embeddings")
         )
-        topic_vectors = {}  # {topic.pk: [embedding_vectors]}
-        for topic in topics:
-            vectors = [e.embedding for e in topic.embeddings.all() if e.embedding is not None]
+        section_vectors = {}
+        for section in sections:
+            vectors = [e.embedding for e in section.embeddings.all() if e.embedding is not None]
             if vectors:
-                topic_vectors[topic.pk] = vectors
+                section_vectors[section.pk] = vectors
 
-        if not topic_vectors:
-            raise RuntimeError("No topic embeddings found. Run initnews or add topics in admin.")
+        if not section_vectors:
+            raise RuntimeError("No section embeddings found. Run initnews or add sections in admin.")
 
-        # 2. For each topic, find best articles via cosine similarity
-        max_distance = 1.0 - self.threshold
-        article_scores = defaultdict(dict)  # {article_id: {topic_pk: best_score}}
+        # 2. For each section, find best articles via cosine similarity
+        max_distance = 1.0 - cfg.similarity_threshold
+        article_scores = defaultdict(dict)
 
-        for topic_pk, vectors in topic_vectors.items():
+        for section_pk, vectors in section_vectors.items():
             for emb in vectors:
                 results = (
                     ArticleChunk.objects
@@ -50,22 +47,22 @@ class TopicArticleCollector:
                     .filter(distance__lte=max_distance)
                     .order_by("distance")
                     .values_list("article_id", "distance")
-                    [:CHUNKS_PER_QUERY]
+                    [:cfg.chunks_per_query]
                 )
                 for article_id, distance in results:
                     score = 1.0 - distance
-                    current = article_scores[article_id].get(topic_pk, 0)
+                    current = article_scores[article_id].get(section_pk, 0)
                     if score > current:
-                        article_scores[article_id][topic_pk] = score
+                        article_scores[article_id][section_pk] = score
 
-        # 3. Assign each article to its best-matching topic
-        article_topics = {
+        # 3. Assign each article to its best-matching section
+        article_sections = {
             article_id: max(scores, key=scores.get)
             for article_id, scores in article_scores.items()
         }
 
         # 4. Fetch article data
-        article_ids = list(article_topics.keys())
+        article_ids = list(article_sections.keys())
         articles_by_id = {
             a.id: a
             for a in Article.objects
@@ -73,34 +70,34 @@ class TopicArticleCollector:
             .filter(id__in=article_ids, published__gte=cutoff)
         }
 
-        # 5. Group by topic
-        topic_map = {t.pk: t for t in topics if t.pk in topic_vectors}
-        grouped = {pk: [] for pk in topic_vectors}
-        for article_id, topic_pk in article_topics.items():
+        # 5. Group by section
+        section_map = {s.pk: s for s in sections if s.pk in section_vectors}
+        grouped = {pk: [] for pk in section_vectors}
+        for article_id, section_pk in article_sections.items():
             a = articles_by_id.get(article_id)
             if not a:
                 continue
-            grouped[topic_pk].append(self._article_to_dict(a))
+            grouped[section_pk].append(self._article_to_dict(a))
 
-        # 6. Sort by date descending, limit per topic, build result
+        # 6. Sort by date descending, limit per section, build result
         result = []
-        for topic_pk in topic_vectors:
-            articles = sorted(grouped[topic_pk], key=lambda x: x["published"], reverse=True)
-            result.append((topic_map[topic_pk], articles[:self.per_topic]))
+        for section_pk in section_vectors:
+            articles = sorted(grouped[section_pk], key=lambda x: x["published"], reverse=True)
+            result.append((section_map[section_pk], articles[:cfg.articles_per_section]))
 
         total = sum(len(a) for _, a in result)
-        logger.info("Collected %d articles across %d topics", total, len(result))
-        for topic, articles in result:
-            logger.info("  [%d] %s: %d articles", topic.order, topic.name_en, len(articles))
+        logger.info("Collected %d articles across %d sections", total, len(result))
+        for section, articles in result:
+            logger.info("  [%d] %s: %d articles", section.order, section.slug, len(articles))
 
         return result
 
-    @staticmethod
-    def _article_to_dict(a: Article) -> dict:
+    def _article_to_dict(self, a: Article) -> dict:
+        snippet_len = self.config.article_snippet_length
         return {
             "id": a.id,
             "title": a.title,
             "feed": a.feed.title if a.feed else "",
             "published": a.published.strftime("%Y-%m-%d") if a.published else "",
-            "snippet": a.content[:300] if a.content else "",
+            "snippet": a.content[:snippet_len] if a.content else "",
         }

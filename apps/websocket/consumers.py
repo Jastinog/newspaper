@@ -232,7 +232,7 @@ class SiteConsumer(AsyncWebsocketConsumer):
             return {"ready": [], "generating": []}
 
         item_ids = set(
-            DigestItem.objects.filter(section__digest_id__in=digest_ids)
+            DigestItem.objects.filter(digest_id__in=digest_ids)
             .values_list("id", flat=True)
         )
         ready = list(
@@ -259,6 +259,6 @@ class SiteConsumer(AsyncWebsocketConsumer):
         if Research.objects.filter(item_id=item_id).exists():
             return f"/research/{item_id}/"
 
-        item = DigestItem.objects.select_related("section__digest").get(pk=item_id)
+        item = DigestItem.objects.select_related("digest").get(pk=item_id)
         ResearchService().generate(item, progress_callback=progress_callback)
         return f"/research/{item_id}/"

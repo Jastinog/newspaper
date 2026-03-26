@@ -1,82 +1,59 @@
 import json
 import logging
-import re
 
-from apps.digest.models import DigestTopic
-from apps.core.services.ai import MODEL_MINI, OpenAIClient, OpenAIError, fix_truncated_json
+from apps.core.services.ai import OpenAIClient, OpenAIError, fix_truncated_json
+from apps.core.services.utils import sanitize_text
+from apps.digest.models import DigestConfig
 
 logger = logging.getLogger(__name__)
 
-LANGUAGES = ["en", "ru", "uk"]
 
+class ItemGenerator:
+    """Generates a single news item in the default language from refined articles."""
 
-def _sanitize(s: str) -> str:
-    """Remove control characters except newline/tab."""
-    return re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', '', s)
-
-
-class TopicDigestGenerator:
-    """Generates digest items for a single topic in all languages at once."""
-
-    def __init__(self, client: OpenAIClient = None, topic: DigestTopic = None):
+    def __init__(self, client: OpenAIClient = None, config: DigestConfig = None):
         self.client = client or OpenAIClient()
-        self.topic = topic
-        self.topic_names = {lang: topic.get_name(lang) for lang in LANGUAGES}
+        self.config = config or DigestConfig.get()
 
     def _build_article_list(self, articles: list[dict]) -> str:
         lines = []
         for a in articles:
-            title = _sanitize(a["title"])
-            feed = _sanitize(a["feed"])
-            pub = a["published"]
-            snippet = _sanitize(a["snippet"][:400])
+            title = sanitize_text(a["title"])
+            feed = sanitize_text(a.get("feed", ""))
+            pub = a.get("published", "")
+            content = sanitize_text(a.get("content", ""))
             date_part = f", {pub}" if pub else ""
-            snippet_part = f" -- {snippet}" if snippet else ""
-            lines.append(f'- [ID:{a["id"]}] "{title}" ({feed}{date_part}){snippet_part}')
+            content_part = f"\n  {content}" if content else ""
+            lines.append(f'- [ID:{a["id"]}] "{title}" ({feed}{date_part}){content_part}')
         return "\n".join(lines)
 
-    def _build_system_prompt(self, num_articles: int) -> str:
-        target = "8-10" if num_articles >= 12 else "4-8"
-        return (
-            f'You are a world news analyst specializing in "{self.topic_names["en"]}". '
-            "Based on the provided articles, create detailed news items about key developments.\n\n"
-            "Rules:\n"
-            f"- Create {target} items, each covering one distinct development. Minimum 4.\n"
-            "- Each item MUST have text in 3 languages: English (en), Russian (ru), Ukrainian (uk).\n"
-            "- For each item provide:\n"
-            '  - "topic": {"en": "...", "ru": "...", "uk": "..."} — short event label (2-5 words)\n'
-            '  - "summary": {"en": "...", "ru": "...", "uk": "..."} — what happened, context, '
-            "why it matters (2-3 sentences)\n"
-            '  - "importance": integer 1-9 (1-3=minor/routine, 4-5=notable, 6=significant, 7-9=major/breaking). '
-            "Use the FULL range: ~15% should be 1-3, ~40% should be 4-5, ~25% should be 6, ~20% should be 7+. "
-            "Only truly extraordinary events deserve 8-9.\n"
-            '  - "article_ids": array of [ID:N] numbers from the input. Include ALL relevant IDs.\n'
-            "- Do NOT reference article IDs in topic or summary text — only in article_ids.\n"
-            "- Output ONLY valid JSON, no markdown fences.\n\n"
-            "JSON format:\n"
-            '{"items": [{"topic": {"en": "...", "ru": "...", "uk": "..."}, '
-            '"summary": {"en": "...", "ru": "...", "uk": "..."}, '
-            '"importance": 5, "article_ids": [1, 2]}, ...]}'
-        )
+    def generate(self, story: dict, articles: list[dict]) -> tuple[dict, dict]:
+        """Generate one news item from a story and its articles.
 
-    def generate(self, articles: list[dict]) -> dict:
-        """Generate items for this topic. Returns {topic, topic_names, items, usage}."""
+        Returns:
+            (item_data, usage) where item_data = {"topic": str, "summary": str, "importance": int, "article_ids": [int]}
+        """
         if not articles:
             return {
-                "topic": self.topic,
-                "topic_names": self.topic_names,
-                "items": [],
-                "usage": {},
-            }
+                "topic": story.get("label", ""),
+                "summary": "",
+                "importance": 0,
+                "article_ids": [],
+            }, {}
 
-        system = self._build_system_prompt(len(articles))
-        user = f"Articles on {self.topic_names['en']}:\n\n{self._build_article_list(articles)}"
+        cfg = self.config
+        system = cfg.system_prompt_generation
+        user = (
+            f"Story: {story.get('label', 'Unknown')}\n\n"
+            f"Articles:\n\n{self._build_article_list(articles)}"
+        )
 
         content, usage = self.client.chat(
             system=system,
             user=user,
-            max_tokens=6000,
-            temperature=0.3,
+            model=cfg.chat_model,
+            max_tokens=cfg.max_tokens_generation,
+            temperature=cfg.temperature,
         )
 
         fixed = fix_truncated_json(content)
@@ -84,59 +61,52 @@ class TopicDigestGenerator:
             data = json.loads(fixed)
         except json.JSONDecodeError as e:
             raise OpenAIError(
-                f"Failed to parse topic '{self.topic.name_en}' JSON: {e}\n"
+                f"Failed to parse item for '{story.get('label')}': {e}\n"
                 f"Response (first 300 chars): {fixed[:300]}"
             )
 
-        return {
-            "topic": self.topic,
-            "topic_names": self.topic_names,
-            "items": data.get("items", []),
-            "usage": usage,
-        }
+        return data, usage
 
 
 class HeadlineGenerator:
-    """Generates a multilingual headline from all topic results."""
+    """Generates a headline for the digest in the default language."""
 
-    def __init__(self, client: OpenAIClient = None):
+    def __init__(self, client: OpenAIClient = None, config: DigestConfig = None):
         self.client = client or OpenAIClient()
+        self.config = config or DigestConfig.get()
 
-    def generate(self, topic_results: list[dict]) -> tuple[dict, dict]:
-        """Return ({en: headline, ru: headline, uk: headline}, usage)."""
-        top_items = []
-        for tr in topic_results:
-            topic_en = tr["topic_names"]["en"]
-            for item in tr.get("items", []):
-                imp = item.get("importance", 0)
-                topic_text = item.get("topic", {}).get("en", "")
-                if imp >= 4 and topic_text:
-                    top_items.append((imp, f"[{topic_en}] {topic_text}"))
+    def generate(self, items: list[dict]) -> tuple[str, dict]:
+        """Generate headline from top items. Returns (headline_str, usage)."""
+        top_labels = []
+        for item in items:
+            imp = item.get("importance", 0)
+            topic = item.get("topic", "")
+            if imp >= 4 and topic:
+                top_labels.append((imp, topic))
 
-        top_items.sort(key=lambda x: x[0], reverse=True)
-        top_labels = [t[1] for t in top_items[:20]]
+        top_labels.sort(key=lambda x: x[0], reverse=True)
+        labels = [t[1] for t in top_labels[:20]]
 
-        if not top_labels:
-            return {"en": "", "ru": "", "uk": ""}, {}
+        if not labels:
+            return "", {}
 
-        system = (
-            "You are a news editor. Based on today's top stories, write a 2-3 sentence "
-            "headline summarizing the overall news picture. Provide in 3 languages.\n\n"
-            'Output ONLY valid JSON: {"en": "...", "ru": "...", "uk": "..."}'
-        )
-        user = "Top stories today:\n" + "\n".join(f"- {t}" for t in top_labels)
+        cfg = self.config
+        system = cfg.system_prompt_headline
+        user = "Top stories today:\n" + "\n".join(f"- {t}" for t in labels)
 
         content, usage = self.client.chat(
             system=system,
             user=user,
-            max_tokens=1000,
-            temperature=0.3,
+            model=cfg.chat_model,
+            max_tokens=cfg.max_tokens_headline,
+            temperature=cfg.temperature,
         )
 
         fixed = fix_truncated_json(content)
         try:
             data = json.loads(fixed)
+            headline = data.get("headline", "")
         except json.JSONDecodeError:
-            data = {"en": "", "ru": "", "uk": ""}
+            headline = ""
 
-        return data, usage
+        return headline, usage

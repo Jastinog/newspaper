@@ -422,7 +422,7 @@ def dashboard_callback(request, context):
         dives = (
             Research.objects
             .filter(item_id__in=item_ids_map.keys())
-            .select_related("item__section__digest")
+            .select_related("item__digest")
         )
         for dive in dives:
             top_researches.append({

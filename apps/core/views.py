@@ -16,8 +16,7 @@ SITE_DESCRIPTION = _("Daily AI-curated news digest from 100+ RSS sources worldwi
 
 def _latest_digest(qs, date=None):
     """Return the best-matching digest from a queryset, optionally filtered by date."""
-    prefetches = ("sections__items__image", "sections__items__articles__feed")
-    qs = qs.prefetch_related(*prefetches)
+    qs = qs.prefetch_related("items__image", "items__section__translations", "items__translations")
     if date:
         return qs.filter(date=date).first()
     return qs.order_by("-date").first()
@@ -25,6 +24,7 @@ def _latest_digest(qs, date=None):
 
 def index(request, date=None):
     from datetime import datetime as dt
+    from itertools import groupby
 
     current_lang = get_language() or "en"
 
@@ -35,32 +35,51 @@ def index(request, date=None):
         except ValueError:
             return redirect("index")
 
-    digest = _latest_digest(Digest.objects.filter(language__code=current_lang), date=parsed)
-
-    # Fallback to English if no digest for current language
-    if not digest and current_lang != "en":
-        digest = _latest_digest(Digest.objects.filter(language__code="en"), date=parsed)
+    digest = _latest_digest(Digest.objects.all(), date=parsed)
 
     # Prev/next navigation
     prev_date = next_date = None
     if digest:
-        prev_digest = Digest.objects.filter(language=digest.language, date__lt=digest.date).order_by("-date").only("date").first()
-        next_digest = Digest.objects.filter(language=digest.language, date__gt=digest.date).order_by("date").only("date").first()
+        prev_digest = Digest.objects.filter(date__lt=digest.date).order_by("-date").only("date").first()
+        next_digest = Digest.objects.filter(date__gt=digest.date).order_by("date").only("date").first()
         if prev_digest:
             prev_date = prev_digest.date
         if next_digest:
             next_date = next_digest.date
 
-    # Section filter
+    # Group items by section
+    section_groups = []
     active_section = None
     filtered_items = None
     section_id = request.GET.get("section")
-    if digest and section_id:
-        for s in digest.sections.all():
-            if str(s.id) == section_id:
-                active_section = s
-                filtered_items = s.items.all()
-                break
+
+    if digest:
+        items = list(digest.items.select_related("section", "image").prefetch_related(
+            "translations", "translations__language",
+            "section__translations", "section__translations__language",
+        ).all())
+
+        # Annotate items with localized text for template (prefetch-safe, no extra queries)
+        for item in items:
+            item.loc_topic = item.get_topic(current_lang)
+            item.loc_summary = item.get_summary(current_lang)
+            item.loc_section_name = item.section.get_name(current_lang) if item.section else ""
+
+        if section_id:
+            filtered_items = [i for i in items if str(i.section_id) == section_id]
+            if filtered_items:
+                active_section = filtered_items[0].section
+        else:
+            for _, group_items in groupby(items, key=lambda i: i.section_id):
+                group_list = list(group_items)
+                if group_list:
+                    section_groups.append({
+                        "section": group_list[0].section,
+                        "name": group_list[0].loc_section_name,
+                        "items": group_list,
+                    })
+
+    headline = digest.get_headline(current_lang) if digest else ""
 
     seo = {
         "title": f"{SITE_NAME} — {_('Daily News Digest')}",
@@ -71,6 +90,8 @@ def index(request, date=None):
 
     return render(request, "news/index.html", {
         "digest": digest,
+        "headline": headline,
+        "section_groups": section_groups,
         "prev_date": prev_date,
         "next_date": next_date,
         "active_section": active_section,
@@ -129,7 +150,7 @@ def category_detail(request, slug):
 
 def research(request, item_id):
     item = get_object_or_404(
-        DigestItem.objects.select_related("section__digest"), pk=item_id,
+        DigestItem.objects.select_related("digest", "section"), pk=item_id,
     )
 
     dive = Research.objects.filter(item=item).first()
@@ -147,7 +168,7 @@ def research(request, item_id):
 
     return render(request, "news/research.html", {
         "dive": dive,
-        "section": item.section,
+        "item": item,
         "sources": sources,
         "seo": seo,
     })

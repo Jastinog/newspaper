@@ -226,11 +226,6 @@ UNFOLD = {
                         "icon": "view_list",
                         "link": reverse_lazy("admin:digest_digestsection_changelist"),
                     },
-                    {
-                        "title": _("Topics"),
-                        "icon": "topic",
-                        "link": reverse_lazy("admin:digest_digesttopic_changelist"),
-                    },
                 ],
             },
             {
