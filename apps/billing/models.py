@@ -11,13 +11,25 @@ class APIUsage(models.Model):
         CHAT = "chat", "Chat Completion"
         EMBEDDING = "embedding", "Embedding"
 
+    class Step(models.TextChoices):
+        ANALYZE = "analyze", "Analyze"
+        REFINE = "refine", "Refine"
+        GENERATE = "generate", "Generate"
+        HEADLINE = "headline", "Headline"
+        TRANSLATE = "translate", "Translate"
+
     service = models.CharField(max_length=20, choices=Service.choices)
     api_type = models.CharField(max_length=20, choices=APIType.choices)
     model = models.CharField(max_length=100)
     prompt_tokens = models.PositiveIntegerField(default=0)
     completion_tokens = models.PositiveIntegerField(default=0)
     total_tokens = models.PositiveIntegerField(default=0)
+    step = models.CharField(max_length=20, choices=Step.choices, blank=True, default="")
     cost_usd = models.DecimalField(max_digits=10, decimal_places=6, default=0)
+    item = models.ForeignKey(
+        "digest.DigestItem", on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="api_usages",
+    )
     digest = models.ForeignKey(
         "digest.Digest", on_delete=models.SET_NULL,
         null=True, blank=True, related_name="api_usages",

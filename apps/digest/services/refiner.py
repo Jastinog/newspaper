@@ -5,7 +5,7 @@ from pgvector.django import CosineDistance
 
 from apps.core.services.ai import EmbeddingClient
 from apps.feed.models import Article, ArticleChunk
-from apps.digest.models import DigestConfig
+from apps.digest.models import ArticleUse, DigestConfig
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ class StoryRefiner:
         self.embedder = embedder or EmbeddingClient()
         self.config = config or DigestConfig.get()
 
-    def refine(self, story: dict, original_articles: dict) -> list[dict]:
+    def refine(self, story: dict, original_articles: dict) -> tuple[list[dict], dict]:
         """Find best articles for a story using refined embedding search.
 
         Args:
@@ -37,10 +37,12 @@ class StoryRefiner:
             original_articles: {article_id: article_dict} - all articles from collector
 
         Returns:
-            List of article dicts with trimmed content, ready for generation.
+            (article_dicts, usage) — articles with trimmed content + embedding token usage.
         """
         cfg = self.config
         cutoff = datetime.now(timezone.utc) - timedelta(hours=cfg.hours_lookback)
+        usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+        used_ids = set(ArticleUse.objects.values_list("article_id", flat=True))
 
         # Start with originally identified articles
         result_ids = set(story.get("article_ids", []))
@@ -49,7 +51,8 @@ class StoryRefiner:
         queries = story.get("search_queries", [])
         if queries:
             try:
-                vectors, _ = self.embedder.embed_batch(queries)
+                vectors, total_tokens = self.embedder.embed_batch(queries)
+                usage = {"prompt_tokens": total_tokens, "completion_tokens": 0, "total_tokens": total_tokens}
             except Exception as e:
                 logger.warning("Failed to embed refine queries for '%s': %s", story.get("label"), e)
                 vectors = []
@@ -59,6 +62,7 @@ class StoryRefiner:
                 results = (
                     ArticleChunk.objects
                     .filter(article__published__gte=cutoff)
+                    .exclude(article_id__in=used_ids)
                     .annotate(distance=CosineDistance("embedding", emb))
                     .filter(distance__lte=max_distance)
                     .order_by("distance")
@@ -70,7 +74,7 @@ class StoryRefiner:
         # Fetch full article data
         all_ids = list(result_ids)
         if not all_ids:
-            return []
+            return [], usage
 
         articles = (
             Article.objects
@@ -91,4 +95,4 @@ class StoryRefiner:
         logger.info("Refined '%s': %d -> %d articles",
                      story.get("label", "?"), len(story.get("article_ids", [])), len(article_dicts))
 
-        return article_dicts
+        return article_dicts, usage

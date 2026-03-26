@@ -1,6 +1,6 @@
 """Default digest sections with translations and embedding descriptions.
 
-Used by the initnews management command to seed the database.
+Used by the initdigest management command to seed the database.
 Each section has ~10 embedding descriptions for broad news coverage.
 """
 

@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 from pgvector.django import CosineDistance
 
 from apps.feed.models import Article, ArticleChunk
-from apps.digest.models import DigestConfig, DigestSection
+from apps.digest.models import ArticleUse, DigestConfig, DigestSection
 
 logger = logging.getLogger(__name__)
 
@@ -32,10 +32,11 @@ class SectionArticleCollector:
                 section_vectors[section.pk] = vectors
 
         if not section_vectors:
-            raise RuntimeError("No section embeddings found. Run initnews or add sections in admin.")
+            raise RuntimeError("No section embeddings found. Run initdigest or add sections in admin.")
 
         # 2. For each section, find best articles via cosine similarity
         max_distance = 1.0 - cfg.similarity_threshold
+        used_ids = self._used_article_ids()
         article_scores = defaultdict(dict)
 
         for section_pk, vectors in section_vectors.items():
@@ -43,6 +44,7 @@ class SectionArticleCollector:
                 results = (
                     ArticleChunk.objects
                     .filter(article__published__gte=cutoff)
+                    .exclude(article_id__in=used_ids)
                     .annotate(distance=CosineDistance("embedding", emb))
                     .filter(distance__lte=max_distance)
                     .order_by("distance")
@@ -91,6 +93,55 @@ class SectionArticleCollector:
             logger.info("  [%d] %s: %d articles", section.order, section.slug, len(articles))
 
         return result
+
+    def collect_section(self, section: DigestSection) -> list[dict]:
+        """Collect articles for a single section (no cross-section dedup)."""
+        cfg = self.config
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=cfg.hours_lookback)
+
+        vectors = [e.embedding for e in section.embeddings.all() if e.embedding is not None]
+        if not vectors:
+            return []
+
+        max_distance = 1.0 - cfg.similarity_threshold
+        used_ids = self._used_article_ids()
+        article_scores = {}
+
+        for emb in vectors:
+            results = (
+                ArticleChunk.objects
+                .filter(article__published__gte=cutoff)
+                .exclude(article_id__in=used_ids)
+                .annotate(distance=CosineDistance("embedding", emb))
+                .filter(distance__lte=max_distance)
+                .order_by("distance")
+                .values_list("article_id", "distance")
+                [:cfg.chunks_per_query]
+            )
+            for article_id, distance in results:
+                score = 1.0 - distance
+                if score > article_scores.get(article_id, 0):
+                    article_scores[article_id] = score
+
+        if not article_scores:
+            return []
+
+        articles = (
+            Article.objects
+            .select_related("feed")
+            .filter(id__in=list(article_scores.keys()), published__gte=cutoff)
+        )
+
+        result = [self._article_to_dict(a) for a in articles]
+        result.sort(key=lambda x: x["published"], reverse=True)
+
+        logger.info("[%d] %s: %d articles collected", section.order, section.slug, len(result))
+        return result[:cfg.articles_per_section]
+
+    @staticmethod
+    def _used_article_ids() -> set:
+        """Pre-fetch IDs of articles already used in digests (one query, avoids per-embedding JOINs)."""
+        return set(ArticleUse.objects.values_list("article_id", flat=True))
 
     def _article_to_dict(self, a: Article) -> dict:
         snippet_len = self.config.article_snippet_length

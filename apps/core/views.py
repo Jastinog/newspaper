@@ -70,7 +70,7 @@ def index(request, date=None):
             if filtered_items:
                 active_section = filtered_items[0].section
         else:
-            for _, group_items in groupby(items, key=lambda i: i.section_id):
+            for _sec_id, group_items in groupby(items, key=lambda i: i.section_id):
                 group_list = list(group_items)
                 if group_list:
                     section_groups.append({

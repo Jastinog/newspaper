@@ -16,8 +16,8 @@ DEFAULT_PROMPT_ANALYSIS = (
     "- \"search_queries\": 2-3 search queries to find the most relevant articles "
     "about this specific story\n\n"
     "Output ONLY valid JSON:\n"
-    '{"stories": [{"label": "...", "article_ids": [...], '
-    '"search_queries": ["...", "..."]}, ...]}'
+    '{{"stories": [{{"label": "...", "article_ids": [...], '
+    '"search_queries": ["...", "..."]}}, ...]}}'
 )
 
 DEFAULT_PROMPT_GENERATION = (
@@ -57,33 +57,84 @@ DEFAULT_PROMPT_TRANSLATION = (
 class DigestConfig(models.Model):
     """Singleton storing all digest pipeline settings and prompts."""
 
-    # LLM
-    chat_model = models.CharField(max_length=100, default="gpt-4.1-mini")
-    temperature = models.FloatField(default=0.3)
-    max_tokens_analysis = models.PositiveIntegerField(default=2000)
-    max_tokens_generation = models.PositiveIntegerField(default=1500)
-    max_tokens_headline = models.PositiveIntegerField(default=1000)
-    max_tokens_translation = models.PositiveIntegerField(default=1000)
+    # ── LLM Model ───────────────────────────────────────────────
+    chat_model = models.CharField(
+        max_length=100, default="gpt-4.1-mini",
+        help_text="OpenAI model for analysis, generation, and translation",
+    )
+    temperature = models.FloatField(
+        default=0.3,
+        help_text="LLM temperature (0 = deterministic, 1 = creative)",
+    )
 
-    # Collection
-    hours_lookback = models.PositiveIntegerField(default=36)
-    articles_per_section = models.PositiveIntegerField(default=25)
-    similarity_threshold = models.FloatField(default=0.25)
-    chunks_per_query = models.PositiveIntegerField(default=60)
-    article_snippet_length = models.PositiveIntegerField(default=300)
-    context_trim_length = models.PositiveIntegerField(default=1500)
-    refine_search_top_k = models.PositiveIntegerField(default=10)
+    # ── Token Limits ──────────────────────────────────────────
+    max_tokens_analysis = models.PositiveIntegerField(
+        default=2000, help_text="Max tokens for story analysis response",
+    )
+    max_tokens_generation = models.PositiveIntegerField(
+        default=1500, help_text="Max tokens for item generation response",
+    )
+    max_tokens_headline = models.PositiveIntegerField(
+        default=1000, help_text="Max tokens for headline generation response",
+    )
+    max_tokens_translation = models.PositiveIntegerField(
+        default=1000, help_text="Max tokens for translation response",
+    )
 
-    # Generation
-    items_per_section_min = models.PositiveIntegerField(default=4)
-    items_per_section_max = models.PositiveIntegerField(default=10)
-    max_workers = models.PositiveIntegerField(default=5)
+    # ── Article Collection ────────────────────────────────────
+    hours_lookback = models.PositiveIntegerField(
+        default=36, help_text="Collect articles published within this many hours",
+    )
+    articles_per_section = models.PositiveIntegerField(
+        default=25, help_text="Max articles to collect per section",
+    )
+    similarity_threshold = models.FloatField(
+        default=0.25,
+        help_text="Cosine distance threshold (0.25 = similarity >= 0.75)",
+    )
+    chunks_per_query = models.PositiveIntegerField(
+        default=60, help_text="Max article chunks per embedding query",
+    )
+    article_snippet_length = models.PositiveIntegerField(
+        default=300, help_text="Snippet length (chars) sent to analyzer",
+    )
 
-    # Prompts
-    system_prompt_analysis = models.TextField(default=DEFAULT_PROMPT_ANALYSIS)
-    system_prompt_generation = models.TextField(default=DEFAULT_PROMPT_GENERATION)
-    system_prompt_headline = models.TextField(default=DEFAULT_PROMPT_HEADLINE)
-    system_prompt_translation = models.TextField(default=DEFAULT_PROMPT_TRANSLATION)
+    # ── Story Refinement ──────────────────────────────────────
+    context_trim_length = models.PositiveIntegerField(
+        default=1500, help_text="Article content length (chars) sent to generator",
+    )
+    refine_search_top_k = models.PositiveIntegerField(
+        default=10, help_text="Additional articles to find per refine query",
+    )
+
+    # ── Generation ────────────────────────────────────────────
+    items_per_section_min = models.PositiveIntegerField(
+        default=4, help_text="Min stories the analyzer should identify per section",
+    )
+    items_per_section_max = models.PositiveIntegerField(
+        default=10, help_text="Max stories the analyzer should identify per section",
+    )
+    max_workers = models.PositiveIntegerField(
+        default=5, help_text="Max parallel workers (for batch mode)",
+    )
+
+    # ── System Prompts ────────────────────────────────────────
+    system_prompt_analysis = models.TextField(
+        default=DEFAULT_PROMPT_ANALYSIS,
+        help_text="Prompt for identifying stories from articles. Variables: {section}, {min}, {max}",
+    )
+    system_prompt_generation = models.TextField(
+        default=DEFAULT_PROMPT_GENERATION,
+        help_text="Prompt for generating topic/summary/importance from articles",
+    )
+    system_prompt_headline = models.TextField(
+        default=DEFAULT_PROMPT_HEADLINE,
+        help_text="Prompt for generating the overall digest headline",
+    )
+    system_prompt_translation = models.TextField(
+        default=DEFAULT_PROMPT_TRANSLATION,
+        help_text="Prompt for translating items. Variable: {language}",
+    )
 
     class Meta:
         verbose_name = "Digest Configuration"
@@ -158,7 +209,16 @@ class SectionEmbedding(models.Model):
 class Digest(models.Model):
     """One digest per date. Language-specific content in DigestTranslation."""
 
+    class Stage(models.IntegerChoices):
+        PENDING = 0, "Pending"
+        ANALYZED = 1, "Analyzed"
+        REFINED = 2, "Refined"
+        GENERATED = 3, "Generated"
+        SAVED = 4, "Saved"
+        DONE = 5, "Done"
+
     date = models.DateField(unique=True)
+    stage = models.IntegerField(choices=Stage.choices, default=Stage.PENDING)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -233,3 +293,56 @@ class DigestItemTranslation(models.Model):
 
     def __str__(self):
         return f"{self.topic} [{self.language.code}]"
+
+
+# ── Item Pipeline (per-item stage tracking) ────────────────────
+
+
+class ItemPipeline(models.Model):
+    """Per-item pipeline state (cf. ArticlePipeline in feed app).
+
+    Each timestamp is NULL until that stage completes.
+    Intermediate data is stored as JSON for resume capability.
+    """
+
+    item = models.OneToOneField(DigestItem, on_delete=models.CASCADE, related_name="pipeline")
+
+    # Intermediate data
+    story_label = models.CharField(max_length=200, default="")
+    article_ids = models.JSONField(default=list)
+    search_queries = models.JSONField(default=list)
+    refined_articles = models.JSONField(default=list)
+
+    # Stage timestamps (NULL = pending, timestamp = done)
+    analyzed_at = models.DateTimeField(null=True, blank=True)
+    refined_at = models.DateTimeField(null=True, blank=True)
+    generated_at = models.DateTimeField(null=True, blank=True)
+    translated_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"Pipeline: {self.story_label or self.item_id}"
+
+
+# ── Article Usage Tracking ──────────────────────────────────────
+
+
+class ArticleUse(models.Model):
+    """Tracks which articles have been used in digest items.
+
+    CASCADE from DigestItem ensures re-runs (delete+recreate digest)
+    automatically free articles for reuse.
+    """
+
+    article = models.ForeignKey(
+        "feed.Article", on_delete=models.CASCADE, related_name="digest_uses",
+    )
+    item = models.ForeignKey(
+        DigestItem, on_delete=models.CASCADE, related_name="article_uses",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [("article", "item")]
+
+    def __str__(self):
+        return f"Article {self.article_id} -> Item {self.item_id}"

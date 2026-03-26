@@ -5,8 +5,9 @@ from unfold.admin import ModelAdmin, TabularInline
 from apps.core.services.ai import EmbeddingClient
 
 from .models import (
-    Digest, DigestConfig, DigestItem, DigestItemTranslation,
-    DigestSection, DigestSectionTranslation, DigestTranslation, SectionEmbedding,
+    ArticleUse, Digest, DigestConfig, DigestItem, DigestItemTranslation,
+    DigestSection, DigestSectionTranslation, DigestTranslation,
+    ItemPipeline, SectionEmbedding,
 )
 
 
@@ -27,21 +28,48 @@ class DigestConfigAdmin(ModelAdmin):
     list_display = ("__str__",)
 
     fieldsets = (
-        ("LLM", {"fields": ("chat_model", "temperature")}),
-        ("Token Limits", {"fields": (
-            "max_tokens_analysis", "max_tokens_generation",
-            "max_tokens_headline", "max_tokens_translation",
-        )}),
-        ("Collection", {"fields": (
-            "hours_lookback", "articles_per_section", "similarity_threshold",
-            "chunks_per_query", "article_snippet_length", "context_trim_length",
-            "refine_search_top_k",
-        )}),
-        ("Generation", {"fields": ("items_per_section_min", "items_per_section_max", "max_workers")}),
-        ("Prompts", {"fields": (
-            "system_prompt_analysis", "system_prompt_generation",
-            "system_prompt_headline", "system_prompt_translation",
-        )}),
+        ("LLM Model", {
+            "description": "OpenAI model and generation parameters",
+            "fields": ("chat_model", "temperature"),
+        }),
+        ("Token Limits", {
+            "description": "Max tokens for each LLM response type",
+            "fields": (
+                ("max_tokens_analysis", "max_tokens_generation"),
+                ("max_tokens_headline", "max_tokens_translation"),
+            ),
+        }),
+        ("Step 1: Article Collection", {
+            "description": "How articles are found via embedding similarity search",
+            "fields": (
+                ("hours_lookback", "articles_per_section"),
+                ("similarity_threshold", "chunks_per_query"),
+                "article_snippet_length",
+            ),
+        }),
+        ("Step 3: Story Refinement", {
+            "description": "How articles are enriched after story identification",
+            "fields": (
+                ("context_trim_length", "refine_search_top_k"),
+            ),
+        }),
+        ("Step 4: Generation", {
+            "description": "How many stories the analyzer should identify per section",
+            "fields": (
+                ("items_per_section_min", "items_per_section_max"),
+                "max_workers",
+            ),
+        }),
+        ("Prompts", {
+            "description": "System prompts sent to the LLM at each pipeline step",
+            "classes": ["collapse"],
+            "fields": (
+                "system_prompt_analysis",
+                "system_prompt_generation",
+                "system_prompt_headline",
+                "system_prompt_translation",
+            ),
+        }),
     )
 
     def has_add_permission(self, request):
@@ -138,7 +166,7 @@ class DigestItemInlineShort(TabularInline):
 
 @admin.register(Digest)
 class DigestAdmin(ModelAdmin):
-    list_display = ("id", "date", "item_count", "created_at")
+    list_display = ("id", "date", "stage", "item_count", "created_at")
     list_display_links = ("id", "date")
     inlines = [DigestTranslationInline, DigestItemInlineShort]
 
@@ -171,3 +199,28 @@ class DigestItemAdmin(ModelAdmin):
     def item_topic(self, obj):
         t = obj.translations.filter(language__is_default=True).first()
         return t.topic[:80] if t else f"Item #{obj.pk}"
+
+
+# ── ItemPipeline (debug) ───────────────────────────────────────
+
+
+@admin.register(ItemPipeline)
+class ItemPipelineAdmin(ModelAdmin):
+    list_display = ("id", "story_label", "analyzed_at", "refined_at", "generated_at", "translated_at")
+    list_display_links = ("id", "story_label")
+    list_filter = ("item__digest__date",)
+    readonly_fields = (
+        "item", "story_label", "article_ids", "search_queries",
+        "refined_articles", "analyzed_at", "refined_at", "generated_at", "translated_at",
+    )
+
+
+# ── ArticleUse ─────────────────────────────────────────────────
+
+
+@admin.register(ArticleUse)
+class ArticleUseAdmin(ModelAdmin):
+    list_display = ("id", "article", "item", "created_at")
+    list_display_links = ("id",)
+    list_filter = ("item__digest__date",)
+    raw_id_fields = ("article", "item")
