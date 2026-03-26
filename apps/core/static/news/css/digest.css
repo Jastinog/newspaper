@@ -104,14 +104,13 @@
 /* === PIN BUTTON === */
 .pin-section-btn {
     flex-shrink: 0;
-    width: 8px;
-    height: 8px;
     margin-right: 0.4rem;
     padding: 0;
-    border: 1.5px solid var(--section-heading-fg);
+    border: none;
     background: none;
-    border-radius: 1px;
     cursor: pointer;
+    font-size: 0.55rem;
+    color: var(--section-heading-fg);
     opacity: 0.3;
     transition: opacity 0.2s;
 }
@@ -122,7 +121,6 @@
     opacity: 1;
 }
 .digest-section.pinned .pin-section-btn {
-    background: var(--section-heading-fg);
     opacity: 0.6;
 }
 .pin-nav-dot {

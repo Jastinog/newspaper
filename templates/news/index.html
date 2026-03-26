@@ -63,7 +63,7 @@
     <div class="pinned-sections">
     {% for group in pinned_groups %}
         <div class="digest-section pinned">
-            <h3><button class="pin-section-btn" data-section-slug="{{ group.section.slug }}" title="{% trans 'Unpin section' %}"></button><span>{{ group.name }}</span></h3>
+            <h3><button class="pin-section-btn" data-section-slug="{{ group.section.slug }}" title="{% trans 'Unpin section' %}"><i class="fas fa-thumbtack"></i></button><span>{{ group.name }}</span></h3>
             <div class="summary">
                 <ul>
                 {% for item in group.items %}
@@ -80,7 +80,7 @@
     <div class="digest-grid">
     {% for group in section_groups %}
         <div class="digest-section">
-            <h3><button class="pin-section-btn" data-section-slug="{{ group.section.slug }}" title="{% trans 'Pin section' %}"></button><span>{{ group.name }}</span></h3>
+            <h3><button class="pin-section-btn" data-section-slug="{{ group.section.slug }}" title="{% trans 'Pin section' %}"><i class="fas fa-thumbtack"></i></button><span>{{ group.name }}</span></h3>
             <div class="summary">
                 <ul>
                 {% for item in group.items %}

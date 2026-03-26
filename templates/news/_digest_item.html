@@ -9,5 +9,5 @@
     {% else %}<span class="importance-bar low" data-label="{% trans 'For context' %}"></span>
     {% endif %}
     <a href="{% url 'research' item.id %}" class="research-hint research-link" data-item-id="{{ item.id }}">{% trans "research" %} &rarr;</a>
-    <button class="similar-btn" data-item-id="{{ item.id }}" aria-label="{% trans 'Similar news' %}" title="{% trans 'Similar news' %}"><span class="ph-thin ph-git-branch"></span></button>
+    <button class="similar-btn" data-item-id="{{ item.id }}" aria-label="{% trans 'Similar news' %}" title="{% trans 'Similar news' %}"><i class="fas fa-atom"></i></button>
 </span>
