@@ -6,18 +6,159 @@
 
 {% block content %}
 
+<style>
+/* ── Lamp toggle ─────────────────────────────────────────── */
+.lamp {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: none;
+    background: linear-gradient(170deg, #dddde2 0%, #b0b0b8 30%, #707078 65%, #9898a0 100%);
+    cursor: pointer;
+    outline: none;
+    flex-shrink: 0;
+    transition: all 0.35s ease;
+    position: relative;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+}
+/* glass */
+.lamp::before {
+    content: "";
+    position: absolute;
+    inset: 5px;
+    border-radius: 50%;
+    transition: all 0.35s ease;
+}
+/* highlight */
+.lamp::after {
+    content: "";
+    position: absolute;
+    top: 5px;
+    left: 7px;
+    width: 4px;
+    height: 3px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.3);
+    pointer-events: none;
+    transition: opacity 0.35s ease;
+}
+.lamp.off::after { opacity: 0.12; }
+.lamp:active:not(:disabled) { transform: scale(0.9); }
+.lamp:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* ON */
+.lamp.on::before {
+    background: radial-gradient(circle at 50% 55%, #3bea6e, #15803d);
+    box-shadow: inset 0 2px 3px rgba(0,0,0,0.25);
+}
+.lamp.on {
+    box-shadow:
+        0 0 4px 0px rgba(34,197,94,0.2),
+        0 1px 2px rgba(0,0,0,0.15);
+}
+.lamp.on:hover:not(:disabled) {
+    box-shadow:
+        0 0 6px 1px rgba(34,197,94,0.3),
+        0 1px 2px rgba(0,0,0,0.15);
+}
+
+/* OFF — unlit LED */
+.lamp.off::before {
+    background: radial-gradient(circle at 50% 55%, #8a9a8e, #5c6b60);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.35);
+}
+.lamp.off {
+    box-shadow: 0 1px 2px rgba(0,0,0,0.12);
+}
+.lamp.off:hover:not(:disabled)::before {
+    background: radial-gradient(circle at 50% 55%, #96a89a, #687b6c);
+}
+
+/* Pipeline lamp — slightly bigger */
+.lamp-lg {
+    width: 24px;
+    height: 24px;
+}
+.lamp-lg::before { inset: 5px; }
+.lamp-lg::after {
+    top: 6px;
+    left: 8px;
+    width: 5px;
+    height: 4px;
+}
+.lamp-lg.on {
+    animation: lamp-pulse 2.5s ease-in-out infinite;
+}
+@keyframes lamp-pulse {
+    0%, 100% {
+        box-shadow:
+            0 0 4px 0px rgba(34,197,94,0.2),
+            0 1px 2px rgba(0,0,0,0.15);
+    }
+    50% {
+        box-shadow:
+            0 0 7px 1px rgba(34,197,94,0.3),
+            0 1px 2px rgba(0,0,0,0.15);
+    }
+}
+
+/* ── Dark ── */
+.dark .lamp {
+    background: linear-gradient(170deg, #808088 0%, #58585f 30%, #38383f 65%, #606068 100%);
+}
+.dark .lamp.on::before {
+    background: radial-gradient(circle at 50% 55%, #3bea6e, #0f6e2e);
+    box-shadow: inset 0 2px 3px rgba(0,0,0,0.3);
+}
+.dark .lamp.on {
+    box-shadow:
+        0 0 5px 0px rgba(34,197,94,0.25),
+        0 1px 2px rgba(0,0,0,0.3);
+}
+.dark .lamp.on:hover:not(:disabled) {
+    box-shadow:
+        0 0 7px 1px rgba(34,197,94,0.35),
+        0 1px 2px rgba(0,0,0,0.3);
+}
+.dark .lamp.off::before {
+    background: radial-gradient(circle at 50% 55%, #3a4a3e, #2a332c);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.45);
+}
+.dark .lamp.off {
+    box-shadow: 0 1px 2px rgba(0,0,0,0.25);
+}
+.dark .lamp.off:hover:not(:disabled)::before {
+    background: radial-gradient(circle at 50% 55%, #455548, #323d35);
+}
+
+/* ── Row layout: label | divider | lamp ── */
+.toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.toggle-divider {
+    width: 1px;
+    height: 16px;
+    margin: 0 10px;
+    background: #d1d5db;
+    flex-shrink: 0;
+}
+.dark .toggle-divider {
+    background: #4b5563;
+}
+</style>
+
 {# --- Pipeline control + auto-refresh indicator --- #}
 <div class="flex items-center justify-between mb-4">
-    <div class="flex items-center gap-3">
-        <span id="pipeline-label" class="text-sm font-medium text-gray-700 dark:text-gray-300">
-            {% if not pipeline_running %}Pipeline not running{% elif pipeline_active %}Pipeline active{% else %}Pipeline paused{% endif %}
+    <div class="toggle-row">
+        <span id="pipeline-label" class="text-sm font-semibold text-gray-700 dark:text-gray-200">
+            {% if not pipeline_running %}Not Running{% elif pipeline_active %}Pipeline Active{% else %}Pipeline Paused{% endif %}
         </span>
         <button id="pipeline-toggle"
                 onclick="togglePipeline()"
                 {% if not pipeline_running %}disabled{% endif %}
-                class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed {% if pipeline_active %}bg-green-500{% else %}bg-gray-300 dark:bg-gray-600{% endif %}">
-            <span class="pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow ring-0 transition-transform duration-200 ease-in-out {% if pipeline_active %}translate-x-5{% else %}translate-x-0{% endif %}"></span>
-        </button>
+                class="lamp lamp-lg {% if pipeline_active %}on{% else %}off{% endif %}"></button>
     </div>
     <div class="flex items-center gap-2">
         <span id="hd-status" class="text-xs text-gray-400"></span>
@@ -28,16 +169,17 @@
 {# --- Stage Controls --- #}
 <div class="mb-8">
     {% component "unfold/components/card.html" with title="Stage Controls" %}
-    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+    <div class="flex flex-wrap items-center gap-y-4">
         {% for stage_id, stage_label in stage_labels %}
-        <div class="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-800/50">
-            <span class="text-sm text-gray-700 dark:text-gray-300">{{ stage_label }}</span>
-            <button id="stage-{{ stage_id }}"
-                    onclick="toggleStage('{{ stage_id }}')"
-                    class="stage-toggle relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none {% if stage_id in stage_toggles_on %}bg-green-500{% else %}bg-gray-300 dark:bg-gray-600{% endif %}">
-                <span class="pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow ring-0 transition-transform duration-200 ease-in-out {% if stage_id in stage_toggles_on %}translate-x-4{% else %}translate-x-0{% endif %}"></span>
-            </button>
-        </div>
+            {% if not forloop.first %}
+                <span class="toggle-divider"></span>
+            {% endif %}
+            <div class="toggle-row">
+                <span class="text-sm font-medium text-gray-600 dark:text-gray-400">{{ stage_label }}</span>
+                <button id="stage-{{ stage_id }}"
+                        onclick="toggleStage('{{ stage_id }}')"
+                        class="lamp {% if stage_id in stage_toggles_on %}on{% else %}off{% endif %}"></button>
+            </div>
         {% endfor %}
     </div>
     {% endcomponent %}
@@ -217,22 +359,14 @@ var TOGGLE_URL = "{% url 'harvester_toggle' %}";
 var STAGE_TOGGLE_URL = "{% url 'harvester_stage_toggle' %}";
 var CSRF = "{{ csrf_token }}";
 
-function setToggle(btn, enabled, onTranslate, offTranslate) {
+function setBtnState(btn, enabled) {
     if (!btn) return;
-    var knob = btn.querySelector("span");
-    if (enabled) {
-        btn.className = btn.className.replace("bg-gray-300", "").replace("dark:bg-gray-600", "").trimEnd();
-        if (!btn.className.includes("bg-green-500")) btn.className += " bg-green-500";
-        knob.className = knob.className.replace(offTranslate, onTranslate);
-    } else {
-        btn.className = btn.className.replace("bg-green-500", "").trimEnd();
-        if (!btn.className.includes("bg-gray-300")) btn.className += " bg-gray-300 dark:bg-gray-600";
-        knob.className = knob.className.replace(onTranslate, offTranslate);
-    }
+    btn.classList.toggle("on", enabled);
+    btn.classList.toggle("off", !enabled);
 }
 
 function updateStageToggle(stageId, enabled) {
-    setToggle(document.getElementById("stage-" + stageId), enabled, "translate-x-4", "translate-x-0");
+    setBtnState(document.getElementById("stage-" + stageId), enabled);
 }
 
 async function toggleStage(stageId) {
@@ -275,14 +409,8 @@ function updatePipelineUI(active, running) {
     if (!btn || !label) return;
 
     btn.disabled = !running;
-    if (!running) {
-        label.textContent = "Pipeline not running";
-    } else if (active) {
-        label.textContent = "Pipeline active";
-    } else {
-        label.textContent = "Pipeline paused";
-    }
-    setToggle(btn, active, "translate-x-5", "translate-x-0");
+    setBtnState(btn, active);
+    label.textContent = !running ? "Not Running" : active ? "Pipeline Active" : "Pipeline Paused";
 }
 
 (function() {
