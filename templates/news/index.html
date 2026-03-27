@@ -10,102 +10,19 @@
 {% endblock %}
 
 {% block masthead_date %}
-    {% if digest %}
-        {% if prev_date %}
-            <a href="{% url 'digest_by_date' prev_date|date:'Y-m-d' %}">&larr;</a>
-        {% else %}
-            <span class="arrow-disabled">&larr;</span>
-        {% endif %}
-        {{ digest.date|date:"F j, Y" }}
-        {% if next_date %}
-            <a href="{% url 'digest_by_date' next_date|date:'Y-m-d' %}">&rarr;</a>
-        {% else %}
-            <span class="arrow-disabled">&rarr;</span>
-        {% endif %}
-    {% else %}
-        {% now "l, F j, Y" %}
-    {% endif %}
+    {% include "news/_date_nav.html" %}
 {% endblock %}
 
 {% block content %}
-{% if not active_section %}{% include "news/_search_bar.html" %}{% endif %}
-
-{% if digest %}
-    <div class="section-nav-rule"></div>
-    <div class="section-nav" id="sectionNav">
-        <button class="section-nav-arrow hidden" id="sectionNavLeft" aria-label="Scroll left">&lsaquo;</button>
-        <div class="section-nav-track">
-            <div class="section-nav-list" id="sectionNavList">
-            <a class="section-nav-item {% if not active_section %}active{% endif %}" href="{% url 'index' %}">{% trans "All" %}</a>
-            {% for group in all_groups %}
-                <a class="section-nav-item {% if active_section.id == group.section.id %}active{% endif %}{% if group.section.slug in pinned_slugs %} pinned{% endif %}" href="?section={{ group.section.id }}">{% if group.section.slug in pinned_slugs %}<span class="pin-nav-dot"></span> {% endif %}{{ group.name }}</a>
-            {% endfor %}
-            </div>
-        </div>
-        <button class="section-nav-arrow hidden" id="sectionNavRight" aria-label="Scroll right">&rsaquo;</button>
-    </div>
-
-    {% if not active_section and headline %}
-        <div class="digest-headline">{{ headline }}</div>
-    {% endif %}
-
-    <div class="digest-headline-rule"></div>
-
-    {% if active_section %}
-    <ul class="digest-grid filtered-grid">
-        {% for item in filtered_items %}
-            <li class="digest-item-card">{% include "news/_digest_item.html" %}</li>
-        {% endfor %}
-    </ul>
-    {% else %}
-
-    {% if pinned_groups %}
-    <div class="pinned-sections">
-    {% for group in pinned_groups %}
-        <div class="digest-section pinned">
-            <h3><button class="pin-section-btn" data-section-slug="{{ group.section.slug }}" title="{% trans 'Unpin section' %}"><i class="fas fa-thumbtack"></i></button><span>{{ group.name }}</span></h3>
-            <div class="summary">
-                <ul>
-                {% for item in group.items %}
-                    <li>{% include "news/_digest_item.html" %}</li>
-                {% endfor %}
-                </ul>
-            </div>
-        </div>
-    {% endfor %}
-    </div>
-    <div class="pinned-divider"></div>
-    {% endif %}
-
-    <div class="digest-grid">
-    {% for group in section_groups %}
-        <div class="digest-section">
-            <h3><button class="pin-section-btn" data-section-slug="{{ group.section.slug }}" title="{% trans 'Pin section' %}"><i class="fas fa-thumbtack"></i></button><span>{{ group.name }}</span></h3>
-            <div class="summary">
-                <ul>
-                {% for item in group.items %}
-                    <li>{% include "news/_digest_item.html" %}</li>
-                {% endfor %}
-                </ul>
-            </div>
-        </div>
-    {% endfor %}
-    </div>
-    {% endif %}
-
-    <button class="back-to-top" id="backToTop" aria-label="Back to top">&uarr;</button>
-{% else %}
-    <div class="empty">
-        <p>{% trans "No digest yet. Run the digest command to generate one." %}</p>
-    </div>
-{% endif %}
+<div id="contentArea">
+    {% include "news/_content_area.html" %}
+</div>
 {% endblock %}
 
 {% block extra_js %}
 {% if digest %}
     <script src="{% static 'news/js/research.js' %}"></script>
     <script src="{% static 'news/js/section-nav.js' %}"></script>
-    <script src="{% static 'news/js/pin-sections.js' %}"></script>
     <script src="{% static 'news/js/back-to-top.js' %}"></script>
     <script src="https://cdn.jsdelivr.net/npm/force-graph/dist/force-graph.min.js"></script>
     <script src="{% static 'news/js/similar-news.js' %}"></script>

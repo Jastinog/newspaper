@@ -1,0 +1,8 @@
+{% if pinned_groups %}
+<div class="pinned-sections">
+{% for group in pinned_groups %}
+    {% include "news/_section_block.html" with is_pinned=True %}
+{% endfor %}
+</div>
+<div class="pinned-divider"></div>
+{% endif %}

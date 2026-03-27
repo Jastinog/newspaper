@@ -1,0 +1,17 @@
+{% load i18n %}
+<div class="digest-section{% if is_pinned %} pinned{% endif %}">
+    <h3><button class="pin-section-btn"
+                data-section-slug="{{ group.section.slug }}"
+                hx-post="{% url 'toggle_pin' group.section.slug %}"
+                hx-target="#pinnedArea"
+                hx-swap="outerHTML transition:true"
+                hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                title="{% if is_pinned %}{% trans 'Unpin section' %}{% else %}{% trans 'Pin section' %}{% endif %}"><i class="fas fa-thumbtack"></i></button><span>{{ group.name }}</span></h3>
+    <div class="summary">
+        <ul>
+        {% for item in group.items %}
+            <li>{% include "news/_digest_item.html" %}</li>
+        {% endfor %}
+        </ul>
+    </div>
+</div>

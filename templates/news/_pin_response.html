@@ -1,0 +1,13 @@
+{% load i18n %}
+{# Primary swap target: replaces #pinnedArea outerHTML #}
+<div id="pinnedArea">
+    {% include "news/_pinned_area.html" %}
+</div>
+
+{# OOB: replace section nav (pin dots change) #}
+{% include "news/_section_nav.html" with oob=True %}
+
+{# OOB: replace main grid (section moved between pinned/unpinned) #}
+<div id="mainGrid" hx-swap-oob="true">
+    {% include "news/_main_grid.html" %}
+</div>

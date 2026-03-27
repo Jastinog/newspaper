@@ -1,0 +1,24 @@
+{% load i18n %}
+{% if digest %}
+    {% if prev_date %}
+        <a href="{% url 'digest_by_date' prev_date|date:'Y-m-d' %}"
+           hx-get="{% url 'digest_by_date' prev_date|date:'Y-m-d' %}"
+           hx-target="#contentArea"
+           hx-swap="innerHTML transition:true"
+           hx-push-url="true">&larr;</a>
+    {% else %}
+        <span class="arrow-disabled">&larr;</span>
+    {% endif %}
+    {{ digest.date|date:"F j, Y" }}
+    {% if next_date %}
+        <a href="{% url 'digest_by_date' next_date|date:'Y-m-d' %}"
+           hx-get="{% url 'digest_by_date' next_date|date:'Y-m-d' %}"
+           hx-target="#contentArea"
+           hx-swap="innerHTML transition:true"
+           hx-push-url="true">&rarr;</a>
+    {% else %}
+        <span class="arrow-disabled">&rarr;</span>
+    {% endif %}
+{% else %}
+    {% now "l, F j, Y" %}
+{% endif %}

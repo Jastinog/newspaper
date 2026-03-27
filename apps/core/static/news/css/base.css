@@ -103,6 +103,16 @@ main {
     padding: clamp(1rem, 2vw, 1.5rem) 0 clamp(1.5rem, 4vw, 3rem);
 }
 
+/* === HTMX TRANSITIONS === */
+.htmx-swapping > * {
+    opacity: 0;
+    transition: opacity .12s ease-out;
+}
+.htmx-settling > * {
+    opacity: 1;
+    transition: opacity .12s ease-in;
+}
+
 /* === RESPONSIVE === */
 @media (max-width: 599px) {
     main {

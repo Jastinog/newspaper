@@ -1,0 +1,23 @@
+{% load i18n %}
+<div class="section-nav" id="sectionNav"{% if oob %} hx-swap-oob="true"{% endif %}>
+    <button class="section-nav-arrow hidden" id="sectionNavLeft" aria-label="Scroll left">&lsaquo;</button>
+    <div class="section-nav-track">
+        <div class="section-nav-list" id="sectionNavList">
+        <a class="section-nav-item {% if not active_section %}active{% endif %}"
+           href="{% url 'index' %}"
+           hx-get="{% url 'index' %}"
+           hx-target="#contentArea"
+           hx-swap="innerHTML transition:true"
+           hx-push-url="true">{% trans "All" %}</a>
+        {% for group in all_groups %}
+            <a class="section-nav-item {% if active_section.id == group.section.id %}active{% endif %}{% if group.section.slug in pinned_slugs %} pinned{% endif %}"
+               href="?section={{ group.section.id }}"
+               hx-get="?section={{ group.section.id }}"
+               hx-target="#contentArea"
+               hx-swap="innerHTML transition:true"
+               hx-push-url="true">{% if group.section.slug in pinned_slugs %}<span class="pin-nav-dot"></span> {% endif %}{{ group.name }}</a>
+        {% endfor %}
+        </div>
+    </div>
+    <button class="section-nav-arrow hidden" id="sectionNavRight" aria-label="Scroll right">&rsaquo;</button>
+</div>

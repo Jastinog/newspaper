@@ -24,7 +24,7 @@ def bias_spectrum(item):
     feed_map = {}
     total = 0
 
-    for article in item.articles.select_related("feed"):
+    for article in item.articles.all():
         lean = article.feed.lean
         total += 1
         if lean and lean in counts:

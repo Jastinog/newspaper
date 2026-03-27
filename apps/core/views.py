@@ -1,6 +1,7 @@
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import get_language, gettext_lazy as _
+from django.views.decorators.http import require_POST
 
 from apps.digest.models import Digest, DigestItem
 from apps.feed.models import Article, Category
@@ -9,6 +10,13 @@ from apps.research.models import Research
 
 SITE_NAME = _("Newspaper")
 SITE_DESCRIPTION = _("Daily AI-curated news digest from 100+ RSS sources worldwide")
+
+_PINNED_COOKIE = "pinned_sections"
+_PINNED_MAX_AGE = 365 * 24 * 60 * 60
+
+
+def _parse_pinned_cookie(request):
+    return set(s for s in request.COOKIES.get(_PINNED_COOKIE, "").split(",") if s)
 
 
 # ── Template Views ────────────────────────────────────────
@@ -22,7 +30,8 @@ def _latest_digest(qs, date=None):
     return qs.order_by("-date").first()
 
 
-def index(request, date=None):
+def _build_digest_context(request, date=None, pinned_slugs=None):
+    """Build the shared context dict used by index() and toggle_pin()."""
     from datetime import datetime as dt
     from itertools import groupby
 
@@ -33,7 +42,7 @@ def index(request, date=None):
         try:
             parsed = dt.strptime(date, "%Y-%m-%d").date()
         except ValueError:
-            return redirect("index")
+            return None
 
     digest = _latest_digest(Digest.objects.all(), date=parsed)
 
@@ -54,15 +63,14 @@ def index(request, date=None):
     filtered_items = None
     section_id = request.GET.get("section")
 
-    # Pinned sections from cookie
-    pinned_slugs = set(
-        s for s in request.COOKIES.get("pinned_sections", "").split(",") if s
-    )
+    if pinned_slugs is None:
+        pinned_slugs = _parse_pinned_cookie(request)
 
     if digest:
         items = list(digest.items.select_related("section", "image").prefetch_related(
             "translations", "translations__language",
             "section__translations", "section__translations__language",
+            "articles__feed",
         ).all())
 
         # Annotate items with localized text for template (prefetch-safe, no extra queries)
@@ -99,10 +107,9 @@ def index(request, date=None):
         "og_type": "website",
     }
 
-    # All sections for nav bar (pinned + unpinned, sorted by order)
     all_groups = sorted(pinned_groups + section_groups, key=lambda g: g["section"].order)
 
-    return render(request, "news/index.html", {
+    return {
         "digest": digest,
         "headline": headline,
         "section_groups": section_groups,
@@ -114,7 +121,46 @@ def index(request, date=None):
         "active_section": active_section,
         "filtered_items": filtered_items,
         "seo": seo,
-    })
+    }
+
+
+_HTMX_TEMPLATES = {
+    "contentArea": "news/_htmx_content_area.html",
+    "mainGrid": "news/_main_grid.html",
+    "pinnedArea": "news/_pinned_area.html",
+    "sectionNav": "news/_section_nav.html",
+}
+
+
+def index(request, date=None):
+    context = _build_digest_context(request, date=date)
+    if context is None:
+        return redirect("index")
+
+    if request.headers.get("HX-Request") == "true":
+        target = request.headers.get("HX-Target", "contentArea")
+        template = _HTMX_TEMPLATES.get(target, "news/_content_area.html")
+        return render(request, template, context)
+
+    return render(request, "news/index.html", context)
+
+
+@require_POST
+def toggle_pin(request, slug):
+    """Toggle a section's pinned state (HTMX POST). Updates cookie, returns OOB swaps."""
+    pinned = _parse_pinned_cookie(request)
+    pinned.symmetric_difference_update({slug})
+
+    context = _build_digest_context(request, pinned_slugs=pinned)
+    if context is None:
+        return redirect("index")
+
+    response = render(request, "news/_pin_response.html", context)
+    response.set_cookie(
+        _PINNED_COOKIE, ",".join(sorted(pinned)),
+        max_age=_PINNED_MAX_AGE, samesite="Lax", path="/",
+    )
+    return response
 
 
 def article_detail(request, pk, slug=""):

@@ -246,6 +246,16 @@
     window.addEventListener('beforeunload', onBeforeUnload);
     window.addEventListener('popstate', onPopState);
 
+    // HTMX pushes URL on partial navigation — track as page view
+    document.addEventListener('htmx:pushedIntoHistory', function (evt) {
+        var newPath = evt.detail.path;
+        if (newPath !== currentPath) {
+            send('analytics.page_view', { path: newPath, referrer: '' });
+            currentPath = newPath;
+            maxScrollDepth = 0;
+        }
+    });
+
     startActive();
     connect();
 

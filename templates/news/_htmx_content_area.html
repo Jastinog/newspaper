@@ -1,0 +1,8 @@
+{% load i18n %}
+{# Main content area (primary swap target) #}
+{% include "news/_content_area.html" %}
+
+{# OOB: update masthead date (prev/next arrows + date text) #}
+<div id="mastheadDate" class="masthead-date" hx-swap-oob="innerHTML">
+    {% include "news/_date_nav.html" %}
+</div>

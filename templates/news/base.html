@@ -59,7 +59,7 @@
                         {% endfor %}
                     </form>
                 </div>
-                <div class="masthead-date">{% block masthead_date %}{% now "l, F j, Y" %}{% endblock %}</div>
+                <div class="masthead-date" id="mastheadDate">{% block masthead_date %}{% now "l, F j, Y" %}{% endblock %}</div>
                 <div class="site-title"><a href="{% url 'index' %}">{% trans "Newspaper" %}</a></div>
                 <div class="masthead-subtitle">{% trans "Daily News Digest" %}</div>
                 <button class="theme-toggle" onclick="toggleTheme()" title="{% trans "Toggle dark/light theme" %}" aria-label="{% trans "Toggle theme" %}">
@@ -78,6 +78,7 @@
     <footer>
         <div class="container">{% trans "Newspaper" %} &mdash; {% trans "RSS aggregator" %}</div>
     </footer>
+    <script src="{% static 'news/js/htmx.min.js' %}"></script>
     <script src="{% static 'news/js/theme.js' %}"></script>
     {% block extra_js %}{% endblock %}
 </body>

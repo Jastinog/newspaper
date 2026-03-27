@@ -218,44 +218,45 @@
         }, 5000);
     });
 
-    /* ── Click handlers ──────────────────────────────── */
+    /* ── Click handler (event delegation — survives HTMX swaps) ── */
 
-    document.querySelectorAll('.research-link').forEach(function (link) {
-        link.addEventListener('click', function (e) {
-            e.preventDefault();
-            var itemId = parseInt(this.dataset.itemId, 10);
-            var href = this.getAttribute('href');
-            var li = this.closest('li');
+    document.addEventListener('click', function (e) {
+        var link = e.target.closest('.research-link');
+        if (!link) return;
+        e.preventDefault();
 
-            if (li.classList.contains('research-ready')) {
-                window.location.href = href;
-                return;
-            }
+        var itemId = parseInt(link.dataset.itemId, 10);
+        var href = link.getAttribute('href');
+        var li = link.closest('li');
 
-            if (hasPending(itemId)) return;
+        if (li.classList.contains('research-ready')) {
+            window.location.href = href;
+            return;
+        }
 
-            if (!WS.send('research.generate', { item_id: itemId })) {
-                window.location.href = href;
-                return;
-            }
+        if (hasPending(itemId)) return;
 
-            var topicEl = li.querySelector('.item-topic');
-            var summaryEl = li.querySelector('.item-summary');
-            var imageEl = li.querySelector('.item-image');
+        if (!WS.send('research.generate', { item_id: itemId })) {
+            window.location.href = href;
+            return;
+        }
 
-            pending[itemId] = {
-                topic: topicEl ? topicEl.textContent.trim() : 'Research #' + itemId,
-                summary: summaryEl ? summaryEl.textContent.trim() : '',
-                imageUrl: imageEl ? imageEl.src : '',
-                step: 0,
-                totalSteps: 6,
-                stepId: null,
-                label: null,
-                url: null,
-                error: null,
-            };
+        var topicEl = li.querySelector('.item-topic');
+        var summaryEl = li.querySelector('.item-summary');
+        var imageEl = li.querySelector('.item-image');
 
-            injectProgress(itemId);
-        });
+        pending[itemId] = {
+            topic: topicEl ? topicEl.textContent.trim() : 'Research #' + itemId,
+            summary: summaryEl ? summaryEl.textContent.trim() : '',
+            imageUrl: imageEl ? imageEl.src : '',
+            step: 0,
+            totalSteps: 6,
+            stepId: null,
+            label: null,
+            url: null,
+            error: null,
+        };
+
+        injectProgress(itemId);
     });
 })();

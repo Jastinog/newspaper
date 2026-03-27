@@ -1,0 +1,6 @@
+{% load i18n %}
+<div class="digest-grid">
+{% for group in section_groups %}
+    {% include "news/_section_block.html" with is_pinned=False %}
+{% endfor %}
+</div>

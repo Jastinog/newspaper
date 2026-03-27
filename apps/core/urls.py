@@ -12,6 +12,7 @@ urlpatterns = [
     path("search/", views.search, name="search"),
     path("research/<int:item_id>/", views.research, name="research"),
     path("category/<slug:slug>/", views.category_detail, name="category_detail"),
+    path("pin/<slug:slug>/", views.toggle_pin, name="toggle_pin"),
 ]
 
 # These should NOT be language-prefixed
