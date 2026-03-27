@@ -114,13 +114,15 @@
     border-radius: 50%;
     flex-shrink: 0;
 }
-.similar-legend-dot.dot-source  { background: #2b7ab5; }
-.similar-legend-dot.dot-center  { background: var(--accent); }
-.similar-legend-dot.dot-item    { background: #8b6e4e; }
-.similar-legend-dot.dot-article { background: var(--fg-muted); opacity: 0.7; }
+.similar-legend-dot.dot-source  { background: #3a8a7d; }
+.similar-legend-dot.dot-center  { background: #b8862a; }
+.similar-legend-dot.dot-item    { background: #a35d4f; }
+.similar-legend-dot.dot-article { background: #5a6a7a; }
 
-[data-theme="dark"] .similar-legend-dot.dot-source { background: #5b9bd5; }
-[data-theme="dark"] .similar-legend-dot.dot-item   { background: #a8845c; }
+[data-theme="dark"] .similar-legend-dot.dot-source { background: #5bab9e; }
+[data-theme="dark"] .similar-legend-dot.dot-center { background: #d4a24e; }
+[data-theme="dark"] .similar-legend-dot.dot-item   { background: #c47a6c; }
+[data-theme="dark"] .similar-legend-dot.dot-article { background: #7a8fa3; }
 
 /* === LOADING / EMPTY === */
 .similar-modal-loading,

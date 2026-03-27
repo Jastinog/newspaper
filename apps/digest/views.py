@@ -77,7 +77,7 @@ def similar_items_api(request, item_id):
 
     found_ids = set(art_scores.keys())
     if not found_ids:
-        return Response({"items": [], "articles": []})
+        return Response({"items": [], "articles": [], "sources": sources_data})
 
     similar = (
         DigestItem.objects

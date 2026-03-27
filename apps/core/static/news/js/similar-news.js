@@ -102,10 +102,10 @@
     /* ── Per-type sizing constants ────────────────── */
 
     var SIZES = {
-        center:  { cardW: 280, imgMin: 56, stripe: 4, pad: 8, titlePx: 11, maxTitle: 4, sumPx: 7, maxSum: 3, subPx: 7, scorePx: 8, metaH: 11, borderW: 2, stripeKey: 'accent'  },
+        center:  { cardW: 360, imgMin: 72, stripe: 5, pad: 10, titlePx: 14, maxTitle: 4, sumPx: 9, maxSum: 3, subPx: 8, scorePx: 9, metaH: 13, borderW: 2.5, stripeKey: 'accent'  },
         item:    { cardW: 210, imgMin: 42, stripe: 3, pad: 6, titlePx:  8, maxTitle: 3, sumPx: 6, maxSum: 2, subPx: 6, scorePx: 7, metaH:  9, borderW: 0.8, stripeKey: 'item'   },
         article: { cardW: 160, imgMin: 32, stripe: 3, pad: 6, titlePx: 6.5, maxTitle: 2, sumPx: 0, maxSum: 0, subPx: 5.5, scorePx: 7, metaH: 10, borderW: 0.5, stripeKey: 'fgMuted' },
-        source:  { cardW: 160, imgMin: 32, stripe: 3, pad: 6, titlePx: 6.5, maxTitle: 2, sumPx: 0, maxSum: 0, subPx: 5.5, scorePx: 7, metaH: 10, borderW: 0.8, stripeKey: 'source' },
+        source:  { cardW: 140, imgMin: 28, stripe: 2, pad: 5, titlePx: 6, maxTitle: 2, sumPx: 0, maxSum: 0, subPx: 5, scorePx: 6, metaH: 9, borderW: 0.6, stripeKey: 'source' },
     };
 
     /* ── Canvas: compute node card layout ─────────── */
@@ -249,6 +249,22 @@
             ctx.fillText(node.score + '%', tx, ty + 1);
         }
 
+        // "open →" link button at bottom-right
+        if (node.url) {
+            var linkPx = S.subPx || 6;
+            var linkText = 'open \u2192';
+            ctx.font = '700 ' + linkPx + 'px -apple-system, system-ui, sans-serif';
+            var linkW = ctx.measureText(linkText).width;
+            var linkX = x + L.cardW - S.pad - linkW;
+            var linkY = y + L.cardH - S.pad - linkPx;
+            ctx.fillStyle = colors.accent;
+            ctx.fillText(linkText, linkX, linkY);
+            // Store link hit area
+            node._linkBox = { x: linkX - 4, y: linkY - 2, w: linkW + 8, h: linkPx + 6 };
+        } else {
+            node._linkBox = null;
+        }
+
         node._bx = x;
         node._by = y;
         node._bw = L.cardW;
@@ -326,23 +342,48 @@
             }
         });
 
+        // Pre-calculate initial positions so graph starts in structured layout
+        var LEVEL_X = { '-1': 500, '0': 0, '1': -500, '2': -900 };
+        var VERT_SPACING = 180;
+        var byLevel = {};
+        graph.nodes.forEach(function (n) {
+            var lvl = n._level;
+            if (!byLevel[lvl]) byLevel[lvl] = [];
+            byLevel[lvl].push(n);
+        });
+        Object.keys(byLevel).forEach(function (lvl) {
+            var group = byLevel[lvl];
+            var totalH = (group.length - 1) * VERT_SPACING;
+            group.forEach(function (n, idx) {
+                n.x = LEVEL_X[n._level] || 0;
+                n.y = -totalH / 2 + idx * VERT_SPACING;
+            });
+        });
+
         var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
         var colors = {
-            accent: cssVar('--accent'),
+            accent: isDark ? '#d4a24e' : '#b8862a',
             fg: cssVar('--fg'),
-            fgMuted: cssVar('--fg-muted'),
+            fgMuted: isDark ? '#7a8fa3' : '#5a6a7a',
             fgFaint: cssVar('--fg-faint'),
             borderLight: cssVar('--border-light'),
             bg: cssVar('--bg'),
-            item: isDark ? '#a8845c' : '#8b6e4e',
-            source: isDark ? '#5b9bd5' : '#2b7ab5',
+            item: isDark ? '#c47a6c' : '#a35d4f',
+            source: isDark ? '#5bab9e' : '#3a8a7d',
         };
-        var linkDefault = isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)';
-        var linkSource  = isDark ? 'rgba(91,155,213,0.35)' : 'rgba(43,122,181,0.3)';
 
-        function isSourceLink(link) {
+        // Link colors per target type
+        var linkColors = {
+            source:  isDark ? 'rgba(91,171,158,0.4)' : 'rgba(58,138,125,0.35)',
+            item:    isDark ? 'rgba(196,122,108,0.4)' : 'rgba(163,93,79,0.35)',
+            article: isDark ? 'rgba(122,143,163,0.35)' : 'rgba(90,106,122,0.3)',
+            center:  isDark ? 'rgba(212,162,78,0.4)' : 'rgba(184,134,42,0.35)',
+        };
+
+        function linkColorByTarget(link) {
             var t = link.target;
-            return typeof t === 'object' && t.type === 'source';
+            var type = (typeof t === 'object') ? t.type : 'item';
+            return linkColors[type] || linkColors.item;
         }
 
         var fg = new ForceGraph()(container)
@@ -360,15 +401,28 @@
                     ctx.fillRect(node._bx, node._by, node._bw, node._bh);
                 }
             })
-            .linkWidth(function (link) { return isSourceLink(link) ? 1.5 : 1; })
-            .linkColor(function (link) { return isSourceLink(link) ? linkSource : linkDefault; })
+            .linkWidth(1.2)
+            .linkColor(linkColorByTarget)
+            .linkCurvature(0.25)
+            .linkDirectionalArrowLength(6)
+            .linkDirectionalArrowRelPos(1)
+            .linkDirectionalArrowColor(linkColorByTarget)
             .d3VelocityDecay(0.85)
             .d3AlphaDecay(0.1)
-            .onNodeClick(function (node) {
-                if (node.url) window.location.href = node.url;
+            .onNodeClick(function (node, event) {
+                // Only navigate if click landed on the "open →" link area
+                if (!node.url || !node._linkBox) return;
+                var rect = container.querySelector('canvas').getBoundingClientRect();
+                // Convert screen coords to graph coords
+                var transform = fg.screen2GraphCoords(event.clientX - rect.left, event.clientY - rect.top);
+                var lb = node._linkBox;
+                if (transform.x >= lb.x && transform.x <= lb.x + lb.w &&
+                    transform.y >= lb.y && transform.y <= lb.y + lb.h) {
+                    window.location.href = node.url;
+                }
             })
-            .onNodeHover(function (node) {
-                container.style.cursor = node && node.url ? 'pointer' : 'default';
+            .onNodeHover(function (node, prevNode) {
+                container.style.cursor = node ? 'grab' : 'default';
             })
             .onNodeDrag(function (node) {
                 node.fx = node.x;
@@ -381,21 +435,43 @@
             .cooldownTicks(60)
             .warmupTicks(150);
 
-        // Strong repulsion to prevent card overlap
-        fg.d3Force('charge').strength(-3000).distanceMax(600);
+        // Moderate repulsion to prevent card overlap
+        fg.d3Force('charge').strength(-2000).distanceMax(500);
 
-        // Link preferred distance (matches level spacing)
-        fg.d3Force('link').distance(350);
+        // Link preferred distance
+        fg.d3Force('link').distance(250);
 
-        // Pull connected nodes LEFT: center stays right, items middle, articles far-left
-        var LEVEL_X = { '-1': 350, '0': 0, '1': -350, '2': -700 };
+        // Structured column layout: sources → center → items → articles
         fg.d3Force('levelX', (function () {
             var nodes;
             function force(alpha) {
+                // Group nodes by level for vertical distribution
+                var byLevel = {};
+                for (var i = 0; i < nodes.length; i++) {
+                    var lvl = nodes[i]._level;
+                    if (!byLevel[lvl]) byLevel[lvl] = [];
+                    byLevel[lvl].push(nodes[i]);
+                }
+
                 for (var i = 0; i < nodes.length; i++) {
                     var n = nodes[i];
                     var tx = LEVEL_X[n._level] || 0;
-                    n.vx += (tx - n.x) * 0.12 * alpha;
+
+                    // Strong horizontal pull to keep columns strict
+                    n.vx += (tx - n.x) * 0.5 * alpha;
+
+                    // Vertical spread: distribute evenly within each column
+                    var group = byLevel[n._level];
+                    if (group.length > 1) {
+                        var idx = group.indexOf(n);
+                        var spacing = 180;
+                        var totalH = (group.length - 1) * spacing;
+                        var ty = -totalH / 2 + idx * spacing;
+                        n.vy += (ty - n.y) * 0.15 * alpha;
+                    } else {
+                        // Single node in column — pull to vertical center
+                        n.vy += (0 - n.y) * 0.15 * alpha;
+                    }
                 }
             }
             force.initialize = function (_) { nodes = _; };
