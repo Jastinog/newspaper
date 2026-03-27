@@ -1,7 +1,7 @@
 import json
 import logging
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 
 from django.db.models import Prefetch
 
@@ -17,6 +17,7 @@ from apps.core.services.utils import deduplicate_queries
 logger = logging.getLogger(__name__)
 
 SNIPPET_LENGTH = 300
+_DATETIME_MIN_UTC = datetime.min.replace(tzinfo=timezone.utc)
 
 
 class SearchQueryGenerator:
@@ -134,7 +135,7 @@ class SearchService:
             })
 
         if sort == self.SORT_DATE:
-            results.sort(key=lambda r: r["article"].published or datetime.min, reverse=True)
+            results.sort(key=lambda r: r["article"].published or _DATETIME_MIN_UTC, reverse=True)
         else:
             results.sort(key=lambda r: r["score"], reverse=True)
 

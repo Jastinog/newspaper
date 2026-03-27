@@ -26,7 +26,8 @@ logger = logging.getLogger(__name__)
 class DigestService:
     """Sequential digest pipeline.
 
-    Full batch: collect -> analyze -> refine -> generate -> headline -> translate.
+    Per item: collect -> analyze -> refine -> generate -> translate.
+    Headline generated and translated after all items.
     Each LLM/embedding call creates its own APIUsage record with step + item.
     """
 
@@ -49,9 +50,11 @@ class DigestService:
             raise RuntimeError("No default language set. Run initdigest first.")
 
         if languages:
-            target_langs = list(Language.objects.filter(code__in=languages).exclude(pk=default_lang.pk))
+            target_langs = list(
+                Language.active_targets().filter(code__in=languages)
+            )
         else:
-            target_langs = list(Language.objects.exclude(pk=default_lang.pk))
+            target_langs = list(Language.active_targets())
 
         # Fresh run
         Digest.objects.filter(date=digest_date).delete()
@@ -76,7 +79,7 @@ class DigestService:
 
             for story in stories:
                 try:
-                    self._process_story(digest, section, story, default_lang)
+                    self._process_story(digest, section, story, default_lang, target_langs)
                 except Exception:
                     logger.exception("Story '%s' failed, skipping", story.get("label", "?"))
 
@@ -96,12 +99,16 @@ class DigestService:
                             model=self.config.chat_model, digest=digest)
         DigestTranslation.objects.create(digest=digest, language=default_lang, headline=headline)
 
-        digest.stage = Digest.Stage.SAVED
-        digest.save(update_fields=["stage"])
-
-        # Translate
-        if target_langs:
-            self._translate_all(digest, default_lang, target_langs)
+        # Translate headline to target languages
+        for lang in target_langs:
+            try:
+                translated_headline, h_usage = self.translator.translate_headline(headline, lang.name)
+                record_digest_usage(h_usage, step=APIUsage.Step.TRANSLATE,
+                                    api_type=APIUsage.APIType.CHAT,
+                                    model=self.config.chat_model, digest=digest)
+                self.saver.save_translations(digest, lang, [], translated_headline)
+            except Exception:
+                logger.exception("Headline translation to %s failed", lang.code)
 
         digest.stage = Digest.Stage.DONE
         digest.save(update_fields=["stage"])
@@ -109,8 +116,8 @@ class DigestService:
         logger.info("Digest %s complete: %d items", digest.date, digest.items.count())
         return digest
 
-    def _process_story(self, digest, section, story, default_lang):
-        """Process one story: refine -> generate -> save as DigestItem."""
+    def _process_story(self, digest, section, story, default_lang, target_langs):
+        """Process one story: refine -> generate -> translate -> save."""
         refined, refine_usage = self.refiner.refine(story, {})
         if not refined:
             return
@@ -127,46 +134,21 @@ class DigestService:
                             api_type=APIUsage.APIType.CHAT,
                             model=self.config.chat_model, digest=digest, item=item)
 
-    def _translate_all(self, digest, default_lang, target_langs):
-        """Translate all items and headline to target languages."""
-        items = list(digest.items.prefetch_related("translations").all())
-        item_texts = []
-        for item in items:
-            for t in item.translations.all():
-                if t.language_id == default_lang.pk:
-                    item_texts.append((item, t.topic, t.summary))
-                    break
-
-        headline_en = digest.get_headline(default_lang)
+        # Translate item to all active languages immediately
+        topic = item_data.get("topic", "")
+        summary = item_data.get("summary", "")
 
         for lang in target_langs:
             try:
-                translated_headline, h_usage = self.translator.translate_headline(headline_en, lang.name)
-                record_digest_usage(h_usage, step=APIUsage.Step.TRANSLATE,
+                translated, usage = self.translator.translate_item(topic, summary, lang.name)
+                self.saver.save_translations(digest, lang, [(item, translated)], "")
+                record_digest_usage(usage, step=APIUsage.Step.TRANSLATE,
                                     api_type=APIUsage.APIType.CHAT,
-                                    model=self.config.chat_model, digest=digest)
+                                    model=self.config.chat_model, digest=digest, item=item)
             except Exception:
-                logger.exception("Headline translation to %s failed", lang.code)
-                translated_headline = ""
+                logger.exception("Translation to %s failed for item #%s", lang.code, item.pk)
 
-            item_translations = []
-            for item, topic, summary in item_texts:
-                try:
-                    translated, usage = self.translator.translate_item(topic, summary, lang.name)
-                    item_translations.append((item, translated))
-                    record_digest_usage(usage, step=APIUsage.Step.TRANSLATE,
-                                        api_type=APIUsage.APIType.CHAT,
-                                        model=self.config.chat_model, digest=digest, item=item)
-                except Exception:
-                    logger.exception("Translation to %s failed for item #%s", lang.code, item.pk)
-
-            self.saver.save_translations(digest, lang, item_translations, translated_headline)
-
-            # Batch update translated_at
-            translated_item_ids = [item.pk for item, _ in item_translations]
-            if translated_item_ids:
-                ItemPipeline.objects.filter(
-                    item_id__in=translated_item_ids, translated_at__isnull=True,
-                ).update(translated_at=timezone.now())
-
-            logger.info("Translated to %s: %d items", lang.code, len(item_translations))
+        if target_langs:
+            ItemPipeline.objects.filter(
+                item=item, translated_at__isnull=True,
+            ).update(translated_at=timezone.now())

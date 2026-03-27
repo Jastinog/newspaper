@@ -29,17 +29,17 @@ class DigestConfigAdmin(ModelAdmin):
 
     fieldsets = (
         ("LLM Model", {
+            "classes": ["tab"],
             "description": "OpenAI model and generation parameters",
-            "fields": ("chat_model", "temperature"),
-        }),
-        ("Token Limits", {
-            "description": "Max tokens for each LLM response type",
             "fields": (
+                "chat_model",
+                "temperature",
                 ("max_tokens_analysis", "max_tokens_generation"),
                 ("max_tokens_headline", "max_tokens_translation"),
             ),
         }),
-        ("Step 1: Article Collection", {
+        ("Collection", {
+            "classes": ["tab"],
             "description": "How articles are found via embedding similarity search",
             "fields": (
                 ("hours_lookback", "articles_per_section"),
@@ -47,13 +47,15 @@ class DigestConfigAdmin(ModelAdmin):
                 "article_snippet_length",
             ),
         }),
-        ("Step 3: Story Refinement", {
+        ("Refinement", {
+            "classes": ["tab"],
             "description": "How articles are enriched after story identification",
             "fields": (
                 ("context_trim_length", "refine_search_top_k"),
             ),
         }),
-        ("Step 4: Generation", {
+        ("Generation", {
+            "classes": ["tab"],
             "description": "How many stories the analyzer should identify per section",
             "fields": (
                 ("items_per_section_min", "items_per_section_max"),
@@ -61,8 +63,8 @@ class DigestConfigAdmin(ModelAdmin):
             ),
         }),
         ("Prompts", {
+            "classes": ["tab"],
             "description": "System prompts sent to the LLM at each pipeline step",
-            "classes": ["collapse"],
             "fields": (
                 "system_prompt_analysis",
                 "system_prompt_generation",

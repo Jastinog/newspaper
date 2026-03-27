@@ -2,8 +2,11 @@ import re
 
 
 def sanitize_text(s: str) -> str:
-    """Remove control characters except newline/tab."""
-    return re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', '', s)
+    """Remove control characters except newline/tab, and strip surrogate chars."""
+    s = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', s)
+    # Remove Unicode surrogates that break JSON serialization
+    s = re.sub(r'[\ud800-\udfff]', '', s)
+    return s
 
 
 def get_translated_field(translations, field: str, language, fallback=""):

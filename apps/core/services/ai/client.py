@@ -77,6 +77,11 @@ class OpenAIClient:
                 return content, usage
 
             last_err = f"OpenAI API error {resp.status_code}: {resp.text[:500]}"
+            if resp.status_code == 400:
+                user_preview = user[:200] if isinstance(user, str) else str(user)[:200]
+                approx_size = len(system) + (len(user) if isinstance(user, str) else 0)
+                logger.error("400 from OpenAI. Approx prompt size: ~%d chars. User prompt preview: %s",
+                             approx_size, user_preview)
             # Don't retry auth errors or client errors (except 429)
             if resp.status_code != 429 and resp.status_code < 500:
                 raise OpenAIError(last_err)

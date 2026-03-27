@@ -190,7 +190,7 @@ class Command(BaseCommand):
 
         # Translate (optional)
         if options["translate"] and saved:
-            target_langs = list(Language.objects.exclude(pk=default_lang.pk))
+            target_langs = list(Language.active_targets())
             if target_langs:
                 self.stdout.write(self.style.MIGRATE_HEADING("\nTranslating"))
                 translator = ItemTranslator(client=client, config=config)

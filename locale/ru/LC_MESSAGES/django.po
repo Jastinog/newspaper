@@ -271,8 +271,8 @@ msgstr "Результаты поиска по запросу"
 #~ msgid "Period Visitors"
 #~ msgstr "Посетители за период"
 
-#~ msgid "sources"
-#~ msgstr "источников"
+msgid "sources"
+msgstr "источники"
 
 msgid "Breaking news"
 msgstr "Срочная новость"

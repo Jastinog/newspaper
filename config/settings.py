@@ -226,6 +226,11 @@ UNFOLD = {
                         "icon": "view_list",
                         "link": reverse_lazy("admin:digest_digestsection_changelist"),
                     },
+                    {
+                        "title": _("Config"),
+                        "icon": "tune",
+                        "link": reverse_lazy("admin:digest_digestconfig_changelist"),
+                    },
                 ],
             },
             {
