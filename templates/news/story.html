@@ -1,0 +1,74 @@
+{% extends "news/base.html" %}
+{% load i18n static news_extras %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'news/css/article.css' %}">
+<link rel="stylesheet" href="{% static 'news/css/story.css' %}">
+<link rel="stylesheet" href="{% static 'news/css/bias-spectrum.css' %}">
+<link rel="stylesheet" href="{% static 'news/css/similar-news.css' %}">
+{% endblock %}
+
+{% block content %}
+<a href="{% url 'index' %}" class="back-link">&larr; {% trans "Back to digest" %}</a>
+
+<article class="story-detail">
+
+    {% if section_name %}
+    <div class="story-section-badge">{{ section_name }}</div>
+    {% endif %}
+
+    <div class="article-header">
+        <h1>{{ topic }}</h1>
+        <div class="meta">
+            {% include "news/_importance_bar.html" %}
+            {% if item.digest %}&middot; {{ item.digest.date|date:"j F Y" }}{% endif %}
+            &middot; {{ source_articles|length }} {% trans "sources" %}
+        </div>
+    </div>
+
+    {% if item.best_image_url %}
+    <div class="story-hero">
+        <img src="{{ item.best_image_url }}" alt="" loading="lazy">
+    </div>
+    {% endif %}
+
+    <div class="article-content">
+        <p>{{ summary }}</p>
+    </div>
+
+    <div class="story-item-actions">
+        <button class="similar-btn" data-item-id="{{ item.id }}" aria-label="{% trans 'Similar news' %}" title="{% trans 'Similar news' %}"><i class="fas fa-atom"></i></button>
+        <a href="{% url 'research' item.id %}" class="research-hint research-link" data-item-id="{{ item.id }}">{% trans "research" %} &rarr;</a>
+    </div>
+
+    {% if source_articles %}
+    <div class="story-sources">
+        <h2>{% trans "Sources" %} ({{ source_articles|length }})</h2>
+        <div class="story-sources-list">
+            {% for src in source_articles %}
+            <a class="story-source-card" href="{{ src.absolute_url }}">
+                {% if src.image_url %}<img class="story-source-img" src="{{ src.image_url }}" alt="" loading="lazy">{% else %}<span class="story-source-img story-source-img--placeholder"><i class="fas fa-newspaper"></i></span>{% endif %}
+                <div class="story-source-text">
+                    <span class="story-source-title">{{ src.title }}</span>
+                    <span class="story-source-meta">
+                        {{ src.feed_title }}{% if src.feed_lean %} <span class="lean-badge lean-{{ src.feed_lean }}">{{ src.feed_lean_display }}</span>{% endif %}
+                    </span>
+                    {% if src.published %}<span class="story-source-date">{{ src.published|date:"j M Y, H:i" }}</span>{% endif %}
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="article-actions">
+        <a href="{% url 'index' %}">&larr; {% trans "Back to digest" %}</a>
+    </div>
+</article>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/force-graph/dist/force-graph.min.js"></script>
+<script src="{% static 'news/js/similar-news.js' %}"></script>
+<script src="{% static 'news/js/sources.js' %}"></script>
+{% endblock %}

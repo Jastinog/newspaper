@@ -301,3 +301,88 @@ msgstr "Поточна"
 
 msgid "Loading…"
 msgstr "Завантаження…"
+
+msgid "Digest"
+msgstr "Дайджест"
+
+msgid "Articles"
+msgstr "Статті"
+
+msgid "All news sources and RSS feeds"
+msgstr "Усі джерела новин та RSS-стрічки"
+
+msgid "Browse all news articles"
+msgstr "Перегляд усіх статей"
+
+msgid "feeds"
+msgstr "стрічок"
+
+msgid "articles"
+msgstr "статей"
+
+msgid "Search feeds..."
+msgstr "Пошук джерел..."
+
+msgid "All categories"
+msgstr "Усі категорії"
+
+msgid "All countries"
+msgstr "Усі країни"
+
+msgid "All leanings"
+msgstr "Усі позиції"
+
+msgid "All factuality"
+msgstr "Будь-яка фактуальність"
+
+msgid "Filter"
+msgstr "Фільтр"
+
+msgid "Clear"
+msgstr "Скинути"
+
+msgid "No feeds match your filters."
+msgstr "Немає джерел за обраними фільтрами."
+
+msgid "All sources"
+msgstr "Усі джерела"
+
+msgid "Page"
+msgstr "Стор."
+
+msgid "of"
+msgstr "з"
+
+msgid "Search by title..."
+msgstr "Пошук за заголовком..."
+
+msgid "No articles match your filters."
+msgstr "Немає статей за обраними фільтрами."
+
+msgid "Previous"
+msgstr "Назад"
+
+msgid "Next"
+msgstr "Далі"
+
+msgid "Read full research"
+msgstr "Читати повне дослідження"
+
+msgid "Research"
+msgstr "Дослідження"
+
+msgid "Digest news"
+msgstr "Новини дайджесту"
+
+msgid "High"
+msgstr "Висока"
+
+msgid "Mixed"
+msgstr "Змішана"
+
+msgid "Low"
+msgstr "Низька"
+
+#, python-format
+msgid "Articles from %(title)s"
+msgstr "Статті з %(title)s"

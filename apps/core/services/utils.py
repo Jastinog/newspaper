@@ -28,6 +28,19 @@ def get_translated_field(translations, field: str, language, fallback=""):
     return fallback
 
 
+def get_article_image_url(article) -> str:
+    """Get the best image URL from a prefetched article. Checks primary first, then fallback."""
+    primary = None
+    fallback = None
+    for img in article.images.all():
+        if img.image:
+            if img.is_primary:
+                return img.image.url
+            if fallback is None:
+                fallback = img.image.url
+    return fallback or ""
+
+
 def deduplicate_queries(queries: list[str], limit: int) -> list[str]:
     """Deduplicate queries case-insensitively, preserving order, up to limit."""
     seen = set()

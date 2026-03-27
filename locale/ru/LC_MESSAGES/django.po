@@ -300,3 +300,88 @@ msgstr "Текущая"
 
 msgid "Loading…"
 msgstr "Загрузка…"
+
+msgid "Digest"
+msgstr "Дайджест"
+
+msgid "Articles"
+msgstr "Статьи"
+
+msgid "All news sources and RSS feeds"
+msgstr "Все источники новостей и RSS-фиды"
+
+msgid "Browse all news articles"
+msgstr "Просмотр всех статей"
+
+msgid "feeds"
+msgstr "фидов"
+
+msgid "articles"
+msgstr "статей"
+
+msgid "Search feeds..."
+msgstr "Поиск источников..."
+
+msgid "All categories"
+msgstr "Все категории"
+
+msgid "All countries"
+msgstr "Все страны"
+
+msgid "All leanings"
+msgstr "Все позиции"
+
+msgid "All factuality"
+msgstr "Любая фактуальность"
+
+msgid "Filter"
+msgstr "Фильтр"
+
+msgid "Clear"
+msgstr "Сбросить"
+
+msgid "No feeds match your filters."
+msgstr "Нет источников по выбранным фильтрам."
+
+msgid "All sources"
+msgstr "Все источники"
+
+msgid "Page"
+msgstr "Стр."
+
+msgid "of"
+msgstr "из"
+
+msgid "Search by title..."
+msgstr "Поиск по заголовку..."
+
+msgid "No articles match your filters."
+msgstr "Нет статей по выбранным фильтрам."
+
+msgid "Previous"
+msgstr "Назад"
+
+msgid "Next"
+msgstr "Далее"
+
+msgid "Read full research"
+msgstr "Читать полное исследование"
+
+msgid "Research"
+msgstr "Исследование"
+
+msgid "Digest news"
+msgstr "Новости дайджеста"
+
+msgid "High"
+msgstr "Высокая"
+
+msgid "Mixed"
+msgstr "Смешанная"
+
+msgid "Low"
+msgstr "Низкая"
+
+#, python-format
+msgid "Articles from %(title)s"
+msgstr "Статьи из %(title)s"

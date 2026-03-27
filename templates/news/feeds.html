@@ -1,0 +1,84 @@
+{% extends "news/base.html" %}
+{% load i18n static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'news/css/browse.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="browse-page">
+
+    <div class="browse-header">
+        <h1>{% trans "Sources" %}</h1>
+        <p class="browse-count">{{ feeds|length }} {% trans "feeds" %}</p>
+    </div>
+
+    <form class="browse-filters" method="get" action="">
+        <input class="browse-search" type="text" name="q" value="{{ active_filters.q }}" placeholder="{% trans 'Search feeds...' %}">
+
+        <div class="browse-filter-row">
+            <select name="category">
+                <option value="">{% trans "All categories" %}</option>
+                {% for cat in categories %}
+                <option value="{{ cat.slug }}" {% if active_filters.category == cat.slug %}selected{% endif %}>{{ cat.name }}</option>
+                {% endfor %}
+            </select>
+
+            <select name="country">
+                <option value="">{% trans "All countries" %}</option>
+                {% for c in countries %}
+                <option value="{{ c.code }}" {% if active_filters.country == c.code %}selected{% endif %}>{{ c.name }}</option>
+                {% endfor %}
+            </select>
+
+            <select name="lean">
+                <option value="">{% trans "All leanings" %}</option>
+                {% for value, label in lean_choices %}
+                <option value="{{ value }}" {% if active_filters.lean == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+
+            <select name="factuality">
+                <option value="">{% trans "All factuality" %}</option>
+                {% for value, label in factuality_choices %}
+                <option value="{{ value }}" {% if active_filters.factuality == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+
+            <button type="submit" class="browse-filter-btn">{% trans "Filter" %}</button>
+            {% if active_filters.category or active_filters.country or active_filters.lean or active_filters.factuality or active_filters.q %}
+            <a href="{% url 'feeds_list' %}" class="browse-clear">{% trans "Clear" %}</a>
+            {% endif %}
+        </div>
+    </form>
+
+    {% if feeds %}
+    <div class="feeds-grid">
+        {% for feed in feeds %}
+        <a class="feed-card" href="{% url 'feed_detail' feed.pk %}">
+            <div class="feed-card-header">
+                <span class="feed-card-title">{{ feed.title }}</span>
+                {% if feed.category %}<span class="feed-card-category">{{ feed.category.name }}</span>{% endif %}
+            </div>
+            <div class="feed-card-meta">
+                {% if feed.country %}<span>{{ feed.country.name }}</span>{% endif %}
+                {% if feed.language %}<span>{{ feed.language.name }}</span>{% endif %}
+                <span>{{ feed.article_count }} {% trans "articles" %}</span>
+            </div>
+            {% if feed.lean or feed.factuality %}
+            <div class="feed-card-badges">
+                {% if feed.lean %}<span class="lean-badge lean-{{ feed.lean }}">{{ feed.get_lean_display }}</span>{% endif %}
+                {% if feed.factuality %}<span class="factuality-badge factuality-{{ feed.factuality }}">{{ feed.get_factuality_display }}</span>{% endif %}
+            </div>
+            {% endif %}
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="browse-empty">
+        <p>{% trans "No feeds match your filters." %}</p>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

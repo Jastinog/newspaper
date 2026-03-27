@@ -1,0 +1,56 @@
+{% extends "news/base.html" %}
+{% load i18n static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'news/css/browse.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="browse-page">
+
+    <a href="{% url 'feeds_list' %}" class="back-link">&larr; {% trans "All sources" %}</a>
+
+    <div class="browse-header">
+        <h1>{{ feed.title }}</h1>
+        {% if feed.description %}<p class="browse-subtitle">{{ feed.description }}</p>{% endif %}
+        <div class="feed-detail-meta">
+            {% if feed.category %}<span>{{ feed.category.name }}</span>{% endif %}
+            {% if feed.country %}<span>{{ feed.country.name }}</span>{% endif %}
+            {% if feed.language %}<span>{{ feed.language.name }}</span>{% endif %}
+            {% if feed.lean %}<span class="lean-badge lean-{{ feed.lean }}">{{ feed.get_lean_display }}</span>{% endif %}
+            {% if feed.factuality %}<span class="factuality-badge factuality-{{ feed.factuality }}">{{ feed.get_factuality_display }}</span>{% endif %}
+            {% if feed.website %}<a href="{{ feed.website }}" target="_blank" rel="noopener">{{ feed.website }}</a>{% endif %}
+        </div>
+    </div>
+
+    {% if page %}
+    <div class="article-results">
+        {% for article in page %}
+        <div class="article-row">
+            <a href="{{ article.get_absolute_url }}" class="article-row-visual">
+                {% if article.primary_images and article.primary_images.0.image %}
+                <img src="{{ article.primary_images.0.image.url }}" alt="" loading="lazy">
+                {% else %}
+                <div class="result-placeholder"><span class="result-placeholder-letter">{{ article.title|first }}</span></div>
+                {% endif %}
+            </a>
+            <div class="article-row-content">
+                <a href="{{ article.get_absolute_url }}" class="article-row-title">{{ article.title }}</a>
+                <div class="article-row-meta">
+                    {% if article.published %}<span>{{ article.published|date:"j M Y, H:i" }}</span>{% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% include "news/_pagination.html" with page=page %}
+
+    {% else %}
+    <div class="browse-empty">
+        <p>{% trans "No articles yet." %}</p>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

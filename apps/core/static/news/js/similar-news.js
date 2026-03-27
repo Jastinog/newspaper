@@ -482,12 +482,12 @@
         if (typeof ForceGraph === 'undefined') return;
 
         var itemId = btn.dataset.itemId;
-        var li = btn.closest('li');
-        if (!li) return;
+        var container = btn.closest('li') || btn.closest('.story-detail');
+        if (!container) return;
 
-        var topicEl = li.querySelector('.item-topic');
-        var summaryEl = li.querySelector('.item-summary');
-        var imgEl = li.querySelector('.item-image');
+        var topicEl = container.querySelector('.item-topic') || container.querySelector('h1');
+        var summaryEl = container.querySelector('.item-summary') || container.querySelector('.article-content p');
+        var imgEl = container.querySelector('.item-image') || container.querySelector('.story-hero img');
 
         launch(itemId, {
             topic: topicEl ? topicEl.textContent.trim() : 'Item #' + itemId,

@@ -1,0 +1,14 @@
+{% load i18n %}
+{% if page.has_other_pages %}
+<nav class="pagination">
+    {% if page.has_previous %}
+    <a href="?{% for k, v in request.GET.items %}{% if k != 'page' %}{{ k }}={{ v|urlencode }}&{% endif %}{% endfor %}page={{ page.previous_page_number }}" class="pagination-link">&larr; {% trans "Previous" %}</a>
+    {% endif %}
+
+    <span class="pagination-info">{{ page.number }} / {{ page.paginator.num_pages }}</span>
+
+    {% if page.has_next %}
+    <a href="?{% for k, v in request.GET.items %}{% if k != 'page' %}{{ k }}={{ v|urlencode }}&{% endif %}{% endfor %}page={{ page.next_page_number }}" class="pagination-link">{% trans "Next" %} &rarr;</a>
+    {% endif %}
+</nav>
+{% endif %}

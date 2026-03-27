@@ -1,6 +1,6 @@
 {% load news_extras i18n %}
 {% if item.best_image_url %}<div class="item-image-wrap">
-    <img class="item-image" src="{{ item.best_image_url }}" alt="" loading="lazy">
+    <a href="{% url 'story_detail' item.id %}"><img class="item-image" src="{{ item.best_image_url }}" alt="" loading="lazy"></a>
     <div class="item-top-bar">
         {% sources_panel item %}
         {% include "news/_importance_bar.html" %}
@@ -9,7 +9,7 @@
     {% sources_panel item %}
     {% include "news/_importance_bar.html" %}
 </div>{% endif %}
-<span class="item-topic">{{ item.loc_topic }}</span>
+<a href="{% url 'story_detail' item.id %}" class="item-topic">{{ item.loc_topic }}</a>
 <span class="item-summary">{{ item.loc_summary }}</span>
 <span class="item-actions">
     <button class="similar-btn" data-item-id="{{ item.id }}" aria-label="{% trans 'Similar news' %}" title="{% trans 'Similar news' %}"><i class="fas fa-atom"></i></button>

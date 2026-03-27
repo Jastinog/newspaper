@@ -1,11 +1,16 @@
+from django.core.paginator import Paginator
+from django.db.models import Count, Prefetch, Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils.translation import get_language, gettext_lazy as _
 from django.views.decorators.http import require_POST
 
+from apps.core.services.utils import get_article_image_url
 from apps.digest.models import Digest, DigestItem
-from apps.feed.models import Article, Category
+from apps.feed.models import Article, ArticleImage, Category, Feed
 from apps.feed.services.search import SearchService
+from apps.location.models import Country
 from apps.research.models import Research
 
 SITE_NAME = _("Newspaper")
@@ -211,6 +216,58 @@ def category_detail(request, slug):
     })
 
 
+def story_detail(request, item_id):
+    current_lang = get_language() or "en"
+    item = get_object_or_404(
+        DigestItem.objects.select_related("digest", "section", "image")
+        .prefetch_related(
+            "translations", "translations__language",
+            "section__translations", "section__translations__language",
+            "articles__feed", "articles__images",
+            Prefetch("researches", queryset=Research.objects.only("id"), to_attr="_researches"),
+        ),
+        pk=item_id,
+    )
+
+    topic = item.get_topic(current_lang)
+    summary = item.get_summary(current_lang)
+    section_name = item.section.get_name(current_lang) if item.section else ""
+
+    source_articles = [
+        {
+            "title": article.title,
+            "url": article.url,
+            "feed_title": article.feed.title,
+            "feed_lean": article.feed.lean,
+            "feed_lean_display": article.feed.get_lean_display() if article.feed.lean else "",
+            "image_url": get_article_image_url(article),
+            "published": article.published,
+            "absolute_url": article.get_absolute_url(),
+        }
+        for article in item.articles.all()
+    ]
+
+    seo = {
+        "title": f"{topic} — {SITE_NAME}",
+        "description": summary[:160] if summary else topic,
+        "canonical": request.build_absolute_uri(reverse("story_detail", args=[item.pk])),
+        "og_type": "article",
+        "og_image": item.best_image_url,
+        "published_time": item.digest.date.isoformat() if item.digest else "",
+        "section": section_name,
+    }
+
+    return render(request, "news/story.html", {
+        "item": item,
+        "topic": topic,
+        "summary": summary,
+        "section_name": section_name,
+        "source_articles": source_articles,
+        "has_research": bool(item._researches),
+        "seo": seo,
+    })
+
+
 def research(request, item_id):
     item = get_object_or_404(
         DigestItem.objects.select_related("digest", "section"), pk=item_id,
@@ -265,6 +322,155 @@ def search(request):
         "results": results.get("articles", []),
         "queries": results.get("queries", []),
         "elapsed_ms": results.get("elapsed_ms", 0),
+        "seo": seo,
+    })
+
+
+_ARTICLES_PER_PAGE = 40
+
+
+def _filter_options():
+    """Return categories and countries for browse filter dropdowns."""
+    return (
+        Category.objects.order_by("order"),
+        Country.objects.filter(feeds__enabled=True).distinct().order_by("name"),
+    )
+
+
+def feeds_list(request):
+    """All feeds with filters: category, country, lean, factuality."""
+    qs = Feed.objects.filter(enabled=True).select_related("category", "country", "language")
+
+    category_slug = request.GET.get("category")
+    country_code = request.GET.get("country")
+    lean = request.GET.get("lean")
+    factuality = request.GET.get("factuality")
+    q = request.GET.get("q", "").strip()
+
+    if category_slug:
+        qs = qs.filter(category__slug=category_slug)
+    if country_code:
+        qs = qs.filter(country__code=country_code)
+    if lean:
+        qs = qs.filter(lean=lean)
+    if factuality:
+        qs = qs.filter(factuality=factuality)
+    if q:
+        qs = qs.filter(Q(title__icontains=q) | Q(description__icontains=q))
+
+    qs = qs.annotate(article_count=Count("articles")).order_by("category__order", "title")
+    feeds = list(qs)
+
+    categories, countries = _filter_options()
+
+    seo = {
+        "title": f"{_('Sources')} — {SITE_NAME}",
+        "description": _("All news sources and RSS feeds"),
+        "canonical": request.build_absolute_uri(request.get_full_path()),
+        "og_type": "website",
+    }
+
+    return render(request, "news/feeds.html", {
+        "feeds": feeds,
+        "categories": categories,
+        "countries": countries,
+        "lean_choices": Feed.Lean.choices,
+        "factuality_choices": Feed.Factuality.choices,
+        "active_filters": {
+            "category": category_slug or "",
+            "country": country_code or "",
+            "lean": lean or "",
+            "factuality": factuality or "",
+            "q": q,
+        },
+        "seo": seo,
+    })
+
+
+def feed_detail(request, pk):
+    """Single feed with its articles, paginated."""
+    feed = get_object_or_404(
+        Feed.objects.select_related("category", "country", "language"), pk=pk,
+    )
+    articles_qs = (
+        feed.articles
+        .prefetch_related(
+            Prefetch("images", queryset=ArticleImage.objects.filter(is_primary=True), to_attr="primary_images"),
+        )
+        .order_by("-published")
+    )
+    paginator = Paginator(articles_qs, _ARTICLES_PER_PAGE)
+    page = paginator.get_page(request.GET.get("page"))
+
+    seo = {
+        "title": f"{feed.title} — {SITE_NAME}",
+        "description": feed.description or (_("Articles from %(title)s") % {"title": feed.title}),
+        "canonical": request.build_absolute_uri(request.get_full_path()),
+        "og_type": "website",
+    }
+
+    return render(request, "news/feed_detail.html", {
+        "feed": feed,
+        "page": page,
+        "seo": seo,
+    })
+
+
+def articles_list(request):
+    """All articles with filters: category, feed, country, date range, search."""
+    qs = (
+        Article.objects
+        .select_related("feed", "feed__category", "feed__country")
+        .prefetch_related(
+            Prefetch("images", queryset=ArticleImage.objects.filter(is_primary=True), to_attr="primary_images"),
+        )
+    )
+
+    category_slug = request.GET.get("category")
+    feed_id = request.GET.get("feed")
+    country_code = request.GET.get("country")
+    date_from = request.GET.get("from")
+    date_to = request.GET.get("to")
+    q = request.GET.get("q", "").strip()
+
+    if category_slug:
+        qs = qs.filter(feed__category__slug=category_slug)
+    if feed_id:
+        qs = qs.filter(feed_id=feed_id)
+    if country_code:
+        qs = qs.filter(feed__country__code=country_code)
+    if date_from:
+        qs = qs.filter(published__date__gte=date_from)
+    if date_to:
+        qs = qs.filter(published__date__lte=date_to)
+    if q:
+        qs = qs.filter(title__icontains=q)
+
+    qs = qs.order_by("-published")
+    paginator = Paginator(qs, _ARTICLES_PER_PAGE)
+    page = paginator.get_page(request.GET.get("page"))
+
+    categories, countries = _filter_options()
+
+    seo = {
+        "title": f"{_('Articles')} — {SITE_NAME}",
+        "description": _("Browse all news articles"),
+        "canonical": request.build_absolute_uri(request.get_full_path()),
+        "og_type": "website",
+    }
+
+    return render(request, "news/articles.html", {
+        "page": page,
+        "categories": categories,
+        "countries": countries,
+        "active_filters": {
+            "category": category_slug or "",
+            "feed": feed_id or "",
+            "country": country_code or "",
+            "from": date_from or "",
+            "to": date_to or "",
+            "q": q,
+        },
         "seo": seo,
     })
 

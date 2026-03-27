@@ -61,7 +61,12 @@
                 </div>
                 <div class="masthead-date" id="mastheadDate">{% block masthead_date %}{% now "l, F j, Y" %}{% endblock %}</div>
                 <div class="site-title"><a href="{% url 'index' %}">{% trans "Newspaper" %}</a></div>
-                <div class="masthead-subtitle">{% trans "Daily News Digest" %}</div>
+                <nav class="masthead-nav">
+                    <a href="{% url 'index' %}" class="{% if request.resolver_match.url_name == 'index' %}active{% endif %}">{% trans "Digest" %}</a>
+                    <a href="{% url 'articles_list' %}" class="{% if request.resolver_match.url_name == 'articles_list' %}active{% endif %}">{% trans "Articles" %}</a>
+                    <a href="{% url 'feeds_list' %}" class="{% if request.resolver_match.url_name == 'feeds_list' or request.resolver_match.url_name == 'feed_detail' %}active{% endif %}">{% trans "Sources" %}</a>
+                    <a href="{% url 'search' %}" class="{% if request.resolver_match.url_name == 'search' %}active{% endif %}">{% trans "Search" %}</a>
+                </nav>
                 <button class="theme-toggle" onclick="toggleTheme()" title="{% trans "Toggle dark/light theme" %}" aria-label="{% trans "Toggle theme" %}">
                     <span class="theme-icon"></span>
                 </button>

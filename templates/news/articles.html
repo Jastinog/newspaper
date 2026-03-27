@@ -1,0 +1,82 @@
+{% extends "news/base.html" %}
+{% load i18n static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'news/css/browse.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="browse-page">
+
+    <div class="browse-header">
+        <h1>{% trans "Articles" %}</h1>
+        <p class="browse-count">{% trans "Page" %} {{ page.number }} {% trans "of" %} {{ page.paginator.num_pages }}</p>
+    </div>
+
+    <form class="browse-filters" method="get" action="">
+        <input class="browse-search" type="text" name="q" value="{{ active_filters.q }}" placeholder="{% trans 'Search by title...' %}">
+
+        <div class="browse-filter-row">
+            <select name="category">
+                <option value="">{% trans "All categories" %}</option>
+                {% for cat in categories %}
+                <option value="{{ cat.slug }}" {% if active_filters.category == cat.slug %}selected{% endif %}>{{ cat.name }}</option>
+                {% endfor %}
+            </select>
+
+            <select name="country">
+                <option value="">{% trans "All countries" %}</option>
+                {% for c in countries %}
+                <option value="{{ c.code }}" {% if active_filters.country == c.code %}selected{% endif %}>{{ c.name }}</option>
+                {% endfor %}
+            </select>
+
+            <div class="browse-date-range">
+                <input type="date" name="from" value="{{ active_filters.from }}" placeholder="{% trans 'From' %}">
+                <span>&ndash;</span>
+                <input type="date" name="to" value="{{ active_filters.to }}" placeholder="{% trans 'To' %}">
+            </div>
+
+            <button type="submit" class="browse-filter-btn">{% trans "Filter" %}</button>
+            {% if active_filters.category or active_filters.country or active_filters.from or active_filters.to or active_filters.q or active_filters.feed %}
+            <a href="{% url 'articles_list' %}" class="browse-clear">{% trans "Clear" %}</a>
+            {% endif %}
+        </div>
+    </form>
+
+    {% if page.object_list %}
+    <div class="article-results">
+        {% for article in page %}
+        <div class="article-row">
+            <a href="{{ article.get_absolute_url }}" class="article-row-visual">
+                {% if article.primary_images and article.primary_images.0.image %}
+                <img src="{{ article.primary_images.0.image.url }}" alt="" loading="lazy">
+                {% else %}
+                <div class="result-placeholder"><span class="result-placeholder-letter">{{ article.title|first }}</span></div>
+                {% endif %}
+            </a>
+            <div class="article-row-content">
+                <div class="article-row-source">
+                    <a href="{% url 'feed_detail' article.feed.pk %}">{{ article.feed.title }}</a>
+                    {% if article.feed.category %}&middot; <span class="source-category">{{ article.feed.category.name }}</span>{% endif %}
+                </div>
+                <a href="{{ article.get_absolute_url }}" class="article-row-title">{{ article.title }}</a>
+                <div class="article-row-meta">
+                    {% if article.published %}<span>{{ article.published|timesince }} {% trans "ago" %}</span>{% endif %}
+                    {% if article.feed.country %}<span>{{ article.feed.country.name }}</span>{% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% include "news/_pagination.html" with page=page %}
+
+    {% else %}
+    <div class="browse-empty">
+        <p>{% trans "No articles match your filters." %}</p>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

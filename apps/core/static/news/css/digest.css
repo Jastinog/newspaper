@@ -225,6 +225,10 @@
     color: var(--fg);
     line-height: 1.35;
     margin-bottom: 0.15rem;
+    text-decoration: none;
+}
+a.item-topic:hover {
+    color: var(--accent);
 }
 
 /* Top bar: sources + importance overlaid on image */
