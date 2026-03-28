@@ -7,7 +7,7 @@ from .sitemaps import sitemaps
 urlpatterns = [
     path("", views.index, name="index"),
     path("digest/<str:date>/", views.index, name="digest_by_date"),
-    path("article/<int:pk>/<slug:slug>/", views.article_detail, name="article_detail"),
+    path("article/<int:pk>/<str:slug>/", views.article_detail, name="article_detail"),
     path("article/<int:pk>/", views.article_detail_redirect, name="article_detail_redirect"),
     path("search/", views.search, name="search"),
     path("feeds/", views.feeds_list, name="feeds_list"),

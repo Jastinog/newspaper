@@ -194,6 +194,8 @@ def article_detail(request, pk, slug=""):
 
 def article_detail_redirect(request, pk):
     article = get_object_or_404(Article, pk=pk)
+    if not article.slug:
+        return article_detail(request, pk)
     return redirect(article.get_absolute_url(), permanent=True)
 
 
