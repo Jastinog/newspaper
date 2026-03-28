@@ -1,8 +1,20 @@
 from django import template
-
 from apps.core.services.utils import get_article_image_url
 
 register = template.Library()
+
+
+@register.filter
+def truncatechars_word(value, length):
+    """Truncate to at most `length` chars, breaking at the last word boundary."""
+    if not value:
+        return ""
+    length = int(length)
+    if len(value) <= length:
+        return value
+    truncated = value[:length].rsplit(" ", 1)[0]
+    return truncated + "\u2026"
+
 
 
 @register.inclusion_tag("news/_sources.html")

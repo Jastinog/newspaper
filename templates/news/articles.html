@@ -1,5 +1,5 @@
 {% extends "news/base.html" %}
-{% load i18n static %}
+{% load i18n static news_extras %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'news/css/browse.css' %}">
@@ -56,14 +56,17 @@
                 {% endif %}
             </a>
             <div class="article-row-content">
-                <div class="article-row-source">
-                    <a href="{% url 'feed_detail' article.feed.pk %}">{{ article.feed.title }}</a>
-                    {% if article.feed.category %}&middot; <span class="source-category">{{ article.feed.category.name }}</span>{% endif %}
-                </div>
                 <a href="{{ article.get_absolute_url }}" class="article-row-title">{{ article.title }}</a>
-                <div class="article-row-meta">
-                    {% if article.published %}<span>{{ article.published|timesince }} {% trans "ago" %}</span>{% endif %}
-                    {% if article.feed.country %}<span>{{ article.feed.country.name }}</span>{% endif %}
+                {% if article.content %}<p class="article-row-snippet">{{ article.content|truncatechars_word:200 }}</p>{% endif %}
+                <div class="article-row-bottom">
+                    <div class="article-row-meta">
+                        {% if article.published %}<span>{{ article.published|timesince }} {% trans "ago" %}</span>{% endif %}
+                        {% if article.feed.country %}<span>{{ article.feed.country.name }}</span>{% endif %}
+                    </div>
+                    <div class="article-row-source">
+                        <a href="{% url 'feed_detail' article.feed.pk %}">{{ article.feed.title }}</a>
+                        {% if article.feed.category %}&middot; <span class="source-category">{{ article.feed.category.name }}</span>{% endif %}
+                    </div>
                 </div>
             </div>
         </div>
