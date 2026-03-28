@@ -185,6 +185,88 @@
     {% endcomponent %}
 </div>
 
+{# --- Digest Readiness --- #}
+<div class="mb-8" id="digest-readiness-section">
+    {% component "unfold/components/card.html" with title="Digest Readiness" %}
+    <div class="space-y-4">
+        {# Status line #}
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <span id="digest-status-dot" class="inline-block w-3 h-3 rounded-full flex-shrink-0 {% if digest_processing == 0 and digest_available > 0 %}bg-green-500{% elif digest_processing > 0 %}bg-amber-500 animate-pulse{% else %}bg-gray-400{% endif %}"></span>
+                <span id="digest-status-text" class="text-sm font-semibold text-gray-700 dark:text-gray-200">
+                    {% if digest_processing == 0 and digest_available > 0 %}
+                        Ready — {{ digest_available }} articles available for digest
+                    {% elif digest_processing > 0 %}
+                        Processing — {{ digest_processing }} articles in pipeline
+                    {% else %}
+                        No articles in window
+                    {% endif %}
+                </span>
+            </div>
+            <span class="text-xs text-gray-400 dark:text-gray-500">last {{ digest_hours }}h window</span>
+        </div>
+
+        {# Progress bar #}
+        {% if digest_window_total > 0 %}
+        <div class="w-full h-5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden flex" title="Total: {{ digest_window_total }} articles">
+            {% if digest_ready > 0 %}
+            <div id="digest-bar-ready" class="h-full bg-green-500 transition-all duration-500" style="width: {{ digest_pct }}%"></div>
+            {% endif %}
+            {% if digest_pending_embed > 0 %}
+            <div id="digest-bar-embed" class="h-full bg-indigo-400 transition-all duration-500" style="width: {% widthratio digest_pending_embed digest_window_total 100 %}%"></div>
+            {% endif %}
+            {% if digest_pending_extract > 0 %}
+            <div id="digest-bar-extract" class="h-full bg-amber-400 transition-all duration-500" style="width: {% widthratio digest_pending_extract digest_window_total 100 %}%"></div>
+            {% endif %}
+            {% if digest_no_pipeline > 0 %}
+            <div id="digest-bar-nopipe" class="h-full bg-gray-300 dark:bg-gray-600 transition-all duration-500" style="width: {% widthratio digest_no_pipeline digest_window_total 100 %}%"></div>
+            {% endif %}
+            {% if digest_failed > 0 %}
+            <div id="digest-bar-failed" class="h-full bg-red-400 transition-all duration-500" style="width: {% widthratio digest_failed digest_window_total 100 %}%"></div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {# Legend #}
+        <div class="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+            <div class="flex items-center gap-2">
+                <span class="inline-block w-3 h-3 rounded-sm bg-green-500 flex-shrink-0"></span>
+                <span class="text-gray-600 dark:text-gray-400">Ready</span>
+                <span id="digest-n-ready" class="font-semibold text-gray-800 dark:text-gray-200">{{ digest_ready }}</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="inline-block w-3 h-3 rounded-sm bg-indigo-400 flex-shrink-0"></span>
+                <span class="text-gray-600 dark:text-gray-400">Embedding</span>
+                <span id="digest-n-embed" class="font-semibold text-gray-800 dark:text-gray-200">{{ digest_pending_embed }}</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="inline-block w-3 h-3 rounded-sm bg-amber-400 flex-shrink-0"></span>
+                <span class="text-gray-600 dark:text-gray-400">Extracting</span>
+                <span id="digest-n-extract" class="font-semibold text-gray-800 dark:text-gray-200">{{ digest_pending_extract }}</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="inline-block w-3 h-3 rounded-sm bg-gray-300 dark:bg-gray-600 flex-shrink-0"></span>
+                <span class="text-gray-600 dark:text-gray-400">Queued</span>
+                <span id="digest-n-nopipe" class="font-semibold text-gray-800 dark:text-gray-200">{{ digest_no_pipeline }}</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="inline-block w-3 h-3 rounded-sm bg-red-400 flex-shrink-0"></span>
+                <span class="text-gray-600 dark:text-gray-400">Failed</span>
+                <span id="digest-n-failed" class="font-semibold text-gray-800 dark:text-gray-200">{{ digest_failed }}</span>
+            </div>
+        </div>
+
+        {# Summary row #}
+        <div class="flex flex-wrap gap-x-8 gap-y-1 text-xs text-gray-500 dark:text-gray-400 pt-1 border-t border-gray-100 dark:border-gray-800">
+            <span>Window: <strong id="digest-n-total" class="text-gray-700 dark:text-gray-300">{{ digest_window_total }}</strong> articles</span>
+            <span>Available: <strong id="digest-n-available" class="text-gray-700 dark:text-gray-300">{{ digest_available }}</strong> (ready & unused)</span>
+            <span>Used in digests: <strong id="digest-n-used" class="text-gray-700 dark:text-gray-300">{{ digest_used }}</strong></span>
+            <span>Readiness: <strong id="digest-n-pct" class="text-gray-700 dark:text-gray-300">{{ digest_pct }}%</strong></span>
+        </div>
+    </div>
+    {% endcomponent %}
+</div>
+
 {# --- Pipeline Timeline --- #}
 <div class="mb-8">
     {% component "unfold/components/card.html" with title="Pipeline Timeline (last 5 minutes)" %}
@@ -579,6 +661,65 @@ function updatePipelineUI(active, running) {
         });
     }
 
+    function updateDigestReadiness(data) {
+        // Numbers
+        updateKPI("digest-n-ready", data.digest_ready);
+        updateKPI("digest-n-embed", data.digest_pending_embed);
+        updateKPI("digest-n-extract", data.digest_pending_extract);
+        updateKPI("digest-n-nopipe", data.digest_no_pipeline);
+        updateKPI("digest-n-failed", data.digest_failed);
+        updateKPI("digest-n-total", data.digest_window_total);
+        updateKPI("digest-n-available", data.digest_available);
+        updateKPI("digest-n-used", data.digest_used);
+        updateKPI("digest-n-pct", data.digest_pct + "%");
+
+        // Progress bar segments
+        var total = data.digest_window_total || 1;
+        var barBase = "h-full transition-all duration-500 ";
+        var segments = [
+            {val: data.digest_ready, color: "bg-green-500"},
+            {val: data.digest_pending_embed, color: "bg-indigo-400"},
+            {val: data.digest_pending_extract, color: "bg-amber-400"},
+            {val: data.digest_no_pipeline, color: "bg-gray-300 dark:bg-gray-600"},
+            {val: data.digest_failed, color: "bg-red-400"},
+        ];
+
+        var container = document.querySelector("#digest-readiness-section .rounded-full.overflow-hidden");
+        if (container) {
+            while (container.firstChild) container.removeChild(container.firstChild);
+            segments.forEach(function(s) {
+                if (s.val > 0) {
+                    var div = document.createElement("div");
+                    div.className = barBase + s.color;
+                    div.style.width = (s.val / total * 100) + "%";
+                    container.appendChild(div);
+                }
+            });
+        }
+
+        // Status dot + text
+        var dot = document.getElementById("digest-status-dot");
+        var txt = document.getElementById("digest-status-text");
+        var processing = data.digest_processing;
+        var available = data.digest_available;
+        var dotBase = "inline-block w-3 h-3 rounded-full flex-shrink-0 ";
+        var dotColor, statusText;
+
+        if (processing === 0 && available > 0) {
+            dotColor = "bg-green-500";
+            statusText = "Ready \u2014 " + available + " articles available for digest";
+        } else if (processing > 0) {
+            dotColor = "bg-amber-500 animate-pulse";
+            statusText = "Processing \u2014 " + processing + " articles in pipeline";
+        } else {
+            dotColor = "bg-gray-400";
+            statusText = "No articles in window";
+        }
+
+        if (dot) dot.className = dotBase + dotColor;
+        if (txt) txt.textContent = statusText;
+    }
+
     function updateStatus(ok) {
         var st = document.getElementById("hd-status");
         var dot = document.getElementById("hd-dot");
@@ -624,6 +765,9 @@ function updatePipelineUI(active, running) {
 
             // Timeline
             if (data.timeline_data) renderTimeline(data.timeline_data);
+
+            // Digest readiness
+            updateDigestReadiness(data);
 
             // Tables
             updateProblemFeeds(data.problem_feeds);

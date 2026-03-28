@@ -6,6 +6,7 @@ from django.db.models.functions import TruncDate, TruncMinute
 from django.urls import reverse
 from django.utils import timezone
 
+from apps.digest.models import ArticleUse, DigestConfig
 from apps.feed.models import Article, ArticlePipeline, Feed
 from apps.harvester.models import (
     PipelineSettings, PipelineEvent, STAGE_FIELDS,
@@ -414,6 +415,54 @@ def build_harvester_context(request):
     # ── Total articles in DB ─────────────────────────────────
     total_articles = Article.objects.count()
 
+    # ── Digest readiness ─────────────────────────────────────
+    digest_cfg = DigestConfig.get()
+    digest_hours = digest_cfg.hours_lookback
+    digest_cutoff = now - timedelta(hours=digest_hours)
+
+    window_total = Article.objects.filter(published__gte=digest_cutoff).count()
+
+    window_pipelines = ArticlePipeline.objects.filter(
+        article__published__gte=digest_cutoff,
+    )
+    digest_ready = (
+        window_pipelines
+        .filter(embedded_at__isnull=False)
+        .exclude(article__content="")
+        .count()
+    )
+    digest_pending_extract = window_pipelines.filter(
+        content_extracted_at__isnull=True,
+    ).count()
+    digest_pending_embed = (
+        window_pipelines
+        .filter(content_extracted_at__isnull=False, embedded_at__isnull=True)
+        .exclude(article__content="")
+        .count()
+    )
+    digest_failed = window_pipelines.filter(
+        content_extracted_at__isnull=False, article__content="",
+    ).count()
+
+    # Articles without a pipeline record yet (just fetched)
+    digest_no_pipeline = (
+        Article.objects
+        .filter(published__gte=digest_cutoff, pipeline__isnull=True)
+        .count()
+    )
+
+    digest_used = (
+        ArticleUse.objects
+        .filter(article__published__gte=digest_cutoff)
+        .values("article_id")
+        .distinct()
+        .count()
+    )
+    digest_available = digest_ready - digest_used
+
+    digest_processing = digest_no_pipeline + digest_pending_extract + digest_pending_embed
+    digest_pct = round(digest_ready / window_total * 100) if window_total > 0 else 0
+
     # ── Pipeline state ────────────────────────────────────────
     from apps.harvester.services.pipeline import get_manager
     ps = PipelineSettings.load()
@@ -456,4 +505,16 @@ def build_harvester_context(request):
         "recent_errors": recent_errors,
         # Timeline
         "timeline_data": _build_timeline_data(now),
+        # Digest readiness
+        "digest_hours": digest_hours,
+        "digest_window_total": window_total,
+        "digest_ready": digest_ready,
+        "digest_pending_extract": digest_pending_extract,
+        "digest_pending_embed": digest_pending_embed,
+        "digest_failed": digest_failed,
+        "digest_no_pipeline": digest_no_pipeline,
+        "digest_used": digest_used,
+        "digest_available": digest_available,
+        "digest_processing": digest_processing,
+        "digest_pct": digest_pct,
     }
