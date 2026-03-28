@@ -337,15 +337,14 @@ _ARTICLES_PER_PAGE = 40
 
 def _filter_options():
     """Return categories and countries for browse filter dropdowns."""
-    key = "filter_options"
-    result = cache.get(key)
-    if result is None:
-        result = (
+    return cache.get_or_set(
+        "filter_options",
+        lambda: (
             list(Category.objects.order_by("order")),
             list(Country.objects.filter(feeds__enabled=True).distinct().order_by("name")),
-        )
-        cache.set(key, result, 3600)
-    return result
+        ),
+        3600,
+    )
 
 
 def feeds_list(request):

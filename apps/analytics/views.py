@@ -20,14 +20,14 @@ def analytics_dashboard(request):
     return render(request, "admin/analytics_dashboard.html", context)
 
 
-@staff_member_required
 @cache_page(60 * 5)
+@staff_member_required
 def analytics_dashboard_api(request):
     return JsonResponse(build_analytics_context(request))
 
 
-@staff_member_required
 @cache_page(60 * 5)
+@staff_member_required
 def traffic_graph_api(request):
     """Return traffic graph data: country -> city -> client (humans only)."""
     days = min(max(int(request.GET.get("days", 7)), 1), 30)

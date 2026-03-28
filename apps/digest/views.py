@@ -37,8 +37,8 @@ def _serialize_article(article, score=0):
     }
 
 
-@cache_page(60 * 60 * 4)
 @api_view(["GET"])
+@cache_page(60 * 60 * 4)
 def similar_items_api(request, item_id):
     """Tree: center -> similar digest items -> their articles."""
     item = get_object_or_404(
