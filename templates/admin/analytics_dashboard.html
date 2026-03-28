@@ -1,5 +1,5 @@
 {% extends "unfold/layouts/base_simple.html" %}
-{% load i18n unfold %}
+{% load i18n unfold static %}
 
 {% block title %}Analytics Dashboard{% endblock %}
 {% block content_title %}Analytics Dashboard{% endblock %}
@@ -295,9 +295,9 @@
 </div>
 
 {# --- Visitor Map --- #}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jsvectormap@1.6.0/dist/css/jsvectormap.min.css">
-<script src="https://cdn.jsdelivr.net/npm/jsvectormap@1.6.0/dist/js/jsvectormap.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jsvectormap@1.6.0/dist/maps/world.js"></script>
+<link rel="stylesheet" href="{% static 'analytics/css/jsvectormap.min.css' %}">
+<script src="{% static 'analytics/js/jsvectormap.min.js' %}"></script>
+<script src="{% static 'analytics/js/jsvectormap-world.js' %}"></script>
 <script>
 (function() {
     var MAP_DATA = {{ country_map_data|safe }};
