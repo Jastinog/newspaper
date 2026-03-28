@@ -32,6 +32,14 @@
 
     {% block json_ld %}{% endblock %}
 
+    <!-- View Transition animation for hx-boost nav -->
+    <style>
+        ::view-transition-old(root) { animation: 120ms ease-out both spa-fade-out; }
+        ::view-transition-new(root) { animation: 180ms ease-in both spa-fade-in; }
+        @keyframes spa-fade-out { to { opacity: 0; } }
+        @keyframes spa-fade-in { from { opacity: 0; } }
+    </style>
+
     <!-- Prevent FOUC: apply saved theme before any rendering -->
     <script>(function(){var t=localStorage.getItem('newspaper-theme');if(t)document.documentElement.setAttribute('data-theme',t);})()</script>
 
@@ -42,6 +50,14 @@
     <link rel="stylesheet" href="{% static 'news/css/icons.css' %}">
     <link rel="stylesheet" href="{% static 'news/css/base.css' %}">
     <link rel="stylesheet" href="{% static 'news/css/layout.css' %}">
+    <!-- All page CSS preloaded for hx-boost SPA navigation -->
+    <link rel="stylesheet" href="{% static 'news/css/search-bar.css' %}">
+    <link rel="stylesheet" href="{% static 'news/css/digest.css' %}">
+    <link rel="stylesheet" href="{% static 'news/css/bias-spectrum.css' %}">
+    <link rel="stylesheet" href="{% static 'news/css/research-card.css' %}">
+    <link rel="stylesheet" href="{% static 'news/css/similar-news.css' %}">
+    <link rel="stylesheet" href="{% static 'news/css/browse.css' %}">
+    <link rel="stylesheet" href="{% static 'news/css/search-results.css' %}">
     {% block extra_css %}{% endblock %}
 </head>
 <body data-lang-prefix="/{{ LANGUAGE_CODE }}" data-error-generation="{% trans "Generation error" %}" data-dd-ready="{% trans "Deep dive ready" %}" data-dd-read="{% trans "Read" %}" data-dd-close="{% trans "Close" %}" data-similar-label="{% trans "Similar news" %}" data-similar-empty="{% trans "No similar news found" %}" data-similar-sources="{% trans "Source articles" %}" data-similar-current="{% trans "Current" %}" data-similar-digest="{% trans "Digest news" %}" data-similar-articles="{% trans "Articles" %}" data-similar-loading="{% trans "Loading…" %}">
@@ -61,7 +77,7 @@
                 </div>
                 <div class="masthead-date" id="mastheadDate">{% block masthead_date %}{% now "l, F j, Y" %}{% endblock %}</div>
                 <div class="site-title"><a href="{% url 'index' %}">{% trans "Newspaper" %}</a></div>
-                <nav class="masthead-nav">
+                <nav class="masthead-nav" hx-boost="true" hx-swap="innerHTML transition:true">
                     <a href="{% url 'index' %}" class="{% if request.resolver_match.url_name == 'index' %}active{% endif %}">{% trans "Digest" %}</a>
                     <a href="{% url 'articles_list' %}" class="{% if request.resolver_match.url_name == 'articles_list' %}active{% endif %}">{% trans "Articles" %}</a>
                     <a href="{% url 'feeds_list' %}" class="{% if request.resolver_match.url_name == 'feeds_list' or request.resolver_match.url_name == 'feed_detail' %}active{% endif %}">{% trans "Sources" %}</a>

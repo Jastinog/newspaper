@@ -1,11 +1,6 @@
 {% extends "news/base.html" %}
 {% load i18n static %}
 
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'news/css/search-bar.css' %}">
-<link rel="stylesheet" href="{% static 'news/css/search-results.css' %}">
-{% endblock %}
-
 {% block content %}
 {% with autofocus=True %}
     {% include "news/_search_bar.html" %}

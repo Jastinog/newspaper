@@ -1,7 +1,6 @@
 import os
 from pathlib import Path
 
-from celery.schedules import crontab
 from django.urls import reverse_lazy
 from django.utils.translation import gettext_lazy as _
 from dotenv import load_dotenv
@@ -129,12 +128,7 @@ CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = "Europe/Kyiv"
-CELERY_BEAT_SCHEDULE = {
-    "digest-daily": {
-        "task": "digest.generate",
-        "schedule": crontab(hour=4, minute=0),  # 04:00 Kyiv time
-    },
-}
+CELERY_BEAT_SCHEDULE = {}
 
 UNFOLD = {
     "SITE_TITLE": "Newspaper",

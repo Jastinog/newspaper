@@ -49,7 +49,7 @@
         var nodes = [{
             id: 'c', type: 'center', _level: 0,
             label: center.topic, summary: center.summary || '',
-            imageUrl: center.imageUrl, score: 0, url: null, sub: '',
+            imageUrl: center.imageUrl, score: 0, url: center.storyUrl || null, sub: '',
         }];
         var links = [];
 
@@ -562,6 +562,7 @@
             topic: topicEl ? topicEl.textContent.trim() : 'Item #' + itemId,
             summary: summaryEl ? summaryEl.textContent.trim() : '',
             imageUrl: imgEl ? imgEl.src : '',
+            storyUrl: (topicEl && topicEl.href) || window.location.pathname,
         });
     });
 })();

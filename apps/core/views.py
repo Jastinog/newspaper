@@ -142,7 +142,7 @@ def index(request, date=None):
     if context is None:
         return redirect("index")
 
-    if request.headers.get("HX-Request") == "true":
+    if request.headers.get("HX-Request") == "true" and not request.headers.get("HX-Boosted"):
         target = request.headers.get("HX-Target", "contentArea")
         template = _HTMX_TEMPLATES.get(target, "news/_content_area.html")
         return render(request, template, context)

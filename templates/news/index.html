@@ -1,14 +1,6 @@
 {% extends "news/base.html" %}
 {% load i18n static %}
 
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'news/css/search-bar.css' %}">
-<link rel="stylesheet" href="{% static 'news/css/digest.css' %}">
-<link rel="stylesheet" href="{% static 'news/css/bias-spectrum.css' %}">
-<link rel="stylesheet" href="{% static 'news/css/research-card.css' %}">
-<link rel="stylesheet" href="{% static 'news/css/similar-news.css' %}">
-{% endblock %}
-
 {% block masthead_date %}
     {% include "news/_date_nav.html" %}
 {% endblock %}

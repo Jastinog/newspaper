@@ -9,7 +9,7 @@
     {% else %}
         <span class="arrow-disabled">&larr;</span>
     {% endif %}
-    {{ digest.date|date:"F j, Y" }}
+    {{ digest.date|date:"l, F j, Y" }}
     {% if next_date %}
         <a href="{% url 'digest_by_date' next_date|date:'Y-m-d' %}"
            hx-get="{% url 'digest_by_date' next_date|date:'Y-m-d' %}"
