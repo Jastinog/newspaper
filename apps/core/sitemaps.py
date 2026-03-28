@@ -1,11 +1,9 @@
 from django.contrib.sitemaps import Sitemap
 from django.urls import reverse
 
-from apps.digest.models import Digest
+from apps.digest.models import Digest, DigestItem
 from apps.feed.models import Article, Category
 from apps.research.models import Research
-
-SITEMAP_TOTAL_LIMIT = 45_000
 
 
 class StaticSitemap(Sitemap):
@@ -13,14 +11,16 @@ class StaticSitemap(Sitemap):
     changefreq = "hourly"
 
     def items(self):
-        return ["index"]
+        return ["index", "feeds_list", "articles_list"]
 
     def location(self, item):
         return reverse(item)
 
     def lastmod(self, item):
-        digest = Digest.objects.order_by("-created_at").only("created_at").first()
-        return digest.created_at if digest else None
+        if item == "index":
+            digest = Digest.objects.order_by("-created_at").only("created_at").first()
+            return digest.created_at if digest else None
+        return None
 
 
 class DigestSitemap(Sitemap):
@@ -39,6 +39,25 @@ class DigestSitemap(Sitemap):
 
     def lastmod(self, obj):
         return obj.created_at
+
+
+class StorySitemap(Sitemap):
+    limit = 5000
+    priority = 0.8
+    changefreq = "never"
+
+    def items(self):
+        return (
+            DigestItem.objects
+            .order_by("-digest__date", "-importance")
+            .only("id", "digest__date")
+        )
+
+    def location(self, obj):
+        return reverse("story_detail", kwargs={"item_id": obj.pk})
+
+    def lastmod(self, obj):
+        return obj.digest.date
 
 
 class CategorySitemap(Sitemap):
@@ -74,24 +93,17 @@ class ResearchSitemap(Sitemap):
 
 
 class ArticleSitemap(Sitemap):
+    limit = 5000
     priority = 0.5
     changefreq = "monthly"
 
     def items(self):
-        other_count = (
-            1
-            + Digest.objects.count()
-            + Category.objects.count()
-            + Research.objects.count()
-        )
-        article_limit = max(SITEMAP_TOTAL_LIMIT - other_count, 0)
         return (
             Article.objects
             .filter(published__isnull=False)
             .exclude(slug="")
             .order_by("-published")
             .only("pk", "slug", "published")
-            [:article_limit]
         )
 
     def lastmod(self, obj):
@@ -101,6 +113,7 @@ class ArticleSitemap(Sitemap):
 sitemaps = {
     "static": StaticSitemap,
     "digests": DigestSitemap,
+    "stories": StorySitemap,
     "categories": CategorySitemap,
     "research": ResearchSitemap,
     "articles": ArticleSitemap,
