@@ -331,7 +331,6 @@
     color: #fff !important;
     font-weight: 600;
 }
-.dark .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9); }
 .dark .leaflet-control-zoom a { background: #374151 !important; color: #d1d5db !important; border-color: #4b5563 !important; }
 .dark .leaflet-popup-content-wrapper, .dark .leaflet-popup-tip { background: #1f2937 !important; color: #e5e7eb !important; }
 </style>
@@ -346,9 +345,15 @@
         zoomControl: true,
     }).setView([30, 10], 2);
 
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
-        maxZoom: 18,
+    var isDark = document.documentElement.classList.contains("dark");
+    var tileUrl = isDark
+        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+        : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+
+    L.tileLayer(tileUrl, {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        maxZoom: 19,
+        subdomains: "abcd",
     }).addTo(map);
 
     // Fix tiles not loading when container isn't fully laid out yet
