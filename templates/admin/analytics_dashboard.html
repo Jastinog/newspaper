@@ -351,6 +351,9 @@
         maxZoom: 18,
     }).addTo(map);
 
+    // Fix tiles not loading when container isn't fully laid out yet
+    setTimeout(function() { map.invalidateSize(); }, 200);
+
     function markerSize(sessions) {
         if (sessions >= 50) return 20;
         if (sessions >= 20) return 16;
