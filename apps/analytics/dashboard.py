@@ -270,13 +270,18 @@ def build_analytics_context(request):
     ])
 
     # ── Geographic data ───────────────────────────────────────
-    top_countries = list(
+    all_countries = list(
         Session.objects.filter(started_at__gte=thirty_days_ago, is_human=True)
         .exclude(client__country="")
         .values("client__country", "client__country_name")
         .annotate(sessions=Count("id"), visitors=Count("client", distinct=True))
-        .order_by("-sessions")[:10]
+        .order_by("-sessions")
     )
+    # Map data: {country_code: sessions} for all countries
+    country_map_data = json.dumps({
+        row["client__country"]: row["sessions"] for row in all_countries
+    })
+    top_countries = all_countries[:10]
     for row in top_countries:
         row["flag"] = _country_flag(row["client__country"])
 
@@ -442,6 +447,7 @@ def build_analytics_context(request):
         "os_chart": os_chart,
         # Tables
         "top_countries": top_countries,
+        "country_map_data": country_map_data,
         "top_cities": top_cities,
         "top_pages": top_pages,
         "top_referrers": top_referrers,
