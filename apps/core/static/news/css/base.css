@@ -50,6 +50,7 @@
 
 html {
     font-size: 16px;
+    overflow-x: hidden;
 }
 @media (min-width: 1800px) {
     html { font-size: 18px; }
@@ -66,6 +67,7 @@ body {
     transition: background 0.3s, color 0.3s;
     position: relative;
     -webkit-text-size-adjust: 100%;
+    overflow-x: hidden;
 }
 
 /* === PAPER TEXTURE === */
