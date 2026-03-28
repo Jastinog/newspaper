@@ -5,3 +5,5 @@ __pycache__/
 staticfiles/
 .env
 data/*.mmdb
+media/
+.playwright-mcp/
