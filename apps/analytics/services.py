@@ -50,6 +50,8 @@ def build_client_defaults(ua_info: dict, ua_string: str, ip_hash: str, geo: dict
         "country": geo.get("country", ""),
         "country_name": geo.get("country_name", ""),
         "city": geo.get("city", ""),
+        "latitude": geo.get("latitude"),
+        "longitude": geo.get("longitude"),
     }
 
 

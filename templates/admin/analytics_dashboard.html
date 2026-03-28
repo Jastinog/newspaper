@@ -115,7 +115,7 @@
 
 <div class="mb-8">
     {% component "unfold/components/card.html" with title="Visitor Map (humans only)" %}
-        <div id="visitor-map" style="width: 100%; height: 420px;"></div>
+        <div id="visitor-map" style="width: 100%; height: 480px; border-radius: 8px; z-index: 0;"></div>
     {% endcomponent %}
 </div>
 
@@ -294,80 +294,113 @@
     {% endcomponent %}
 </div>
 
-{# --- Visitor Map --- #}
-<link rel="stylesheet" href="{% static 'analytics/css/jsvectormap.min.css' %}">
-<script src="{% static 'analytics/js/jsvectormap.min.js' %}"></script>
-<script src="{% static 'analytics/js/jsvectormap-world.js' %}"></script>
+{# --- Visitor Map (Leaflet + MarkerCluster) --- #}
+<link rel="stylesheet" href="{% static 'analytics/css/leaflet.css' %}">
+<link rel="stylesheet" href="{% static 'analytics/css/MarkerCluster.css' %}">
+<link rel="stylesheet" href="{% static 'analytics/css/MarkerCluster.Default.css' %}">
+<script src="{% static 'analytics/js/leaflet.js' %}"></script>
+<script src="{% static 'analytics/js/leaflet.markercluster.js' %}"></script>
+<style>
+.leaflet-marker-custom {
+    background: rgba(34, 197, 94, 0.85);
+    border: 2px solid #15803d;
+    border-radius: 50%;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+}
+.marker-cluster-small {
+    background-color: rgba(34, 197, 94, 0.3) !important;
+}
+.marker-cluster-small div {
+    background-color: rgba(34, 197, 94, 0.7) !important;
+    color: #fff !important;
+    font-weight: 600;
+}
+.marker-cluster-medium {
+    background-color: rgba(234, 179, 8, 0.3) !important;
+}
+.marker-cluster-medium div {
+    background-color: rgba(234, 179, 8, 0.7) !important;
+    color: #fff !important;
+    font-weight: 600;
+}
+.marker-cluster-large {
+    background-color: rgba(239, 68, 68, 0.3) !important;
+}
+.marker-cluster-large div {
+    background-color: rgba(239, 68, 68, 0.7) !important;
+    color: #fff !important;
+    font-weight: 600;
+}
+.dark .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9); }
+.dark .leaflet-control-zoom a { background: #374151 !important; color: #d1d5db !important; border-color: #4b5563 !important; }
+.dark .leaflet-popup-content-wrapper, .dark .leaflet-popup-tip { background: #1f2937 !important; color: #e5e7eb !important; }
+</style>
 <script>
 (function() {
-    var MAP_DATA = {{ country_map_data|safe }};
-    var isDark = document.documentElement.classList.contains("dark");
+    var MARKERS = {{ city_markers|safe }};
+    var el = document.getElementById("visitor-map");
+    if (!el) return;
 
-    function getMaxValue(data) {
-        var max = 0;
-        for (var k in data) { if (data[k] > max) max = data[k]; }
-        return max || 1;
+    var map = L.map("visitor-map", {
+        scrollWheelZoom: true,
+        zoomControl: true,
+    }).setView([30, 10], 2);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
+        maxZoom: 18,
+    }).addTo(map);
+
+    function markerSize(sessions) {
+        if (sessions >= 50) return 20;
+        if (sessions >= 20) return 16;
+        if (sessions >= 5) return 12;
+        return 8;
     }
 
-    function buildMap(data) {
-        var el = document.getElementById("visitor-map");
-        if (!el) return null;
-        while (el.firstChild) el.removeChild(el.firstChild);
-        isDark = document.documentElement.classList.contains("dark");
-
-        return new jsVectorMap({
-            selector: "#visitor-map",
-            map: "world",
-            zoomButtons: true,
-            zoomOnScroll: true,
-            zoomOnScrollSpeed: 3,
-            zoomMax: 12,
-            zoomAnimate: true,
-            showTooltip: true,
-            regionStyle: {
-                initial: {
-                    fill: isDark ? "#374151" : "#e5e7eb",
-                    stroke: isDark ? "#1f2937" : "#d1d5db",
-                    strokeWidth: 0.5,
-                },
-                hover: {
-                    fillOpacity: 0.8,
-                    cursor: "pointer",
-                },
-            },
-            series: {
-                regions: [{
-                    attribute: "fill",
-                    scale: {
-                        low: isDark ? "#064e3b" : "#bbf7d0",
-                        high: isDark ? "#22c55e" : "#15803d",
-                    },
-                    values: data,
-                    min: 0,
-                    max: getMaxValue(data),
-                }],
-            },
-            onRegionTooltipShow: function(event, tooltip, code) {
-                var sessions = data[code];
-                if (sessions) {
-                    tooltip.text(
-                        tooltip.text() + " — " + sessions + " sessions",
-                        true
-                    );
-                }
-            },
+    function buildClusterGroup(data) {
+        var cluster = L.markerClusterGroup({
+            maxClusterRadius: 40,
+            spiderfyOnMaxZoom: true,
+            showCoverageOnHover: false,
+            zoomToBoundsOnClick: true,
         });
+
+        data.forEach(function(m) {
+            var size = markerSize(m.sessions);
+            var icon = L.divIcon({
+                className: "leaflet-marker-custom",
+                iconSize: [size, size],
+                iconAnchor: [size / 2, size / 2],
+            });
+            var marker = L.marker([m.lat, m.lng], {icon: icon});
+            marker.bindPopup(
+                "<b>" + m.city + "</b><br>" +
+                m.country + "<br>" +
+                "<span style='color:#22c55e;font-weight:600'>" + m.sessions + "</span> sessions, " +
+                "<span style='color:#3b82f6;font-weight:600'>" + m.visitors + "</span> visitors"
+            );
+            cluster.addLayer(marker);
+        });
+
+        return cluster;
     }
 
-    window._visitorMap = buildMap(MAP_DATA);
-    window._visitorMapData = MAP_DATA;
+    var clusterLayer = buildClusterGroup(MARKERS);
+    map.addLayer(clusterLayer);
 
-    window._updateVisitorMap = function(newData) {
-        window._visitorMapData = newData;
-        if (window._visitorMap) {
-            try { window._visitorMap.destroy(); } catch(e) {}
+    // Fit bounds if we have markers
+    if (MARKERS.length > 0) {
+        var bounds = clusterLayer.getBounds();
+        if (bounds.isValid()) {
+            map.fitBounds(bounds, {padding: [30, 30], maxZoom: 6});
         }
-        window._visitorMap = buildMap(newData);
+    }
+
+    window._updateVisitorMap = function(newMarkers) {
+        map.removeLayer(clusterLayer);
+        clusterLayer = buildClusterGroup(newMarkers);
+        map.addLayer(clusterLayer);
     };
 })();
 </script>
@@ -525,8 +558,8 @@
             ], "No bots");
 
             // Map
-            if (data.country_map_data && window._updateVisitorMap) {
-                window._updateVisitorMap(JSON.parse(data.country_map_data));
+            if (data.city_markers && window._updateVisitorMap) {
+                window._updateVisitorMap(JSON.parse(data.city_markers));
             }
 
             updateTable("table-live", data.live_sessions, [

@@ -277,10 +277,6 @@ def build_analytics_context(request):
         .annotate(sessions=Count("id"), visitors=Count("client", distinct=True))
         .order_by("-sessions")
     )
-    # Map data: {country_code: sessions} for all countries
-    country_map_data = json.dumps({
-        row["client__country"]: row["sessions"] for row in all_countries
-    })
     top_countries = all_countries[:10]
     for row in top_countries:
         row["flag"] = _country_flag(row["client__country"])
@@ -294,6 +290,31 @@ def build_analytics_context(request):
     )
     for row in top_cities:
         row["flag"] = _country_flag(row["client__country"])
+
+    # City markers with coordinates for Leaflet map
+    city_markers_qs = list(
+        Session.objects.filter(started_at__gte=thirty_days_ago, is_human=True)
+        .exclude(client__city="")
+        .exclude(client__latitude__isnull=True)
+        .exclude(client__longitude__isnull=True)
+        .values(
+            "client__city", "client__country", "client__country_name",
+            "client__latitude", "client__longitude",
+        )
+        .annotate(sessions=Count("id"), visitors=Count("client", distinct=True))
+        .order_by("-sessions")
+    )
+    city_markers = json.dumps([
+        {
+            "lat": row["client__latitude"],
+            "lng": row["client__longitude"],
+            "city": row["client__city"],
+            "country": row["client__country_name"],
+            "sessions": row["sessions"],
+            "visitors": row["visitors"],
+        }
+        for row in city_markers_qs
+    ])
 
     # ── Top pages ─────────────────────────────────────────────
     top_pages = list(
@@ -447,7 +468,7 @@ def build_analytics_context(request):
         "os_chart": os_chart,
         # Tables
         "top_countries": top_countries,
-        "country_map_data": country_map_data,
+        "city_markers": city_markers,
         "top_cities": top_cities,
         "top_pages": top_pages,
         "top_referrers": top_referrers,

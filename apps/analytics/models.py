@@ -23,6 +23,8 @@ class Client(models.Model):
     country = models.CharField(max_length=2, blank=True, default="")
     country_name = models.CharField(max_length=100, blank=True, default="")
     city = models.CharField(max_length=200, blank=True, default="")
+    latitude = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
 
     # Bot classification
     is_bot = models.BooleanField(default=False)

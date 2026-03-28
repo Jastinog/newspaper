@@ -185,19 +185,21 @@ def get_client_ip(request) -> str:
 
 
 def resolve_geo(ip: str) -> dict:
-    """Resolve IP to country/city via GeoIP database."""
+    """Resolve IP to country/city/coordinates via GeoIP database."""
     reader = _get_geoip_reader()
     if not reader or not ip:
-        return {"country": "", "country_name": "", "city": ""}
+        return {"country": "", "country_name": "", "city": "", "latitude": None, "longitude": None}
     try:
         resp = reader.city(ip)
         return {
             "country": (resp.country.iso_code or "")[:2],
             "country_name": (resp.country.name or "")[:100],
             "city": (resp.city.name or "")[:200],
+            "latitude": resp.location.latitude,
+            "longitude": resp.location.longitude,
         }
     except Exception:
-        return {"country": "", "country_name": "", "city": ""}
+        return {"country": "", "country_name": "", "city": "", "latitude": None, "longitude": None}
 
 
 def country_flag(code: str) -> str:
