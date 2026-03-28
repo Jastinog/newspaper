@@ -1,0 +1,8 @@
+[    3684ms] [ERROR] WebSocket connection to 'ws://localhost:8002/ws/' failed: Error during WebSocket handshake: Unexpected response code: 404 @ http://localhost:8002/static/websocket/js/ws.js:62
+[    8962ms] [ERROR] WebSocket connection to 'ws://localhost:8002/ws/' failed: Error during WebSocket handshake: Unexpected response code: 404 @ http://localhost:8002/static/websocket/js/ws.js:62
+[   15505ms] [ERROR] WebSocket connection to 'ws://localhost:8002/ws/' failed: Error during WebSocket handshake: Unexpected response code: 404 @ http://localhost:8002/static/websocket/js/ws.js:62
+[   23663ms] [ERROR] WebSocket connection to 'ws://localhost:8002/ws/' failed: Error during WebSocket handshake: Unexpected response code: 404 @ http://localhost:8002/static/websocket/js/ws.js:62
+[   32199ms] [ERROR] WebSocket connection to 'ws://localhost:8002/ws/' failed: Error during WebSocket handshake: Unexpected response code: 404 @ http://localhost:8002/static/websocket/js/ws.js:62
+[   43472ms] [ERROR] WebSocket connection to 'ws://localhost:8002/ws/' failed: Error during WebSocket handshake: Unexpected response code: 404 @ http://localhost:8002/static/websocket/js/ws.js:62
+[   61297ms] [ERROR] WebSocket connection to 'ws://localhost:8002/ws/' failed: Error during WebSocket handshake: Unexpected response code: 404 @ http://localhost:8002/static/websocket/js/ws.js:62
+[   86395ms] [ERROR] WebSocket connection to 'ws://localhost:8002/ws/' failed: Error during WebSocket handshake: Unexpected response code: 404 @ http://localhost:8002/static/websocket/js/ws.js:62

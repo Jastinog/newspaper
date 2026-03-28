@@ -249,21 +249,9 @@
             ctx.fillText(node.score + '%', tx, ty + 1);
         }
 
-        // "open →" link button at bottom-right
-        if (node.url) {
-            var linkPx = S.subPx || 6;
-            var linkText = 'open \u2192';
-            ctx.font = '700 ' + linkPx + 'px -apple-system, system-ui, sans-serif';
-            var linkW = ctx.measureText(linkText).width;
-            var linkX = x + L.cardW - S.pad - linkW;
-            var linkY = y + L.cardH - S.pad - linkPx;
-            ctx.fillStyle = colors.accent;
-            ctx.fillText(linkText, linkX, linkY);
-            // Store link hit area
-            node._linkBox = { x: linkX - 4, y: linkY - 2, w: linkW + 8, h: linkPx + 6 };
-        } else {
-            node._linkBox = null;
-        }
+        // Store clickable areas: image + title
+        node._imgBox = { x: imgX, y: imgY, w: L.imgS, h: L.cardH };
+        node._titleBox = { x: x + L.textLeft, y: y + S.pad, w: L.cardW - L.textLeft - S.pad, h: L.titleLines.length * S.titlePx * 1.35 };
 
         node._bx = x;
         node._by = y;
@@ -372,18 +360,24 @@
             source: isDark ? '#5bab9e' : '#3a8a7d',
         };
 
-        // Link colors per target type
-        var linkColors = {
-            source:  isDark ? 'rgba(91,171,158,0.4)' : 'rgba(58,138,125,0.35)',
-            item:    isDark ? 'rgba(196,122,108,0.4)' : 'rgba(163,93,79,0.35)',
-            article: isDark ? 'rgba(122,143,163,0.35)' : 'rgba(90,106,122,0.3)',
-            center:  isDark ? 'rgba(212,162,78,0.4)' : 'rgba(184,134,42,0.35)',
+        // 4 distinct link colors by relationship type
+        var linkStyles = {
+            centerSource:  isDark ? 'rgba(77,184,164,0.55)'  : 'rgba(58,150,134,0.5)',    // mint
+            centerItem:    isDark ? 'rgba(224,168,50,0.55)'   : 'rgba(190,140,36,0.5)',    // yellow
+            centerArticle: isDark ? 'rgba(107,143,196,0.55)'  : 'rgba(80,116,168,0.5)',    // blue
+            itemArticle:   isDark ? 'rgba(212,122,122,0.55)'  : 'rgba(180,94,94,0.5)',     // pink
         };
 
-        function linkColorByTarget(link) {
+        function linkColorByRelation(link) {
+            var s = link.source;
             var t = link.target;
-            var type = (typeof t === 'object') ? t.type : 'item';
-            return linkColors[type] || linkColors.item;
+            var sType = (typeof s === 'object') ? s.type : '';
+            var tType = (typeof t === 'object') ? t.type : '';
+            if (tType === 'source') return linkStyles.centerSource;
+            if (sType === 'center' && tType === 'item') return linkStyles.centerItem;
+            if (sType === 'center' && tType === 'article') return linkStyles.centerArticle;
+            if (sType === 'item' && tType === 'article') return linkStyles.itemArticle;
+            return linkStyles.centerItem;
         }
 
         var fg = new ForceGraph()(container)
@@ -402,22 +396,21 @@
                 }
             })
             .linkWidth(1.2)
-            .linkColor(linkColorByTarget)
-            .linkCurvature(0.25)
+            .linkColor(linkColorByRelation)
+            .linkCurvature(0.4)
             .linkDirectionalArrowLength(6)
             .linkDirectionalArrowRelPos(1)
-            .linkDirectionalArrowColor(linkColorByTarget)
+            .linkDirectionalArrowColor(linkColorByRelation)
             .d3VelocityDecay(0.85)
             .d3AlphaDecay(0.1)
             .onNodeClick(function (node, event) {
-                // Only navigate if click landed on the "open →" link area
-                if (!node.url || !node._linkBox) return;
+                if (!node.url) return;
                 var rect = container.querySelector('canvas').getBoundingClientRect();
-                // Convert screen coords to graph coords
-                var transform = fg.screen2GraphCoords(event.clientX - rect.left, event.clientY - rect.top);
-                var lb = node._linkBox;
-                if (transform.x >= lb.x && transform.x <= lb.x + lb.w &&
-                    transform.y >= lb.y && transform.y <= lb.y + lb.h) {
+                var pt = fg.screen2GraphCoords(event.clientX - rect.left, event.clientY - rect.top);
+                function hitBox(b) {
+                    return b && pt.x >= b.x && pt.x <= b.x + b.w && pt.y >= b.y && pt.y <= b.y + b.h;
+                }
+                if (hitBox(node._imgBox) || hitBox(node._titleBox)) {
                     window.location.href = node.url;
                 }
             })

@@ -8,6 +8,7 @@ from apps.core.urls import seo_urlpatterns
 
 urlpatterns = [
     path("admin/harvester/", include("apps.harvester.urls")),
+    path("admin/analytics/", include("apps.analytics.dashboard_urls")),
     path("admin/", admin.site.urls),
     path("i18n/", include("django.conf.urls.i18n")),
     path("api/", include("apps.feed.api_urls")),

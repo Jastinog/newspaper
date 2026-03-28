@@ -288,6 +288,11 @@ UNFOLD = {
                 "collapsible": True,
                 "items": [
                     {
+                        "title": _("Dashboard"),
+                        "icon": "monitoring",
+                        "link": reverse_lazy("analytics_dashboard"),
+                    },
+                    {
                         "title": _("Clients"),
                         "icon": "devices",
                         "link": reverse_lazy("admin:analytics_client_changelist"),

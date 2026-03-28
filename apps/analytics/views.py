@@ -1,12 +1,27 @@
 from datetime import timedelta
 
+from django.contrib.admin import site as admin_site
 from django.contrib.admin.views.decorators import staff_member_required
 from django.http import JsonResponse
+from django.shortcuts import render
 from django.urls import reverse
 from django.utils import timezone
 
+from .dashboard import build_analytics_context
 from .models import Session
 from .utils import country_flag, format_duration
+
+
+@staff_member_required
+def analytics_dashboard(request):
+    context = {**admin_site.each_context(request), "title": "Analytics Dashboard"}
+    context.update(build_analytics_context(request))
+    return render(request, "admin/analytics_dashboard.html", context)
+
+
+@staff_member_required
+def analytics_dashboard_api(request):
+    return JsonResponse(build_analytics_context(request))
 
 
 @staff_member_required
