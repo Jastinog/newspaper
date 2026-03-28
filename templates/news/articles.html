@@ -56,7 +56,7 @@
                 {% if article.content %}<p class="article-row-snippet">{{ article.content|truncatechars_word:200 }}</p>{% endif %}
                 <div class="article-row-bottom">
                     <div class="article-row-meta">
-                        {% if article.published %}<span>{{ article.published|timesince }} {% trans "ago" %}</span>{% endif %}
+                        {% if article.published %}<span>{{ article.published|timesince }} {% trans "ago" %}</span>{% elif article.created_at %}<span>{{ article.created_at|timesince }} {% trans "ago" %}</span>{% endif %}
                         {% if article.feed.country %}<span>{{ article.feed.country.name }}</span>{% endif %}
                     </div>
                     <div class="article-row-source">

@@ -71,6 +71,7 @@ class Article(models.Model):
     rss_content = models.TextField(blank=True, default="")
     content = models.TextField(blank=True, default="")
     published = models.DateTimeField(null=True, blank=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ["-published"]
