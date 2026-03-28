@@ -1,7 +1,7 @@
 from django.core.cache import cache
 from django.core.paginator import Paginator
-from django.db.models import Count, Prefetch, Q
-from django.db.models.functions import Coalesce
+from django.db.models import Count, F, Prefetch, Q, Window
+from django.db.models.functions import Coalesce, RowNumber
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -458,7 +458,14 @@ def articles_list(request):
     if q:
         qs = qs.filter(title__icontains=q)
 
-    qs = qs.annotate(sort_date=Coalesce("published", "created_at")).order_by("-sort_date")
+    qs = qs.annotate(
+        sort_date=Coalesce("published", "created_at"),
+        feed_rank=Window(
+            expression=RowNumber(),
+            partition_by=F("feed_id"),
+            order_by=F("sort_date").desc(),
+        ),
+    ).order_by("feed_rank", "-sort_date")
     paginator = Paginator(qs, _ARTICLES_PER_PAGE)
     page = paginator.get_page(request.GET.get("page"))
 
