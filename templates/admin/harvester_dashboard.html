@@ -208,22 +208,8 @@
 
         {# Progress bar #}
         {% if digest_window_total > 0 %}
-        <div class="w-full h-5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden flex" title="Total: {{ digest_window_total }} articles">
-            {% if digest_ready > 0 %}
-            <div id="digest-bar-ready" class="h-full bg-green-500 transition-all duration-500" style="width: {{ digest_pct }}%"></div>
-            {% endif %}
-            {% if digest_pending_embed > 0 %}
-            <div id="digest-bar-embed" class="h-full bg-indigo-400 transition-all duration-500" style="width: {% widthratio digest_pending_embed digest_window_total 100 %}%"></div>
-            {% endif %}
-            {% if digest_pending_extract > 0 %}
-            <div id="digest-bar-extract" class="h-full bg-amber-400 transition-all duration-500" style="width: {% widthratio digest_pending_extract digest_window_total 100 %}%"></div>
-            {% endif %}
-            {% if digest_no_pipeline > 0 %}
-            <div id="digest-bar-nopipe" class="h-full bg-gray-300 dark:bg-gray-600 transition-all duration-500" style="width: {% widthratio digest_no_pipeline digest_window_total 100 %}%"></div>
-            {% endif %}
-            {% if digest_failed > 0 %}
-            <div id="digest-bar-failed" class="h-full bg-red-400 transition-all duration-500" style="width: {% widthratio digest_failed digest_window_total 100 %}%"></div>
-            {% endif %}
+        <div class="w-full overflow-hidden flex" style="height: 6px; background: rgba(128,128,128,0.15);" title="Total: {{ digest_window_total }} articles">
+            <div id="digest-bar-fill" class="h-full bg-green-500 transition-all duration-500" style="width: {{ digest_pct }}%"></div>
         </div>
         {% endif %}
 
@@ -673,29 +659,9 @@ function updatePipelineUI(active, running) {
         updateKPI("digest-n-used", data.digest_used);
         updateKPI("digest-n-pct", data.digest_pct + "%");
 
-        // Progress bar segments
-        var total = data.digest_window_total || 1;
-        var barBase = "h-full transition-all duration-500 ";
-        var segments = [
-            {val: data.digest_ready, color: "bg-green-500"},
-            {val: data.digest_pending_embed, color: "bg-indigo-400"},
-            {val: data.digest_pending_extract, color: "bg-amber-400"},
-            {val: data.digest_no_pipeline, color: "bg-gray-300 dark:bg-gray-600"},
-            {val: data.digest_failed, color: "bg-red-400"},
-        ];
-
-        var container = document.querySelector("#digest-readiness-section .rounded-full.overflow-hidden");
-        if (container) {
-            while (container.firstChild) container.removeChild(container.firstChild);
-            segments.forEach(function(s) {
-                if (s.val > 0) {
-                    var div = document.createElement("div");
-                    div.className = barBase + s.color;
-                    div.style.width = (s.val / total * 100) + "%";
-                    container.appendChild(div);
-                }
-            });
-        }
+        // Progress bar
+        var bar = document.getElementById("digest-bar-fill");
+        if (bar) bar.style.width = data.digest_pct + "%";
 
         // Status dot + text
         var dot = document.getElementById("digest-status-dot");
