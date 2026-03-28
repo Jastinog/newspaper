@@ -1,9 +1,11 @@
+from django.core.cache import cache
 from django.core.paginator import Paginator
 from django.db.models import Count, Prefetch, Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.translation import get_language, gettext_lazy as _
+from django.views.decorators.cache import cache_page
 from django.views.decorators.http import require_POST
 
 from apps.core.services.utils import get_article_image_url
@@ -168,6 +170,7 @@ def toggle_pin(request, slug):
     return response
 
 
+@cache_page(60 * 60)
 def article_detail(request, pk, slug=""):
     article = get_object_or_404(
         Article.objects.select_related("feed", "feed__category"), pk=pk,
@@ -193,6 +196,7 @@ def article_detail_redirect(request, pk):
     return redirect(article.get_absolute_url(), permanent=True)
 
 
+@cache_page(60 * 60 * 2)
 def category_detail(request, slug):
     category = get_object_or_404(Category, slug=slug)
     articles = (
@@ -216,6 +220,7 @@ def category_detail(request, slug):
     })
 
 
+@cache_page(60 * 60 * 4)
 def story_detail(request, item_id):
     current_lang = get_language() or "en"
     item = get_object_or_404(
@@ -268,6 +273,7 @@ def story_detail(request, item_id):
     })
 
 
+@cache_page(60 * 60 * 4)
 def research(request, item_id):
     item = get_object_or_404(
         DigestItem.objects.select_related("digest", "section"), pk=item_id,
@@ -331,10 +337,15 @@ _ARTICLES_PER_PAGE = 40
 
 def _filter_options():
     """Return categories and countries for browse filter dropdowns."""
-    return (
-        Category.objects.order_by("order"),
-        Country.objects.filter(feeds__enabled=True).distinct().order_by("name"),
-    )
+    key = "filter_options"
+    result = cache.get(key)
+    if result is None:
+        result = (
+            list(Category.objects.order_by("order")),
+            list(Country.objects.filter(feeds__enabled=True).distinct().order_by("name")),
+        )
+        cache.set(key, result, 3600)
+    return result
 
 
 def feeds_list(request):
@@ -387,6 +398,7 @@ def feeds_list(request):
     })
 
 
+@cache_page(60 * 60)
 def feed_detail(request, pk):
     """Single feed with its articles, paginated."""
     feed = get_object_or_404(

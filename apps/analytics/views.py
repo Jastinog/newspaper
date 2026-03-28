@@ -6,6 +6,7 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from django.urls import reverse
 from django.utils import timezone
+from django.views.decorators.cache import cache_page
 
 from .dashboard import build_analytics_context
 from .models import Session
@@ -20,11 +21,13 @@ def analytics_dashboard(request):
 
 
 @staff_member_required
+@cache_page(60 * 5)
 def analytics_dashboard_api(request):
     return JsonResponse(build_analytics_context(request))
 
 
 @staff_member_required
+@cache_page(60 * 5)
 def traffic_graph_api(request):
     """Return traffic graph data: country -> city -> client (humans only)."""
     days = min(max(int(request.GET.get("days", 7)), 1), 30)

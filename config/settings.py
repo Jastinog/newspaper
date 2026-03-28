@@ -118,6 +118,15 @@ IMAGE_QUALITY = 85
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# Cache
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": os.environ.get("CACHE_REDIS_URL", "redis://127.0.0.1:6379/2"),
+        "TIMEOUT": 3600,
+    }
+}
+
 # Analytics — path to MaxMind GeoLite2-City.mmdb (optional)
 GEOIP_DATABASE_PATH = os.environ.get("GEOIP_DATABASE_PATH", str(BASE_DIR / "data" / "GeoLite2-City.mmdb"))
 

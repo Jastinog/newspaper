@@ -1,7 +1,7 @@
 #!/bin/bash
 
 export PATH=/root/.local/bin:$PATH
-cd /root/Projects/newspaper
+cd /root/projects/newspaper
 
 # ── colors ──
 RED='\033[0;31m'

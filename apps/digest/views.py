@@ -2,6 +2,7 @@ from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.utils.translation import get_language
+from django.views.decorators.cache import cache_page
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
@@ -36,6 +37,7 @@ def _serialize_article(article, score=0):
     }
 
 
+@cache_page(60 * 60 * 4)
 @api_view(["GET"])
 def similar_items_api(request, item_id):
     """Tree: center -> similar digest items -> their articles."""
