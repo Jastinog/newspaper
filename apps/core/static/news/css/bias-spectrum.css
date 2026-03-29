@@ -109,6 +109,7 @@
     object-fit: cover;
     flex-shrink: 0;
     background: var(--border-faint);
+    image-rendering: pixelated;
 }
 .source-card-img--placeholder {
     display: flex;

@@ -179,6 +179,7 @@
     height: 100%;
     object-fit: cover;
     display: block;
+    image-rendering: pixelated;
 }
 .feed-card-thumb-placeholder {
     display: flex;
@@ -284,6 +285,7 @@
     height: 100%;
     object-fit: cover;
     display: block;
+    image-rendering: pixelated;
 }
 
 .article-row-content {

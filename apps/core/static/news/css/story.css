@@ -27,6 +27,7 @@
     aspect-ratio: 16 / 9;
     object-fit: cover;
     display: block;
+    image-rendering: pixelated;
 }
 
 /* Research CTA */
@@ -133,6 +134,7 @@
     object-fit: cover;
     flex-shrink: 0;
     background: var(--border-faint);
+    image-rendering: pixelated;
 }
 .story-source-img--placeholder {
     display: flex;
