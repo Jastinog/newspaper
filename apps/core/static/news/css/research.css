@@ -59,6 +59,19 @@
     font-style: italic;
 }
 
+/* Hero image */
+.story-hero {
+    max-width: 680px;
+    margin: 0 auto 2rem;
+}
+
+.story-hero img {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    display: block;
+}
+
 /* Sources section */
 .research-sources {
     max-width: 680px;
