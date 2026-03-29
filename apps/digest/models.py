@@ -15,9 +15,7 @@ DEFAULT_PROMPT_ANALYSIS = (
     "- \"article_ids\": array of article IDs covering this story\n"
     "- \"search_queries\": 2-3 search queries to find the most relevant articles "
     "about this specific story\n\n"
-    "Output ONLY valid JSON:\n"
-    '{{"stories": [{{"label": "...", "article_ids": [...], '
-    '"search_queries": ["...", "..."]}}, ...]}}'
+    "Return JSON with key \"stories\" containing an array of story objects."
 )
 
 DEFAULT_PROMPT_GENERATION = (
@@ -29,13 +27,13 @@ DEFAULT_PROMPT_GENERATION = (
     '- "importance": integer 1-9 '
     "(1-3=minor, 4-5=notable, 6=significant, 7-9=major/breaking)\n"
     '- "article_ids": array of relevant article IDs from the input\n\n'
-    "Output ONLY valid JSON."
+    "Return JSON."
 )
 
 DEFAULT_PROMPT_HEADLINE = (
     "You are a news editor. Based on today's top stories, write a 2-3 sentence "
     "headline summarizing the overall news picture.\n\n"
-    'Output ONLY valid JSON: {"headline": "..."}'
+    'Return JSON with a single key "headline".'
 )
 
 DEFAULT_PROMPT_TRANSLATION = (
@@ -47,7 +45,7 @@ DEFAULT_PROMPT_TRANSLATION = (
     "Provide:\n"
     '- "topic": translated short event label\n'
     '- "summary": translated summary\n\n'
-    "Output ONLY valid JSON."
+    "Return JSON."
 )
 
 
@@ -101,38 +99,41 @@ class DigestConfig(models.Model):
 
     # ── Story Refinement ──────────────────────────────────────
     context_trim_length = models.PositiveIntegerField(
-        default=1500, help_text="Article content length (chars) sent to generator",
+        default=700, help_text="Article content length (chars) sent to generator",
     )
     refine_search_top_k = models.PositiveIntegerField(
         default=10, help_text="Additional articles to find per refine query",
     )
+    max_articles_per_story = models.PositiveIntegerField(
+        default=7, help_text="Max articles sent to generator per story",
+    )
 
     # ── Generation ────────────────────────────────────────────
     items_per_section_min = models.PositiveIntegerField(
-        default=4, help_text="Min stories the analyzer should identify per section",
+        default=6, help_text="Min stories the analyzer should identify per section",
     )
     items_per_section_max = models.PositiveIntegerField(
-        default=10, help_text="Max stories the analyzer should identify per section",
+        default=8, help_text="Max stories the analyzer should identify per section",
     )
     max_workers = models.PositiveIntegerField(
         default=5, help_text="Max parallel workers (for batch mode)",
     )
 
-    # ── System Prompts ────────────────────────────────────────
+    # ── System Prompts (defaults managed by initdigest) ────────
     system_prompt_analysis = models.TextField(
-        default=DEFAULT_PROMPT_ANALYSIS,
+        default="",
         help_text="Prompt for identifying stories from articles. Variables: {section}, {min}, {max}",
     )
     system_prompt_generation = models.TextField(
-        default=DEFAULT_PROMPT_GENERATION,
+        default="",
         help_text="Prompt for generating topic/summary/importance from articles",
     )
     system_prompt_headline = models.TextField(
-        default=DEFAULT_PROMPT_HEADLINE,
+        default="",
         help_text="Prompt for generating the overall digest headline",
     )
     system_prompt_translation = models.TextField(
-        default=DEFAULT_PROMPT_TRANSLATION,
+        default="",
         help_text="Prompt for translating items. Variable: {language}",
     )
 

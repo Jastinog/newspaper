@@ -156,7 +156,7 @@ class Command(BaseCommand):
             ))
 
             # Refine
-            refined, refine_usage = refiner.refine(story, {})
+            refined, refine_usage = refiner.refine(story)
             costs.append(("refine", refine_usage, EMBEDDING_MODEL))
             self.stdout.write(
                 f"   Refine: {len(story.get('article_ids', []))} -> {len(refined)} articles"

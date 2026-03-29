@@ -11,14 +11,19 @@ logger = logging.getLogger(__name__)
 
 
 def trim_content(text: str, max_length: int) -> str:
-    """Trim text to max_length, breaking at sentence boundaries when possible."""
+    """Trim text to max_length, breaking at paragraph or sentence boundaries."""
     if not text or len(text) <= max_length:
         return text or ""
     truncated = text[:max_length]
-    # Try to break at last sentence boundary
-    last_period = truncated.rfind('. ')
-    if last_period > max_length * 0.6:
-        return truncated[:last_period + 1]
+    # Prefer paragraph boundary
+    last_para = truncated.rfind('\n\n')
+    if last_para > max_length * 0.5:
+        return truncated[:last_para].rstrip()
+    # Try sentence boundary
+    for sep in ('. ', '! ', '? ', '.\n', '!\n', '?\n'):
+        pos = truncated.rfind(sep)
+        if pos > max_length * 0.5:
+            return truncated[:pos + 1]
     return truncated + "..."
 
 
@@ -29,12 +34,12 @@ class StoryRefiner:
         self.embedder = embedder or EmbeddingClient()
         self.config = config or DigestConfig.get()
 
-    def refine(self, story: dict, original_articles: dict) -> tuple[list[dict], dict]:
+    def refine(self, story: dict, used_ids: set = None) -> tuple[list[dict], dict]:
         """Find best articles for a story using refined embedding search.
 
         Args:
             story: {"label": str, "article_ids": [int], "search_queries": [str]}
-            original_articles: {article_id: article_dict} - all articles from collector
+            used_ids: pre-loaded set of already-used article IDs (avoids per-call DB query)
 
         Returns:
             (article_dicts, usage) — articles with trimmed content + embedding token usage.
@@ -42,12 +47,17 @@ class StoryRefiner:
         cfg = self.config
         cutoff = datetime.now(timezone.utc) - timedelta(hours=cfg.hours_lookback)
         usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
-        used_ids = set(ArticleUse.objects.values_list("article_id", flat=True))
+        if used_ids is None:
+            used_ids = set(ArticleUse.objects.values_list("article_id", flat=True))
 
-        # Start with originally identified articles
-        result_ids = set(story.get("article_ids", []))
+        # Track similarity scores: article_id -> best score
+        article_scores = {}
 
-        # Embed search queries and find additional articles
+        # Original articles from analyzer get perfect relevance score
+        for aid in story.get("article_ids", []):
+            article_scores[aid] = 1.0
+
+        # Embed search queries and find additional articles with scores
         queries = story.get("search_queries", [])
         if queries:
             try:
@@ -66,20 +76,26 @@ class StoryRefiner:
                     .annotate(distance=CosineDistance("embedding", emb))
                     .filter(distance__lte=max_distance)
                     .order_by("distance")
-                    .values_list("article_id", flat=True)
+                    .values_list("article_id", "distance")
                     [:cfg.refine_search_top_k]
                 )
-                result_ids.update(results)
+                for article_id, distance in results:
+                    score = 1.0 - distance
+                    if score > article_scores.get(article_id, 0):
+                        article_scores[article_id] = score
 
-        # Fetch full article data
-        all_ids = list(result_ids)
-        if not all_ids:
+        if not article_scores:
             return [], usage
 
+        # Sort by relevance and limit to top N
+        sorted_ids = sorted(article_scores, key=lambda aid: article_scores[aid], reverse=True)
+        top_ids = sorted_ids[:cfg.max_articles_per_story]
+
+        # Fetch full article data
         articles = (
             Article.objects
             .select_related("feed")
-            .filter(id__in=all_ids, published__gte=cutoff)
+            .filter(id__in=top_ids, published__gte=cutoff)
         )
 
         article_dicts = []
@@ -92,7 +108,7 @@ class StoryRefiner:
                 "content": trim_content(a.content, cfg.context_trim_length),
             })
 
-        logger.info("Refined '%s': %d -> %d articles",
-                     story.get("label", "?"), len(story.get("article_ids", [])), len(article_dicts))
+        logger.info("Refined '%s': %d candidates -> %d articles",
+                     story.get("label", "?"), len(article_scores), len(article_dicts))
 
         return article_dicts, usage

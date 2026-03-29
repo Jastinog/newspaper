@@ -52,6 +52,7 @@ class DigestConfigAdmin(ModelAdmin):
             "description": "How articles are enriched after story identification",
             "fields": (
                 ("context_trim_length", "refine_search_top_k"),
+                "max_articles_per_story",
             ),
         }),
         ("Generation", {

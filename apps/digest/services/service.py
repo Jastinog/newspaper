@@ -1,6 +1,8 @@
 import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date
 
+from django.db import close_old_connections
 from django.utils import timezone
 
 from apps.billing.models import APIUsage
@@ -10,11 +12,12 @@ from apps.core.services.ai import (
     EMBEDDING_MODEL, OpenAIClient, EmbeddingClient,
 )
 from apps.digest.models import (
-    Digest, DigestConfig, DigestTranslation, ItemPipeline,
+    ArticleUse, Digest, DigestConfig, DigestItemTranslation, DigestTranslation, ItemPipeline,
 )
 
 from .analyzer import StoryAnalyzer
 from .collector import SectionArticleCollector
+from .deduplicator import StoryDeduplicator
 from .generator import HeadlineGenerator, ItemGenerator
 from .refiner import StoryRefiner
 from .saver import DigestSaver
@@ -22,13 +25,16 @@ from .translator import ItemTranslator
 
 logger = logging.getLogger(__name__)
 
-
 class DigestService:
-    """Sequential digest pipeline.
+    """Digest pipeline with parallel story processing and batched translations.
 
-    Per item: collect -> analyze -> refine -> generate -> translate.
-    Headline generated and translated after all items.
-    Each LLM/embedding call creates its own APIUsage record with step + item.
+    Pipeline phases:
+      A. Collect articles per section (embedding search)
+      B. Analyze each section -> identify stories
+      C. Deduplicate stories across sections
+      D. Process stories in parallel: refine -> generate -> save
+      E. Batch-translate all items
+      F. Generate & translate headline
     """
 
     def __init__(self, config: DigestConfig = None):
@@ -41,6 +47,7 @@ class DigestService:
         self.item_generator = ItemGenerator(client=self.client, config=self.config)
         self.headline_generator = HeadlineGenerator(client=self.client, config=self.config)
         self.translator = ItemTranslator(client=self.client, config=self.config)
+        self.deduplicator = StoryDeduplicator(embedder=self.embedder)
         self.saver = DigestSaver()
 
     def run(self, digest_date: date = None, languages: list[str] = None) -> Digest:
@@ -60,38 +67,45 @@ class DigestService:
         Digest.objects.filter(date=digest_date).delete()
         digest = Digest.objects.create(date=digest_date)
 
-        # Collect
+        # Phase A: Collect
         section_articles = self.collector.collect()
         total = sum(len(a) for _, a in section_articles)
         if total == 0:
             raise RuntimeError("No articles found. Check embeddings and sections.")
 
-        # Process each section sequentially
+        # Phase B: Analyze all sections
+        section_stories = []
         for section, articles in section_articles:
             try:
                 stories, usage = self.analyzer.analyze(section, articles)
                 record_digest_usage(usage, step=APIUsage.Step.ANALYZE,
                                     api_type=APIUsage.APIType.CHAT,
                                     model=self.config.chat_model, digest=digest)
+                if stories:
+                    section_stories.append((section, stories))
             except Exception:
                 logger.exception("Analysis failed for [%s]", section.slug)
-                continue
 
-            for story in stories:
-                try:
-                    self._process_story(digest, section, story, default_lang, target_langs)
-                except Exception:
-                    logger.exception("Story '%s' failed, skipping", story.get("label", "?"))
+        # Phase C: Deduplicate across sections
+        section_stories = self.deduplicator.deduplicate(section_stories)
 
-        if not digest.items.exists():
+        # Phase D: Process stories in parallel (refine -> generate -> save)
+        used_ids = set(ArticleUse.objects.values_list("article_id", flat=True))
+        items_with_data = self._process_all_stories(digest, section_stories, default_lang, used_ids)
+
+        if not items_with_data:
             raise RuntimeError("No items generated.")
 
-        # Headline
+        # Phase E: Batch-translate all items
+        if target_langs:
+            self._translate_all(digest, items_with_data, target_langs)
+
+        # Phase F: Headline
         items_data = [
-            {"topic": t.topic, "importance": item.importance}
-            for item in digest.items.prefetch_related("translations").all()
-            for t in item.translations.all()
-            if t.language_id == default_lang.pk
+            {"topic": row["topic"], "importance": row["item__importance"]}
+            for row in DigestItemTranslation.objects
+            .filter(item__digest=digest, language=default_lang)
+            .values("topic", "item__importance")
         ]
         headline, usage = self.headline_generator.generate(items_data)
         record_digest_usage(usage, step=APIUsage.Step.HEADLINE,
@@ -99,7 +113,7 @@ class DigestService:
                             model=self.config.chat_model, digest=digest)
         DigestTranslation.objects.create(digest=digest, language=default_lang, headline=headline)
 
-        # Translate headline to target languages
+        # Translate headline
         for lang in target_langs:
             try:
                 translated_headline, h_usage = self.translator.translate_headline(headline, lang.name)
@@ -116,17 +130,49 @@ class DigestService:
         logger.info("Digest %s complete: %d items", digest.date, digest.items.count())
         return digest
 
-    def _process_story(self, digest, section, story, default_lang, target_langs):
-        """Process one story: refine -> generate -> translate -> save."""
-        refined, refine_usage = self.refiner.refine(story, {})
+    def _process_all_stories(self, digest, section_stories, default_lang, used_ids):
+        """Process all stories in parallel using ThreadPoolExecutor."""
+        items_with_data = []
+        max_workers = self.config.max_workers
+
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {}
+            for section, stories in section_stories:
+                for story in stories:
+                    future = executor.submit(
+                        self._process_story_safe, digest, section, story, default_lang, used_ids,
+                    )
+                    futures[future] = story
+
+            for future in as_completed(futures):
+                result = future.result()
+                if result:
+                    items_with_data.append(result)
+
+        return items_with_data
+
+    def _process_story_safe(self, digest, section, story, default_lang, used_ids):
+        """Thread-safe wrapper: close stale DB connections around story processing."""
+        close_old_connections()
+        try:
+            return self._process_story(digest, section, story, default_lang, used_ids)
+        except Exception:
+            logger.exception("Story '%s' failed, skipping", story.get("label", "?"))
+            return None
+        finally:
+            close_old_connections()
+
+    def _process_story(self, digest, section, story, default_lang, used_ids):
+        """Process one story: refine -> generate -> save. Returns (item, item_data) or None."""
+        refined, refine_usage = self.refiner.refine(story, used_ids=used_ids)
         if not refined:
-            return
+            return None
 
         item_data, gen_usage = self.item_generator.generate(story, refined)
 
         item = self.saver.save_item(digest, section, story, item_data, refined, default_lang)
 
-        # Record per-step usage with item link
+        # Record per-step usage
         record_digest_usage(refine_usage, step=APIUsage.Step.REFINE,
                             api_type=APIUsage.APIType.EMBEDDING,
                             model=EMBEDDING_MODEL, digest=digest, item=item)
@@ -134,21 +180,52 @@ class DigestService:
                             api_type=APIUsage.APIType.CHAT,
                             model=self.config.chat_model, digest=digest, item=item)
 
-        # Translate item to all active languages immediately
-        topic = item_data.get("topic", "")
-        summary = item_data.get("summary", "")
+        return item, item_data
 
-        for lang in target_langs:
+    def _translate_all(self, digest, items_with_data, target_langs):
+        """Translate all items in parallel — one API call per item, all languages at once."""
+        lang_pairs = [(lang.code, lang.name) for lang in target_langs]
+        per_lang = {lang.code: [] for lang in target_langs}
+        translated_item_ids = set()
+
+        def _translate_one(item, item_data):
+            close_old_connections()
             try:
-                translated, usage = self.translator.translate_item(topic, summary, lang.name)
-                self.saver.save_translations(digest, lang, [(item, translated)], "")
+                topic = item_data.get("topic", "")
+                summary = item_data.get("summary", "")
+                by_lang, usage = self.translator.translate_item_multilang(
+                    topic, summary, lang_pairs,
+                )
+                return item, by_lang, usage
+            except Exception:
+                logger.exception("Translation failed for item #%s", item.pk)
+                return item, {}, {}
+            finally:
+                close_old_connections()
+
+        with ThreadPoolExecutor(max_workers=self.config.max_workers) as executor:
+            futures = {
+                executor.submit(_translate_one, item, data): item
+                for item, data in items_with_data
+            }
+            for future in as_completed(futures):
+                item, by_lang, usage = future.result()
+                if not by_lang:
+                    continue
+                for lang in target_langs:
+                    translated = by_lang.get(lang.code)
+                    if translated:
+                        per_lang[lang.code].append((item, translated))
                 record_digest_usage(usage, step=APIUsage.Step.TRANSLATE,
                                     api_type=APIUsage.APIType.CHAT,
                                     model=self.config.chat_model, digest=digest, item=item)
-            except Exception:
-                logger.exception("Translation to %s failed for item #%s", lang.code, item.pk)
+                translated_item_ids.add(item.pk)
 
-        if target_langs:
+        for lang in target_langs:
+            if per_lang[lang.code]:
+                self.saver.save_translations(digest, lang, per_lang[lang.code], "")
+
+        if translated_item_ids:
             ItemPipeline.objects.filter(
-                item=item, translated_at__isnull=True,
+                item_id__in=translated_item_ids, translated_at__isnull=True,
             ).update(translated_at=timezone.now())

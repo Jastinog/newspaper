@@ -41,7 +41,8 @@ class OpenAIClient:
         if not self.api_key:
             raise OpenAIError("OPENAI_API_KEY is not set")
 
-    def chat(self, *, system, user, model=MODEL_MINI, max_tokens=8000, temperature=0.3):
+    def chat(self, *, system, user, model=MODEL_MINI, max_tokens=8000, temperature=0.3,
+             response_format=None):
         """Send a chat completion request with retries for transient errors."""
         payload = {
             "model": model,
@@ -52,6 +53,8 @@ class OpenAIClient:
             "max_tokens": max_tokens,
             "temperature": temperature,
         }
+        if response_format:
+            payload["response_format"] = response_format
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",

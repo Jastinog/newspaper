@@ -54,6 +54,7 @@ class ItemGenerator:
             model=cfg.chat_model,
             max_tokens=cfg.max_tokens_generation,
             temperature=cfg.temperature,
+            response_format={"type": "json_object"},
         )
 
         fixed = fix_truncated_json(content)
@@ -100,6 +101,7 @@ class HeadlineGenerator:
             model=cfg.chat_model,
             max_tokens=cfg.max_tokens_headline,
             temperature=cfg.temperature,
+            response_format={"type": "json_object"},
         )
 
         fixed = fix_truncated_json(content)

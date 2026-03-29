@@ -55,6 +55,7 @@ class StoryAnalyzer:
             model=cfg.chat_model,
             max_tokens=cfg.max_tokens_analysis,
             temperature=cfg.temperature,
+            response_format={"type": "json_object"},
         )
 
         fixed = fix_truncated_json(content)
