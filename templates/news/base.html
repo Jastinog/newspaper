@@ -99,7 +99,25 @@
     <footer>
         <div class="container">{% trans "Newspaper" %} &mdash; {% trans "RSS aggregator" %}</div>
     </footer>
+    <div id="pageLoader"></div>
     <script src="{% static 'news/js/htmx.min.js' %}"></script>
+    <script>
+    (function(){
+        var bar = document.getElementById('pageLoader');
+        var timer;
+        document.body.addEventListener('htmx:beforeRequest', function(){
+            clearTimeout(timer);
+            bar.classList.remove('done');
+            void bar.offsetWidth; // force reflow so animation restarts
+            bar.classList.add('active');
+        });
+        document.body.addEventListener('htmx:afterRequest', function(){
+            bar.classList.remove('active');
+            bar.classList.add('done');
+            timer = setTimeout(function(){ bar.classList.remove('done'); }, 500);
+        });
+    })();
+    </script>
     <script src="{% static 'news/js/theme.js' %}"></script>
     {% block extra_js %}{% endblock %}
 </body>

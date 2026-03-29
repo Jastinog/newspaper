@@ -115,6 +115,36 @@ main {
     transition: opacity .12s ease-in;
 }
 
+/* === PAGE LOADER BAR === */
+#pageLoader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 3px;
+    width: 0;
+    background: var(--accent);
+    z-index: 99999;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .2s;
+}
+#pageLoader.active {
+    opacity: 1;
+    animation: loader-progress 12s cubic-bezier(.1, .4, .2, .9) forwards;
+}
+#pageLoader.done {
+    width: 100%;
+    opacity: 0;
+    transition: width .15s ease-out, opacity .3s .15s;
+}
+@keyframes loader-progress {
+    0%   { width: 0; }
+    10%  { width: 25%; }
+    30%  { width: 50%; }
+    60%  { width: 75%; }
+    100% { width: 95%; }
+}
+
 /* === RESPONSIVE === */
 @media (max-width: 599px) {
     main {
