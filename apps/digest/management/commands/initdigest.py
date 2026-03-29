@@ -60,9 +60,9 @@ class Command(BaseCommand):
                 setattr(config, field.name, default)
                 updated.append(field.name)
 
-        # Prompt defaults from constants (not stored on model fields)
+        # Prompt defaults: only fill empty prompts (preserve operator customizations)
         for field_name, default in CONFIG_DEFAULTS.items():
-            if getattr(config, field_name, None) != default:
+            if not getattr(config, field_name, ""):
                 setattr(config, field_name, default)
                 updated.append(field_name)
 
