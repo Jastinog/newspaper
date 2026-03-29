@@ -9,6 +9,7 @@ from django.utils.translation import get_language, gettext_lazy as _
 from django.views.decorators.cache import cache_page
 from django.views.decorators.http import require_POST
 
+from apps.core.models import Language
 from apps.core.services.utils import get_article_image_url
 from apps.digest.models import Digest, DigestItem
 from apps.feed.models import Article, ArticleImage, Category, Feed
@@ -278,15 +279,27 @@ def story_detail(request, item_id):
 
 @cache_page(60 * 60 * 4)
 def research(request, item_id):
+    lang = get_language() or "en"
     item = get_object_or_404(
-        DigestItem.objects.select_related("digest", "section"), pk=item_id,
+        DigestItem.objects.select_related("digest", "section")
+        .prefetch_related("translations", "translations__language"),
+        pk=item_id,
     )
 
-    dive = Research.objects.filter(item=item).first()
+    dive = Research.objects.filter(item=item, language=Language.get_by_code(lang)).first()
     if not dive:
-        return render(request, "news/research_loading.html", {"item": item})
+        return render(request, "news/research_loading.html", {
+            "item": item,
+            "topic": item.get_topic(lang),
+        })
 
-    sources = dive.sources.select_related("article__feed").order_by("order")
+    sources = (
+        dive.sources.select_related("article__feed")
+        .prefetch_related("article__images")
+        .order_by("order")
+    )
+
+    hero_image = next(filter(None, (get_article_image_url(s.article) for s in sources)), "")
 
     seo = {
         "title": f"{dive.title} — {SITE_NAME}",
@@ -299,6 +312,7 @@ def research(request, item_id):
         "dive": dive,
         "item": item,
         "sources": sources,
+        "hero_image": hero_image,
         "seo": seo,
     })
 

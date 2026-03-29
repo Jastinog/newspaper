@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 from pathlib import Path
 
 from django.urls import reverse_lazy
@@ -43,6 +44,7 @@ INSTALLED_APPS = [
     "apps.analytics",
     "apps.websocket",
     "apps.account",
+    "apps.telegram",
 ]
 
 AUTH_USER_MODEL = "account.User"
@@ -130,6 +132,9 @@ CACHES = {
 # Analytics — path to MaxMind GeoLite2-City.mmdb (optional)
 GEOIP_DATABASE_PATH = os.environ.get("GEOIP_DATABASE_PATH", str(BASE_DIR / "data" / "GeoLite2-City.mmdb"))
 
+# Telegram
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+
 # Celery
 CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://127.0.0.1:6379/1")
 CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND", "redis://127.0.0.1:6379/1")
@@ -137,7 +142,12 @@ CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = "Europe/Kyiv"
-CELERY_BEAT_SCHEDULE = {}
+CELERY_BEAT_SCHEDULE = {
+    "telegram-publish-digest": {
+        "task": "telegram.publish",
+        "schedule": timedelta(minutes=30),
+    },
+}
 
 UNFOLD = {
     "SITE_TITLE": "Newspaper",
@@ -245,6 +255,23 @@ UNFOLD = {
                         "title": _("Researches"),
                         "icon": "science",
                         "link": reverse_lazy("admin:research_research_changelist"),
+                    },
+                ],
+            },
+            {
+                "title": _("Telegram"),
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": _("Channels"),
+                        "icon": "send",
+                        "link": reverse_lazy("admin:telegram_telegramchannel_changelist"),
+                    },
+                    {
+                        "title": _("Post log"),
+                        "icon": "history",
+                        "link": reverse_lazy("admin:telegram_telegrampost_changelist"),
                     },
                 ],
             },

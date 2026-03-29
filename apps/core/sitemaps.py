@@ -83,7 +83,11 @@ class ResearchSitemap(Sitemap):
     changefreq = "never"
 
     def items(self):
-        return Research.objects.order_by("-created_at").only("item_id", "created_at")
+        return (
+            Research.objects.order_by("item_id", "-created_at")
+            .distinct("item_id")
+            .only("item_id", "created_at")
+        )
 
     def location(self, obj):
         return reverse("research", kwargs={"item_id": obj.item_id})

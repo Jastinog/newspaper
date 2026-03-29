@@ -11,6 +11,7 @@
     if (!itemId) return;
 
     var langPrefix = document.body.dataset.langPrefix || '';
+    var language = WS.getLanguage();
 
     var STEP_DEFS = [
         { icon: '\u2049', label: 'Search queries' },
@@ -76,7 +77,7 @@
         if (generating) return;
         generating = true;
         showGeneratingUI();
-        WS.send('research.generate', { item_id: itemId });
+        WS.send('research.generate', { item_id: itemId, language: language });
     }
 
     document.getElementById('generateBtn').addEventListener('click', startGeneration);
@@ -96,7 +97,7 @@
         }
 
         if (generating) {
-            WS.send('research.generate', { item_id: itemId });
+            WS.send('research.generate', { item_id: itemId, language: language });
         }
     });
 

@@ -22,6 +22,12 @@
         </div>
     </div>
 
+    {% if hero_image %}
+    <div class="story-hero">
+        <img src="{{ hero_image }}" alt="" loading="lazy">
+    </div>
+    {% endif %}
+
     <div class="article-content article-body">
         {{ dive.content|markdown }}
     </div>

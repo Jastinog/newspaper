@@ -1,3 +1,4 @@
+from django.core.cache import cache
 from django.db import models
 
 
@@ -21,3 +22,13 @@ class Language(models.Model):
     def active_targets(cls):
         """Return active non-default languages for translation."""
         return cls.objects.filter(is_active=True).exclude(is_default=True)
+
+    @classmethod
+    def get_by_code(cls, code: str) -> "Language":
+        """Get Language by code with in-memory cache (tiny, stable table)."""
+        cache_key = f"lang:{code}"
+        obj = cache.get(cache_key)
+        if obj is None:
+            obj = cls.objects.get(code=code)
+            cache.set(cache_key, obj, 3600)
+        return obj

@@ -3,6 +3,7 @@ from django.db import models
 
 class Research(models.Model):
     item = models.ForeignKey("digest.DigestItem", on_delete=models.CASCADE, related_name="researches")
+    language = models.ForeignKey("core.Language", on_delete=models.CASCADE, related_name="researches")
     title = models.CharField(max_length=500)
     subtitle = models.TextField(blank=True, default="")
     content = models.TextField()  # markdown
@@ -14,9 +15,10 @@ class Research(models.Model):
     class Meta:
         verbose_name = "Research"
         verbose_name_plural = "Researches"
+        unique_together = [("item", "language")]
 
     def __str__(self):
-        return f"Research: {self.title[:80]}"
+        return f"Research [{self.language}]: {self.title[:80]}"
 
 
 class ResearchSource(models.Model):

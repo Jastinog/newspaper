@@ -259,5 +259,10 @@
     startActive();
     connect();
 
-    window.WS = { on: on, send: send, isConnected: isConnected };
+    function getLanguage() {
+        var prefix = document.body.dataset.langPrefix || '';
+        return prefix.replace(/^\//, '') || 'en';
+    }
+
+    window.WS = { on: on, send: send, isConnected: isConnected, getLanguage: getLanguage };
 })();

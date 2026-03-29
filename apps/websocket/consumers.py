@@ -9,7 +9,7 @@ from apps.analytics.services import SessionService
 
 logger = logging.getLogger(__name__)
 
-# In-progress research generations: item_id -> {event, url, error, waiters}
+# In-progress research generations: (item_id, language) -> {event, url, error, waiters}
 _generations = {}
 
 
@@ -126,10 +126,14 @@ class SiteConsumer(AsyncWebsocketConsumer):
 
     async def _on_research_generate(self, data):
         item_id = data.get("item_id")
+        language = data.get("language", "en")
         if not item_id:
             return
 
-        url = await self._research_url(item_id)
+        gen_key = (item_id, language)
+        lang_obj = await self._resolve_language(language)
+
+        url = await self._research_url(item_id, lang_obj)
         if url:
             await self.send(json.dumps({
                 "type": "research.ready",
@@ -143,20 +147,20 @@ class SiteConsumer(AsyncWebsocketConsumer):
             "item_id": item_id,
         }))
 
-        if item_id not in _generations:
-            _generations[item_id] = {
+        if gen_key not in _generations:
+            _generations[gen_key] = {
                 "event": asyncio.Event(),
                 "url": None,
                 "error": None,
                 "waiters": set(),
             }
-            asyncio.create_task(self._run_research(item_id))
+            asyncio.create_task(self._run_research(item_id, language, lang_obj, gen_key))
 
-        _generations[item_id]["waiters"].add(self)
-        asyncio.create_task(self._await_research(item_id))
+        _generations[gen_key]["waiters"].add(self)
+        asyncio.create_task(self._await_research(item_id, gen_key))
 
-    async def _run_research(self, item_id):
-        gen = _generations[item_id]
+    async def _run_research(self, item_id, language, lang_obj, gen_key):
+        gen = _generations[gen_key]
         loop = asyncio.get_running_loop()
 
         def progress_callback(step, total, step_id, label, detail=None):
@@ -170,21 +174,21 @@ class SiteConsumer(AsyncWebsocketConsumer):
                 "detail": detail,
             })
             asyncio.run_coroutine_threadsafe(
-                self._broadcast_progress(item_id, msg), loop
+                self._broadcast_progress(gen_key, msg), loop
             )
 
         try:
-            gen["url"] = await self._do_research_generate(item_id, progress_callback)
+            gen["url"] = await self._do_research_generate(item_id, language, lang_obj, progress_callback)
         except Exception as e:
-            logger.exception("Research generation failed for item %s", item_id)
+            logger.exception("Research generation failed for item %s [%s]", item_id, language)
             gen["error"] = str(e)
         finally:
             gen["event"].set()
             await asyncio.sleep(5)
-            _generations.pop(item_id, None)
+            _generations.pop(gen_key, None)
 
-    async def _broadcast_progress(self, item_id, msg):
-        gen = _generations.get(item_id)
+    async def _broadcast_progress(self, gen_key, msg):
+        gen = _generations.get(gen_key)
         if not gen:
             return
         for consumer in list(gen["waiters"]):
@@ -193,8 +197,8 @@ class SiteConsumer(AsyncWebsocketConsumer):
             except Exception:
                 pass
 
-    async def _await_research(self, item_id):
-        gen = _generations.get(item_id)
+    async def _await_research(self, item_id, gen_key):
+        gen = _generations.get(gen_key)
         if not gen:
             return
         try:
@@ -239,26 +243,31 @@ class SiteConsumer(AsyncWebsocketConsumer):
             Research.objects.filter(item_id__in=item_ids)
             .values_list("item_id", flat=True)
         )
-        generating = [iid for iid in _generations if iid in item_ids]
+        generating = [iid for iid, _lang in _generations if iid in item_ids]
         return {"ready": ready, "generating": generating}
 
     @database_sync_to_async
-    def _research_url(self, item_id):
+    def _resolve_language(self, language):
+        from apps.core.models import Language
+        return Language.get_by_code(language)
+
+    @database_sync_to_async
+    def _research_url(self, item_id, lang_obj):
         from apps.research.models import Research
 
-        if Research.objects.filter(item_id=item_id).exists():
+        if Research.objects.filter(item_id=item_id, language=lang_obj).exists():
             return f"/research/{item_id}/"
         return None
 
     @database_sync_to_async
-    def _do_research_generate(self, item_id, progress_callback=None):
+    def _do_research_generate(self, item_id, language, lang_obj, progress_callback=None):
         from apps.research.models import Research
         from apps.digest.models import DigestItem
         from apps.research.services import ResearchService
 
-        if Research.objects.filter(item_id=item_id).exists():
+        if Research.objects.filter(item_id=item_id, language=lang_obj).exists():
             return f"/research/{item_id}/"
 
         item = DigestItem.objects.select_related("digest").get(pk=item_id)
-        ResearchService().generate(item, progress_callback=progress_callback)
+        ResearchService().generate(item, language=language, progress_callback=progress_callback)
         return f"/research/{item_id}/"

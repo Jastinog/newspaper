@@ -4,6 +4,7 @@ import re
 import time
 
 from apps.billing.models import APIUsage
+from apps.core.models import Language
 from apps.feed.models import ArticleChunk
 from apps.research.models import Research, ResearchSource
 from apps.digest.models import DigestItem
@@ -180,6 +181,9 @@ class ArticleSynthesizer:
 class ResearchService:
     """Orchestrates the full research pipeline: queries → embed → search → synthesize → save."""
 
+    # Embeddings perform better with English queries regardless of output language
+    QUERY_LANGUAGE = "en"
+
     STEPS = [
         (1, "queries", "Generating search queries…"),
         (2, "embedding", "Creating embeddings…"),
@@ -200,15 +204,15 @@ class ResearchService:
         if callback:
             callback(step_number, self.TOTAL_STEPS, step_id, label, detail)
 
-    def generate(self, item: DigestItem, progress_callback=None) -> Research:
-        """Generate a research article for a DigestItem."""
+    def generate(self, item: DigestItem, language="en", progress_callback=None) -> Research:
+        """Generate a research article for a DigestItem in the given language."""
         start = time.time()
 
         # 1. Generate search queries
         self._progress(progress_callback, 1, "queries", "Generating search queries…")
-        item_topic = item.get_topic("en")
-        item_summary = item.get_summary("en")
-        section_name = item.section.get_name("en") if item.section else ""
+        item_topic = item.get_topic(self.QUERY_LANGUAGE)
+        item_summary = item.get_summary(self.QUERY_LANGUAGE)
+        section_name = item.section.get_name(self.QUERY_LANGUAGE) if item.section else ""
         queries, query_gen_usage = self.query_gen.generate(item_topic, section_name, item_summary)
         logger.info("Generated %d search queries for '%s'", len(queries), item_topic)
 
@@ -258,15 +262,16 @@ class ResearchService:
         # 5. Synthesize article
         self._progress(progress_callback, 5, "synthesis", "Synthesizing article…",
                         f"{len(chunks_by_article)} sources")
-        language = "en"  # Research always synthesizes in English (default language)
         result = self.synthesizer.synthesize(item_topic, section_name, chunks_by_article, language=language)
 
         elapsed_ms = int((time.time() - start) * 1000)
 
         # 6. Save Research
         self._progress(progress_callback, 6, "saving", "Saving result…")
+        lang_obj = Language.get_by_code(language)
         dive = Research.objects.create(
             item=item,
+            language=lang_obj,
             title=result["title"],
             subtitle=result["subtitle"],
             content=result["content"],
@@ -321,7 +326,7 @@ class ResearchService:
 
         logger.info(
             "Research generated for '%s': %d sources, %dms",
-            item.topic, len(sources), elapsed_ms,
+            item_topic, len(sources), elapsed_ms,
         )
 
         return dive

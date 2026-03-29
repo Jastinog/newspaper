@@ -25,6 +25,7 @@
     /* ── State ────────────────────────────────────────── */
 
     var langPrefix = bodyData('langPrefix', '');
+    var language = WS.getLanguage();
     var pending = {};
 
     var STEP_ICONS = {
@@ -174,7 +175,7 @@
                     cleanupProgress(id);
                     markReady(id);
                 } else {
-                    WS.send('research.generate', { item_id: id });
+                    WS.send('research.generate', { item_id: id, language: language });
                 }
             }
         }
@@ -236,7 +237,7 @@
 
         if (hasPending(itemId)) return;
 
-        if (!WS.send('research.generate', { item_id: itemId })) {
+        if (!WS.send('research.generate', { item_id: itemId, language: language })) {
             window.location.href = href;
             return;
         }

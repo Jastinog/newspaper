@@ -13,8 +13,9 @@ class ResearchSourceInline(TabularInline):
 
 @admin.register(Research)
 class ResearchAdmin(ModelAdmin):
-    list_display = ("id", "title_short", "item", "chunks_used", "generation_time_ms", "created_at")
+    list_display = ("id", "title_short", "item", "language", "chunks_used", "generation_time_ms", "created_at")
     list_display_links = ("id", "title_short")
+    list_filter = ("language",)
     raw_id_fields = ("item",)
     inlines = [ResearchSourceInline]
 
