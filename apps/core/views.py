@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.core.cache import cache
 from django.core.paginator import Paginator
 from django.db.models import Count, F, Prefetch, Q, Window
@@ -190,7 +191,11 @@ def article_detail(request, pk, slug=""):
         "section": article.feed.category.name if article.feed.category else "",
     }
 
-    return render(request, "news/article.html", {"article": article, "seo": seo})
+    hero_image = article.images.filter(is_primary=True).exclude(image="").first()
+
+    return render(request, "news/article.html", {
+        "article": article, "seo": seo, "hero_image": hero_image,
+    })
 
 
 def article_detail_redirect(request, pk):
@@ -387,6 +392,21 @@ def feeds_list(request):
 
     qs = qs.annotate(article_count=Count("articles")).order_by("category__order", "title")
     feeds = list(qs)
+
+    # Fetch the most recently downloaded image per feed
+    feed_ids = [f.pk for f in feeds]
+    latest_images = (
+        ArticleImage.objects
+        .filter(article__feed_id__in=feed_ids)
+        .exclude(image="")
+        .order_by("article__feed_id", "-created_at")
+        .distinct("article__feed_id")
+        .values_list("article__feed_id", "image")
+    )
+    feed_image_map = dict(latest_images)
+    for feed in feeds:
+        rel = feed_image_map.get(feed.pk, "")
+        feed.thumb = f"{settings.MEDIA_URL}{rel}" if rel else ""
 
     categories, countries = _filter_options()
 

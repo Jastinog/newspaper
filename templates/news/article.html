@@ -33,6 +33,12 @@
         </div>
     </div>
 
+    {% if hero_image %}
+        <div class="article-hero">
+            <img src="{{ hero_image.image.url }}" alt="{{ article.title }}">
+        </div>
+    {% endif %}
+
     {% if article.summary %}
         <div class="article-content article-summary"><p>{{ article.summary }}</p></div>
         <hr class="article-summary-sep">

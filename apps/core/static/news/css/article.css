@@ -41,6 +41,17 @@
 .article-header .meta a { color: var(--fg-dim); text-decoration: none; }
 .article-header .meta a:hover { text-decoration: underline; }
 
+.article-hero {
+    max-width: 680px;
+    margin: 0 auto 2rem;
+}
+
+.article-hero img {
+    width: 100%;
+    height: auto;
+    border-radius: 6px;
+}
+
 .article-content {
     max-width: 680px;
     margin: 0 auto;
@@ -73,13 +84,6 @@
     padding-top: 0.04em;
     font-weight: 700;
     color: var(--accent);
-}
-
-.article-summary {
-    max-width: 680px;
-    margin: 0 auto;
-    font-size: clamp(1rem, 1.8vw, 1.1rem);
-    line-height: 1.85;
 }
 
 .article-summary-sep {
