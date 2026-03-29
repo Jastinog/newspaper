@@ -56,8 +56,13 @@
     }
 
     // ── Connection ─────────────────────────────────
+    function getLanguage() {
+        var prefix = document.body.dataset.langPrefix || '';
+        return prefix.replace(/^\//, '') || 'en';
+    }
+
     var url = (location.protocol === 'https:' ? 'wss:' : 'ws:')
-        + '//' + location.host + '/ws/';
+        + '//' + location.host + '/ws/?lang=' + getLanguage();
 
     function connect() {
         ws = new WebSocket(url);
@@ -258,11 +263,6 @@
 
     startActive();
     connect();
-
-    function getLanguage() {
-        var prefix = document.body.dataset.langPrefix || '';
-        return prefix.replace(/^\//, '') || 'en';
-    }
 
     window.WS = { on: on, send: send, isConnected: isConnected, getLanguage: getLanguage };
 })();

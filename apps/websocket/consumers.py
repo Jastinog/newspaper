@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+from urllib.parse import parse_qs
 
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
@@ -56,7 +57,9 @@ class SiteConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         await self.accept()
         self.analytics = SessionService(self.scope)
-        state = await self._research_state()
+        qs = parse_qs(self.scope.get("query_string", b"").decode())
+        self.language = qs.get("lang", ["en"])[0]
+        state = await self._research_state(self.language)
         await self.send(json.dumps({
             "type": "research.state",
             "ready": state["ready"],
@@ -227,8 +230,9 @@ class SiteConsumer(AsyncWebsocketConsumer):
     # ── Research DB helpers ────────────────────────
 
     @database_sync_to_async
-    def _research_state(self):
+    def _research_state(self, language="en"):
         from apps.research.models import Research
+        from apps.core.models import Language
         from apps.digest.models import Digest, DigestItem
 
         digest_ids = list(Digest.objects.order_by("-date").values_list("id", flat=True)[:3])
@@ -239,8 +243,9 @@ class SiteConsumer(AsyncWebsocketConsumer):
             DigestItem.objects.filter(digest_id__in=digest_ids)
             .values_list("id", flat=True)
         )
+        lang_obj = Language.get_by_code(language)
         ready = list(
-            Research.objects.filter(item_id__in=item_ids)
+            Research.objects.filter(item_id__in=item_ids, language=lang_obj)
             .values_list("item_id", flat=True)
         )
         generating = [iid for iid, _lang in _generations if iid in item_ids]
