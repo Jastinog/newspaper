@@ -69,7 +69,9 @@ class ItemTranslator:
             f"to each of these languages: {lang_list}.\n"
             "Maintain journalistic style, factual accuracy, and nuance. "
             "Adapt idioms and cultural references naturally. "
-            "Do not add or remove information.\n\n"
+            "Do not add or remove information.\n"
+            "Keep technical terms, abbreviations, and proper nouns in their original Latin form "
+            "(e.g. AGI, AI, NASA, OpenAI, GPT, CERN — do NOT transliterate to Cyrillic).\n\n"
             'Return JSON with key "translations" containing an array of objects, '
             "one per language in the same order, each with: "
             '"language", "topic", "summary".'

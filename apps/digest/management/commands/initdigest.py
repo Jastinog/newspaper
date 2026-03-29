@@ -37,15 +37,24 @@ class Command(BaseCommand):
             action="store_true",
             help="Skip embedding generation (create section structure only)",
         )
+        parser.add_argument(
+            "--reset",
+            action="store_true",
+            help="Force-reset all config including operator-customized prompts",
+        )
 
     def handle(self, *args, **options):
-        self._sync_config()
+        self._sync_config(force=options["reset"])
         languages = self._sync_languages()
         self._sync_sections(languages)
         self._generate_embeddings(skip=options["no_embed"])
 
-    def _sync_config(self):
-        """Reset DigestConfig to canonical defaults (model fields + prompt constants)."""
+    def _sync_config(self, force=False):
+        """Reset DigestConfig to canonical defaults.
+
+        By default preserves operator-customized prompts.
+        With force=True, resets everything including prompts.
+        """
         config = DigestConfig.get()
         updated = []
 
@@ -60,9 +69,10 @@ class Command(BaseCommand):
                 setattr(config, field.name, default)
                 updated.append(field.name)
 
-        # Prompt defaults: only fill empty prompts (preserve operator customizations)
+        # Prompt defaults: fill empty or force-reset all
         for field_name, default in CONFIG_DEFAULTS.items():
-            if not getattr(config, field_name, ""):
+            current = getattr(config, field_name, "")
+            if not current or (force and current != default):
                 setattr(config, field_name, default)
                 updated.append(field_name)
 
