@@ -7,7 +7,6 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.translation import get_language, gettext_lazy as _
-from django.views.decorators.cache import cache_page
 from django.views.decorators.http import require_POST
 
 from apps.core.models import Language
@@ -173,7 +172,6 @@ def toggle_pin(request, slug):
     return response
 
 
-@cache_page(60 * 60)
 def article_detail(request, pk, slug=""):
     article = get_object_or_404(
         Article.objects.select_related("feed", "feed__category"), pk=pk,
@@ -205,7 +203,6 @@ def article_detail_redirect(request, pk):
     return redirect(article.get_absolute_url(), permanent=True)
 
 
-@cache_page(60 * 60 * 2)
 def category_detail(request, slug):
     category = get_object_or_404(Category, slug=slug)
     articles = (
@@ -229,7 +226,6 @@ def category_detail(request, slug):
     })
 
 
-@cache_page(60 * 60 * 4)
 def story_detail(request, item_id):
     current_lang = get_language() or "en"
     item = get_object_or_404(
@@ -282,7 +278,6 @@ def story_detail(request, item_id):
     })
 
 
-@cache_page(60 * 60 * 4)
 def research(request, item_id):
     lang = get_language() or "en"
     item = get_object_or_404(
@@ -434,7 +429,6 @@ def feeds_list(request):
     })
 
 
-@cache_page(60 * 60)
 def feed_detail(request, pk):
     """Single feed with its articles, paginated."""
     feed = get_object_or_404(

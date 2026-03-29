@@ -6,7 +6,6 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from django.urls import reverse
 from django.utils import timezone
-from django.views.decorators.cache import cache_page
 
 from .dashboard import build_analytics_context
 from .models import Session
@@ -20,13 +19,11 @@ def analytics_dashboard(request):
     return render(request, "admin/analytics_dashboard.html", context)
 
 
-@cache_page(60 * 5)
 @staff_member_required
 def analytics_dashboard_api(request):
     return JsonResponse(build_analytics_context(request))
 
 
-@cache_page(60 * 5)
 @staff_member_required
 def traffic_graph_api(request):
     """Return traffic graph data: country -> city -> client (humans only)."""
