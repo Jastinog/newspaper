@@ -19,5 +19,23 @@
     <script src="https://cdn.jsdelivr.net/npm/force-graph/dist/force-graph.min.js"></script>
     <script src="{% static 'news/js/similar-news.js' %}"></script>
     <script src="{% static 'news/js/sources.js' %}"></script>
+    <script>
+    document.addEventListener('click', function(e) {
+        var btn = e.target.closest('.share-btn');
+        if (!btn) return;
+        var url = window.location.origin + btn.dataset.url;
+        var title = btn.dataset.title || document.title;
+        if (navigator.share) {
+            navigator.share({ title: title, url: url }).catch(function(){});
+        } else {
+            navigator.clipboard.writeText(url).then(function() {
+                var icon = btn.querySelector('i');
+                var orig = icon.className;
+                icon.className = 'fas fa-check';
+                setTimeout(function() { icon.className = orig; }, 2000);
+            }).catch(function(){});
+        }
+    });
+    </script>
 {% endif %}
 {% endblock %}

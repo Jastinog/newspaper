@@ -249,22 +249,20 @@ a.item-topic:hover {
 }
 .item-top-bar .sources-wrap,
 .item-top-bar .sources-btn,
-.item-top-bar .importance-bar {
+.item-top-bar .importance-icon {
     display: flex;
     align-items: center;
     line-height: 1;
 }
-.item-top-bar .importance-bar {
-    display: block;
+.item-top-bar .importance-icon {
     flex-shrink: 0;
-    align-self: center;
 }
 
-/* Bottom actions: similar (left) + research (right) */
+/* Bottom actions: research only */
 .item-actions {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-end;
     margin-top: 0.3rem;
 }
 
@@ -325,18 +323,15 @@ a.item-topic:hover {
     font-size: 0.9em;
 }
 
-/* Importance bar */
-.importance-bar {
-    display: inline-block;
-    width: 28px;
-    height: 4px;
-    border-radius: 2px;
-    vertical-align: middle;
-    margin-right: 0.4rem;
+/* Importance icon */
+.importance-icon {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.7rem;
     position: relative;
     cursor: default;
 }
-.importance-bar::after {
+.importance-icon::after {
     content: attr(data-label);
     position: absolute;
     bottom: calc(100% + 4px);
@@ -355,24 +350,74 @@ a.item-topic:hover {
     pointer-events: none;
     transition: opacity 0.15s;
 }
-.importance-bar:hover::after {
+.importance-icon:hover::after {
     opacity: 1;
 }
-.importance-bar.critical {
-    background: #d32f2f;
-    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3);
+.importance-icon.critical { color: #d32f2f; }
+.importance-icon.high     { color: #e65100; }
+.importance-icon.medium   { color: #e67e22; }
+.importance-icon.low      { color: #999; }
+
+/* === HERO CARD (blurred background + full-width image) === */
+.item-hero-card {
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 0.4rem;
 }
-.importance-bar.high {
-    background: #e65100;
-    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.25);
+
+.item-hero-card__blur {
+    position: absolute;
+    inset: -20px;
+    background-size: cover;
+    background-position: center;
+    filter: blur(20px) saturate(1.1);
+    z-index: 0;
 }
-.importance-bar.medium {
-    background: #e67e22;
-    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+
+/* Both bars inside hero card: same style, flow in normal order */
+.item-hero-card .item-top-bar,
+.item-hero-card .item-bottom-bar {
+    position: relative;
+    bottom: auto;
+    left: auto;
+    right: auto;
+    z-index: 2;
+    width: 100%;
+    background: rgba(var(--bg-rgb), 0.65);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
 }
-.importance-bar.low {
-    background: #999;
-    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+
+/* Bottom bar button styling (match sources-btn look) */
+.item-bottom-bar button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--fg-faint);
+    padding: 0;
+    white-space: nowrap;
+    transition: color 0.15s;
+    display: inline-flex;
+    align-items: center;
+    line-height: 1;
+}
+
+.item-bottom-bar button:hover {
+    color: var(--accent);
+}
+
+/* Full-width image */
+.item-hero-card__img {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    display: block;
+    image-rendering: pixelated;
 }
 
 .empty {

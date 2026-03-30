@@ -1,6 +1,6 @@
 {% load i18n %}
 <span class="sources-wrap">
-    <button class="sources-btn" type="button" data-sources-id="{{ item_id }}">{% trans "sources" %} ({{ total }})</button>
+    <button class="sources-btn" type="button" data-sources-id="{{ item_id }}"><i class="far fa-newspaper"></i></button>
     <div class="sources-modal-overlay" id="sources-modal-{{ item_id }}" style="display:none">
         <div class="sources-modal">
             <div class="sources-modal-header">
@@ -10,7 +10,7 @@
             <div class="sources-modal-body">
                 {% for src in source_articles %}
                 <a class="source-card" href="{{ src.url }}" target="_blank" rel="noopener">
-                    {% if src.image_url %}<img class="source-card-img" src="{{ src.image_url }}" alt="" loading="lazy">{% else %}<span class="source-card-img source-card-img--placeholder"><i class="fas fa-newspaper"></i></span>{% endif %}
+                    {% if src.image_url %}<img class="source-card-img" src="{{ src.image_url }}" alt="" loading="lazy">{% else %}<span class="source-card-img source-card-img--placeholder"><i class="far fa-newspaper"></i></span>{% endif %}
                     <div class="source-card-text">
                         <span class="source-card-title">{{ src.title }}</span>
                         <span class="source-card-feed">{{ src.feed_title }}</span>

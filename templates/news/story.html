@@ -45,7 +45,7 @@
         <div class="story-sources-list">
             {% for src in source_articles %}
             <a class="story-source-card" href="{{ src.absolute_url }}">
-                {% if src.image_url %}<img class="story-source-img" src="{{ src.image_url }}" alt="" loading="lazy">{% else %}<span class="story-source-img story-source-img--placeholder"><i class="fas fa-newspaper"></i></span>{% endif %}
+                {% if src.image_url %}<img class="story-source-img" src="{{ src.image_url }}" alt="" loading="lazy">{% else %}<span class="story-source-img story-source-img--placeholder"><i class="far fa-newspaper"></i></span>{% endif %}
                 <div class="story-source-text">
                     <span class="story-source-title">{{ src.title }}</span>
                     <span class="story-source-meta">
