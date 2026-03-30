@@ -266,9 +266,11 @@ a.item-topic:hover {
     margin-top: 0.3rem;
 }
 
-/* Item image */
+/* Shared card container layout (hero card + no-image placeholder) */
+.item-hero-card,
 .item-image-wrap {
     position: relative;
+    overflow: hidden;
     margin-bottom: 0.4rem;
 }
 .item-image {
@@ -359,12 +361,6 @@ a.item-topic:hover {
 .importance-icon.low      { color: #999; }
 
 /* === HERO CARD (blurred background + full-width image) === */
-.item-hero-card {
-    position: relative;
-    overflow: hidden;
-    margin-bottom: 0.4rem;
-}
-
 .item-hero-card__blur {
     position: absolute;
     inset: -20px;
@@ -374,9 +370,11 @@ a.item-topic:hover {
     z-index: 0;
 }
 
-/* Both bars inside hero card: same style, flow in normal order */
+/* Sandwich bars: override absolute positioning to flow in document order */
 .item-hero-card .item-top-bar,
-.item-hero-card .item-bottom-bar {
+.item-hero-card .item-bottom-bar,
+.item-image-wrap .item-top-bar,
+.item-image-wrap .item-bottom-bar {
     position: relative;
     bottom: auto;
     left: auto;
@@ -386,6 +384,11 @@ a.item-topic:hover {
     background: rgba(var(--bg-rgb), 0.65);
     backdrop-filter: blur(6px);
     -webkit-backdrop-filter: blur(6px);
+}
+/* No blur background behind image-wrap, so bars need more opacity */
+.item-image-wrap .item-top-bar,
+.item-image-wrap .item-bottom-bar {
+    background: rgba(var(--bg-rgb), 0.75);
 }
 
 /* Bottom bar button styling (match sources-btn look) */
