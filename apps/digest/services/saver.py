@@ -65,6 +65,7 @@ class DigestSaver:
                 )
 
             order = 0
+            used_image_ids = set()
             for section, items in section_items:
                 for item_data in items:
                     try:
@@ -81,20 +82,23 @@ class DigestSaver:
                         topic=item_data.get("topic", ""),
                         summary=item_data.get("summary", ""),
                     )
-                    self.link_articles(item, item_data.get("article_ids", []))
+                    valid_ids = self.link_articles(item, item_data.get("article_ids", []))
+                    image_id = self.assign_image(item, used_image_ids, valid_ids)
+                    if image_id:
+                        used_image_ids.add(image_id)
                     order += 1
 
         item_count = digest.items.count()
         logger.info("Saved digest %s: %d items", digest.date, item_count)
         return digest
 
-    def link_articles(self, item: DigestItem, raw_article_ids: list):
-        """Link articles to an item, set best image and freshness."""
+    def link_articles(self, item: DigestItem, raw_article_ids: list) -> list[int]:
+        """Link articles to an item and set freshness. Returns validated article IDs."""
         valid_ids = list(
             Article.objects.filter(id__in=raw_article_ids).values_list("id", flat=True)
         )
         if not valid_ids:
-            return
+            return []
 
         item.articles.set(valid_ids)
 
@@ -103,30 +107,41 @@ class DigestSaver:
             ignore_conflicts=True,
         )
 
-        local_image = (
-            ArticleImage.objects
-            .filter(article_id__in=valid_ids, downloaded=True)
-            .exclude(image="")
-            .select_related("article")
-            .order_by("-is_primary", "-article__published")
-            .first()
-        )
-
         newest_published = (
             Article.objects
             .filter(id__in=valid_ids, published__isnull=False)
             .aggregate(newest=Max("published"))["newest"]
         )
 
-        update_fields = []
-        if local_image:
-            item.image = local_image
-            update_fields.append("image")
         if newest_published:
             item.freshness = newest_published.timestamp()
-            update_fields.append("freshness")
-        if update_fields:
-            item.save(update_fields=update_fields)
+            item.save(update_fields=["freshness"])
+
+        return valid_ids
+
+    def assign_image(self, item: DigestItem, used_image_ids: set | None = None,
+                     article_ids: list[int] | None = None) -> int | None:
+        """Pick the best unused image for the item. Returns the chosen image ID or None."""
+        if article_ids is None:
+            article_ids = list(item.articles.values_list("id", flat=True))
+        if not article_ids:
+            return None
+
+        qs = (
+            ArticleImage.objects
+            .filter(article_id__in=article_ids, downloaded=True)
+            .exclude(image="")
+            .order_by("-is_primary", "-article__published")
+        )
+        if used_image_ids:
+            qs = qs.exclude(id__in=used_image_ids)
+
+        local_image = qs.first()
+        if local_image:
+            item.image = local_image
+            item.save(update_fields=["image"])
+            return local_image.id
+        return None
 
     def save_translations(self, digest: Digest, language: Language,
                           item_translations: list, headline: str):

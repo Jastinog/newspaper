@@ -131,23 +131,37 @@ class DigestService:
         return digest
 
     def _process_all_stories(self, digest, section_stories, default_lang, used_ids):
-        """Process all stories in parallel using ThreadPoolExecutor."""
+        """Process sections sequentially, stories within each section in parallel.
+
+        After each section completes, used_ids and used_image_ids are updated so
+        the next section never picks the same articles or images.
+        """
         items_with_data = []
-        max_workers = self.config.max_workers
+        used_image_ids = set()
 
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = {}
+        with ThreadPoolExecutor(max_workers=self.config.max_workers) as executor:
             for section, stories in section_stories:
-                for story in stories:
-                    future = executor.submit(
-                        self._process_story_safe, digest, section, story, default_lang, used_ids,
-                    )
-                    futures[future] = story
+                futures = {
+                    executor.submit(
+                        self._process_story_safe, digest, section, story,
+                        default_lang, used_ids,
+                    ): story
+                    for story in stories
+                }
+                section_items = []
+                for future in as_completed(futures):
+                    result = future.result()
+                    if result:
+                        section_items.append(result)
 
-            for future in as_completed(futures):
-                result = future.result()
-                if result:
-                    items_with_data.append(result)
+                for item, item_data in section_items:
+                    article_ids = item_data.get("article_ids", [])
+                    image_id = self.saver.assign_image(item, used_image_ids, article_ids)
+                    if image_id:
+                        used_image_ids.add(image_id)
+                    used_ids.update(article_ids)
+
+                items_with_data.extend(section_items)
 
         return items_with_data
 
