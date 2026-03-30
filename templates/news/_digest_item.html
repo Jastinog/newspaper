@@ -22,7 +22,7 @@
 </div>
 {% endif %}
 <a href="{% url 'story_detail' item.id %}" class="item-topic">{{ item.loc_topic }}</a>
-<span class="item-summary">{{ item.loc_summary }}</span>
+<span class="item-summary">{{ item.loc_summary|strip_markdown }}</span>
 <span class="item-actions">
     {% if not item.best_image_url %}<button class="similar-btn" data-item-id="{{ item.id }}" aria-label="{% trans 'Similar news' %}" title="{% trans 'Similar news' %}"><i class="fas fa-circle-nodes"></i></button>{% endif %}
     <a href="{% url 'research' item.id %}" class="research-hint research-link" data-item-id="{{ item.id }}">{% trans "research" %} &rarr;</a>

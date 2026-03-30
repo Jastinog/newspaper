@@ -70,6 +70,7 @@ class ItemTranslator:
             "Maintain journalistic style, factual accuracy, and nuance. "
             "Adapt idioms and cultural references naturally. "
             "Do not add or remove information.\n"
+            "Preserve all Markdown formatting (**bold**, bullet lists, etc.) exactly as-is.\n"
             "Keep technical terms, abbreviations, and proper nouns in their original Latin form "
             "(e.g. AGI, AI, NASA, OpenAI, GPT, CERN — do NOT transliterate to Cyrillic).\n\n"
             'Return JSON with key "translations" containing an array of objects, '

@@ -23,7 +23,9 @@ DEFAULT_PROMPT_GENERATION = (
     "following story based on the provided articles.\n\n"
     "Provide:\n"
     '- "topic": short event label (2-5 words)\n'
-    '- "summary": what happened, context, why it matters (4-5 sentences)\n'
+    '- "summary": what happened, context, why it matters (4-5 sentences). '
+    "Use Markdown formatting: **bold** for key terms, names and numbers. "
+    "Use bullet lists where appropriate. Do NOT use headings (#).\n"
     '- "importance": integer 1-9 '
     "(1-3=minor, 4-5=notable, 6=significant, 7-9=major/breaking)\n"
     '- "article_ids": array of relevant article IDs from the input\n\n'
@@ -42,11 +44,12 @@ DEFAULT_PROMPT_TRANSLATION = (
     "Maintain journalistic style, factual accuracy, and nuance. "
     "Adapt idioms and cultural references naturally. "
     "Do not add or remove information.\n"
+    "Preserve all Markdown formatting (**bold**, bullet lists, etc.) exactly as-is.\n"
     "Keep technical terms, abbreviations, and proper nouns in their original Latin form "
     "(e.g. AGI, AI, NASA, OpenAI, GPT, CERN — do NOT transliterate to Cyrillic).\n\n"
     "Provide:\n"
     '- "topic": translated short event label\n'
-    '- "summary": translated summary\n\n'
+    '- "summary": translated summary (keep Markdown)\n\n'
     "Return JSON."
 )
 

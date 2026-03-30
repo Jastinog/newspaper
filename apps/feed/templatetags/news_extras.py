@@ -1,4 +1,7 @@
+import re
+
 from django import template
+
 from apps.core.services.utils import get_article_image_url
 
 register = template.Library()
@@ -15,6 +18,16 @@ def truncatechars_word(value, length):
     truncated = value[:length].rsplit(" ", 1)[0]
     return truncated + "\u2026"
 
+
+@register.filter
+def strip_markdown(value):
+    """Strip markdown formatting, returning plain text."""
+    if not value:
+        return ""
+    text = re.sub(r"\*\*(.+?)\*\*", r"\1", value)
+    text = re.sub(r"\*(.+?)\*", r"\1", text)
+    text = re.sub(r"^[-*+] ", "", text, flags=re.MULTILINE)
+    return text.strip()
 
 
 @register.inclusion_tag("news/_sources.html")

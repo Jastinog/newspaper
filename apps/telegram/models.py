@@ -86,3 +86,26 @@ class TelegramPost(models.Model):
 
     def __str__(self):
         return f"{self.channel.name} — {self.digest.date} ({self.status})"
+
+
+class SentItem(models.Model):
+    """Tracks individual digest items sent to a channel."""
+
+    channel = models.ForeignKey(
+        TelegramChannel,
+        on_delete=models.CASCADE,
+        related_name="sent_items",
+    )
+    item = models.ForeignKey(
+        "digest.DigestItem",
+        on_delete=models.CASCADE,
+        related_name="telegram_sent",
+    )
+    sent_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [("channel", "item")]
+        ordering = ["-sent_at"]
+
+    def __str__(self):
+        return f"{self.channel.name} — item #{self.item_id}"

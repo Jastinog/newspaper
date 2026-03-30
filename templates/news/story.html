@@ -1,5 +1,5 @@
 {% extends "news/base.html" %}
-{% load i18n static news_extras %}
+{% load i18n static news_extras markdown_extras %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'news/css/article.css' %}">
@@ -31,7 +31,7 @@
     {% endif %}
 
     <div class="article-content">
-        <p>{{ summary }}</p>
+        {{ summary|markdown }}
     </div>
 
     <div class="story-item-actions">

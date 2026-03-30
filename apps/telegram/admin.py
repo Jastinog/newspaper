@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.utils.html import format_html
 from unfold.admin import ModelAdmin
 
-from .models import TelegramChannel, TelegramPost
+from .models import SentItem, TelegramChannel, TelegramPost
 
 
 @admin.register(TelegramChannel)
@@ -38,6 +38,16 @@ class TelegramPostAdmin(ModelAdmin):
             '<span style="color:#c1121f;font-weight:600" title="{}">ERR</span>',
             obj.error_message or "Unknown error",
         )
+
+    def has_add_permission(self, request):
+        return False
+
+
+@admin.register(SentItem)
+class SentItemAdmin(ModelAdmin):
+    list_display = ("channel", "item", "sent_at")
+    list_filter = ("channel",)
+    readonly_fields = ("channel", "item", "sent_at")
 
     def has_add_permission(self, request):
         return False

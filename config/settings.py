@@ -151,9 +151,9 @@ CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = "Europe/Kyiv"
 CELERY_BEAT_SCHEDULE = {
-    "telegram-publish-digest": {
-        "task": "telegram.publish",
-        "schedule": timedelta(minutes=30),
+    "telegram-publish-next": {
+        "task": "telegram.publish_next",
+        "schedule": timedelta(minutes=15),
     },
 }
 

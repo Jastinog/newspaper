@@ -1,5 +1,7 @@
 import logging
+import re
 from pathlib import Path
+from urllib.parse import urlparse
 
 import requests
 from django.conf import settings
@@ -7,9 +9,17 @@ from django.utils import timezone
 
 from apps.digest.models import Digest, DigestItem
 
-from .models import TelegramChannel, TelegramPost
+from .models import SentItem, TelegramChannel, TelegramPost
 
 logger = logging.getLogger(__name__)
+
+
+def md_to_telegram_html(text: str) -> str:
+    """Convert simple Markdown to Telegram-compatible HTML."""
+    text = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", text)
+    text = re.sub(r"\*(.+?)\*", r"<i>\1</i>", text)
+    text = re.sub(r"^[-*+] ", "\u2022 ", text, flags=re.MULTILINE)
+    return text.strip()
 
 TELEGRAM_API = "https://api.telegram.org/bot{token}"
 
@@ -58,25 +68,73 @@ class TelegramService:
         importance = item.importance
 
         # Importance indicator
-        if importance >= 7:
-            icon = "\U0001f534"  # red circle
-        elif importance >= 5:
-            icon = "\U0001f7e0"  # orange circle
+        if importance >= 8:
+            icon = "\U0001f525"  # fire
+        elif importance >= 6:
+            icon = "\u26a1"  # lightning
         else:
-            icon = "\U0001f535"  # blue circle
+            icon = "\U0001f539"  # small blue diamond
 
-        return f"{icon} <b>{topic}</b>\n{summary}"
+        # Section hashtag
+        hashtag = ""
+        if item.section:
+            hashtag = f"#{item.section.slug.replace('-', '_')}"
+
+        # Source links (unique domains, up to 3)
+        sources = ""
+        seen_domains = set()
+        links = []
+        for a in item.articles.all():
+            domain = urlparse(a.url).netloc.replace("www.", "")
+            if domain in seen_domains:
+                continue
+            seen_domains.add(domain)
+            name = domain.split(".")[0].capitalize()
+            links.append(f'<a href="{a.url}">{name}</a>')
+            if len(links) >= 3:
+                break
+        if links:
+            sources = "\n\n" + " \u2022 ".join(links)
+
+        lines = [
+            f"{icon} <b>{topic}</b>",
+            "",
+            md_to_telegram_html(summary),
+        ]
+        if sources:
+            lines.append(sources)
+        if hashtag:
+            lines.append(f"\n{hashtag}")
+
+        return "\n".join(lines)
 
     def _format_header(self, digest: Digest) -> str:
         lang = self.channel.language.code
         headline = digest.get_headline(lang) or digest.get_headline("en")
         date_str = digest.date.strftime("%d.%m.%Y")
-        header = f"\U0001f4f0 <b>{date_str}</b>"
+
+        header = f"\U0001f4f0 <b>Дайджест {date_str}</b>"
         if headline:
-            header += f"\n\n{headline}"
+            header += f"\n\n<i>{headline}</i>"
+        header += "\n\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500"
         return header
 
     # ── Publishing ────────────────────────────────────────────
+
+    def send_item(self, item: DigestItem) -> None:
+        """Format and send a single digest item, with image fallback to text."""
+        text = self._format_item(item)
+
+        if self.channel.include_images and item.image and item.image.image:
+            image_path = Path(settings.MEDIA_ROOT) / str(item.image.image)
+            if image_path.exists():
+                try:
+                    self.send_photo(image_path, text)
+                    return
+                except Exception:
+                    logger.debug("Image send failed for item %s, falling back to text", item.pk)
+
+        self.send_message(text)
 
     def publish_digest(self, digest: Digest) -> TelegramPost:
         """Post the digest's top items to the Telegram channel."""
@@ -84,7 +142,7 @@ class TelegramService:
             DigestItem.objects
             .filter(digest=digest)
             .select_related("section", "image")
-            .prefetch_related("translations", "translations__language")
+            .prefetch_related("translations", "translations__language", "articles")
             .order_by("-importance", "-freshness")
             [: self.channel.top_n]
         )
@@ -99,25 +157,9 @@ class TelegramService:
             )
 
         try:
-            # Send header
-            self.send_message(self._format_header(digest))
-
             posted = 0
             for item in items:
-                text = self._format_item(item)
-
-                # Try sending with image
-                if self.channel.include_images and item.image and item.image.image:
-                    image_path = Path(settings.MEDIA_ROOT) / str(item.image.image)
-                    if image_path.exists():
-                        try:
-                            self.send_photo(image_path, text)
-                            posted += 1
-                            continue
-                        except Exception:
-                            logger.debug("Image send failed for item %s, falling back to text", item.pk)
-
-                self.send_message(text)
+                self.send_item(item)
                 posted += 1
 
             return TelegramPost.objects.create(
@@ -135,6 +177,44 @@ class TelegramService:
                 status=TelegramPost.Status.FAILED,
                 error_message=str(e)[:500],
             )
+
+
+def publish_next_items() -> int:
+    """Send the next unsent item to each active channel. Returns total items sent."""
+    today = timezone.localdate()
+    channels = TelegramChannel.objects.filter(is_active=True).select_related("language")
+    total = 0
+
+    for channel in channels:
+        already_sent = SentItem.objects.filter(
+            channel=channel,
+            item__digest__date=today,
+        ).values_list("item_id", flat=True)
+
+        item = (
+            DigestItem.objects
+            .filter(digest__date=today)
+            .exclude(id__in=already_sent)
+            .select_related("section", "image")
+            .prefetch_related("translations", "translations__language", "articles")
+            .order_by("-importance", "-freshness")
+            .first()
+        )
+
+        if not item:
+            logger.info("No unsent items for %s on %s", channel, today)
+            continue
+
+        service = TelegramService(channel)
+        try:
+            service.send_item(item)
+            SentItem.objects.create(channel=channel, item=item)
+            total += 1
+            logger.info("Sent item #%d to %s", item.pk, channel)
+        except Exception as e:
+            logger.exception("Failed sending item #%d to %s: %s", item.pk, channel, e)
+
+    return total
 
 
 def publish_to_all_channels(digest: Digest | None = None) -> list[TelegramPost]:

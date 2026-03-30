@@ -5,17 +5,11 @@ from celery import shared_task
 logger = logging.getLogger(__name__)
 
 
-@shared_task(name="telegram.publish")
-def publish_digest_to_telegram():
-    """Publish today's digest to all active Telegram channels."""
-    from .services import publish_to_all_channels
+@shared_task(name="telegram.publish_next")
+def publish_next_to_telegram():
+    """Send the next unsent digest item to all active channels."""
+    from .services import publish_next_items
 
-    results = publish_to_all_channels()
-
-    from .models import TelegramPost
-
-    success = sum(1 for r in results if r.status == TelegramPost.Status.SUCCESS)
-    failed = sum(1 for r in results if r.status == TelegramPost.Status.FAILED)
-    logger.info("Telegram publish: %d success, %d failed", success, failed)
-
-    return {"success": success, "failed": failed}
+    total = publish_next_items()
+    logger.info("Telegram publish_next: %d items sent", total)
+    return {"sent": total}
