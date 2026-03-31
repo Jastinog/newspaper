@@ -22,7 +22,10 @@ DEFAULT_PROMPT_GENERATION = (
     "You are a world-class news analyst. Write a detailed news item about the "
     "following story based on the provided articles.\n\n"
     "Provide:\n"
-    '- "topic": short event label (2-5 words)\n'
+    '- "topic": catchy, attention-grabbing headline (4-8 words) that sparks curiosity. '
+    "Use active verbs, hint at consequences or surprises. "
+    "Avoid generic clickbait clich\u00e9s like \"You won't believe...\" \u2014 "
+    "aim for intriguing but still informative.\n"
     '- "summary": what happened, context, why it matters (4-5 sentences). '
     "Use Markdown formatting: **bold** for key terms, names and numbers. "
     "Use bullet lists where appropriate. Do NOT use headings (#).\n"
@@ -48,7 +51,7 @@ DEFAULT_PROMPT_TRANSLATION = (
     "Keep technical terms, abbreviations, and proper nouns in their original Latin form "
     "(e.g. AGI, AI, NASA, OpenAI, GPT, CERN — do NOT transliterate to Cyrillic).\n\n"
     "Provide:\n"
-    '- "topic": translated short event label\n'
+    '- "topic": translated headline \u2014 keep the catchy, attention-grabbing tone\n'
     '- "summary": translated summary (keep Markdown)\n\n'
     "Return JSON."
 )
