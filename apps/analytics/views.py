@@ -158,9 +158,8 @@ def session_graph_api(request):
         nodes.append({
             "id": sid,
             "type": "session",
-            "label": f"{c.browser or '?'} / {c.os or '?'}",
+            "label": format_duration(s.active_time),
             "time": format_duration(s.active_time),
-            "pages": s.page_count,
             "sessions": 1,
         })
         links.append({

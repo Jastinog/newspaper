@@ -116,19 +116,6 @@
         ctx.fillStyle = type === 'country' ? colors.countryStroke : type === 'city' ? colors.cityStroke : colors.sessStroke;
         ctx.fillText(label, x, labelY);
 
-        // Session: show pages below label
-        if (type === 'session' && node.pages > 0) {
-            var pf = 6;
-            ctx.font = pf + 'px -apple-system, system-ui, sans-serif';
-            var pText = node.pages + ' pg';
-            var pw = ctx.measureText(pText).width;
-            var py = labelY + fontSize + 2;
-            ctx.fillStyle = colors.labelBg;
-            ctx.fillRect(x - pw / 2 - 2, py - 1, pw + 4, pf + 3);
-            ctx.fillStyle = colors.sessStroke;
-            ctx.fillText(pText, x, py);
-        }
-
         // Store for pointer area
         node._h = h;
     }
