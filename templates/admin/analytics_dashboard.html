@@ -119,6 +119,22 @@
     {% endcomponent %}
 </div>
 
+<div class="mb-8">
+    {% component "unfold/components/card.html" with title="Session Geography Graph" %}
+        <div style="position: relative;">
+            <button id="session-graph-fullscreen" type="button"
+                    style="position:absolute;top:8px;right:8px;z-index:10;background:none;border:1px solid rgba(156,163,175,0.4);border-radius:6px;padding:4px 8px;cursor:pointer;color:#9ca3af;font-size:13px;"
+                    title="Fullscreen">&#x26F6;</button>
+            <div id="session-graph-container" style="width:100%;height:480px;border-radius:8px;"></div>
+            <div id="session-graph-loading" style="text-align:center;padding:40px;color:#9ca3af;">Loading graph...</div>
+        </div>
+        <div style="display:flex;gap:16px;justify-content:center;padding:8px 0 4px;font-size:12px;color:#9ca3af;">
+            <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:rgba(99,102,241,0.85);margin-right:4px;vertical-align:middle;"></span>Country</span>
+            <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:rgba(34,197,94,0.8);margin-right:4px;vertical-align:middle;"></span>City</span>
+        </div>
+    {% endcomponent %}
+</div>
+
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
     {% component "unfold/components/card.html" with title="Top Countries" %}
         <table class="w-full text-sm">
@@ -413,6 +429,30 @@
 })();
 </script>
 
+{# --- Session Geography Graph (ForceGraph) --- #}
+<script src="https://cdn.jsdelivr.net/npm/force-graph/dist/force-graph.min.js"></script>
+<script src="{% static 'analytics/js/session-graph.js' %}"></script>
+<style>
+.sg-overlay {
+    position: fixed; inset: 0; z-index: 9999;
+    background: rgba(0,0,0,0.8);
+    display: flex; flex-direction: column;
+    opacity: 0; transition: opacity .2s;
+}
+.sg-overlay.sg-ready { opacity: 1; }
+.sg-fs-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 20px; color: #e5e7eb;
+}
+.sg-fs-title { font-size: 16px; font-weight: 600; }
+.sg-fs-close {
+    font-size: 28px; background: none; border: none; color: #9ca3af;
+    cursor: pointer; line-height: 1;
+}
+.sg-fs-close:hover { color: #fff; }
+.sg-fs-box { flex: 1; overflow: hidden; }
+</style>
+
 {# --- Auto-refresh script --- #}
 <script>
 (function() {
@@ -568,6 +608,14 @@
             // Map
             if (data.city_markers && window._updateVisitorMap) {
                 window._updateVisitorMap(JSON.parse(data.city_markers));
+            }
+
+            // Session graph
+            if (window._updateSessionGraph) {
+                fetch("/analytics/api/session-graph/")
+                    .then(function(r) { return r.ok ? r.json() : null; })
+                    .then(function(gd) { if (gd) window._updateSessionGraph(gd); })
+                    .catch(function() {});
             }
 
             updateTable("table-live", data.live_sessions, [

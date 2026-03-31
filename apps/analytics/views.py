@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 from django.contrib.admin import site as admin_site
+from django.db.models import Count
 from django.contrib.admin.views.decorators import staff_member_required
 from django.http import JsonResponse
 from django.shortcuts import render
@@ -96,3 +97,68 @@ def traffic_graph_api(request):
         })
 
     return JsonResponse({"countries": countries_out, "days": days})
+
+
+@staff_member_required
+def session_graph_api(request):
+    """Return force-graph data: country and city nodes with links."""
+    days = min(max(int(request.GET.get("days", 30)), 1), 90)
+    since = timezone.now() - timedelta(days=days)
+
+    # Aggregate sessions per city (humans only)
+    city_qs = list(
+        Session.objects.filter(started_at__gte=since, client__is_bot=False)
+        .exclude(client__country="")
+        .values(
+            "client__country", "client__country_name",
+            "client__city",
+        )
+        .annotate(
+            sessions=Count("id"),
+            visitors=Count("client", distinct=True),
+        )
+        .order_by("-sessions")
+    )
+
+    # Build nodes + links
+    nodes = []
+    links = []
+    country_nodes = {}  # code -> node dict
+
+    for row in city_qs:
+        code = row["client__country"]
+        country_name = row["client__country_name"] or code
+        city_name = row["client__city"] or "Unknown"
+
+        # Country node (deduplicated)
+        if code not in country_nodes:
+            co_node = {
+                "id": f"co_{code}",
+                "type": "country",
+                "label": f"{country_flag(code)} {country_name}",
+                "sessions": 0,
+                "visitors": 0,
+            }
+            country_nodes[code] = co_node
+            nodes.append(co_node)
+
+        # Accumulate country totals
+        country_nodes[code]["sessions"] += row["sessions"]
+        country_nodes[code]["visitors"] += row["visitors"]
+
+        # City node
+        city_id = f"ci_{code}_{city_name}"
+        nodes.append({
+            "id": city_id,
+            "type": "city",
+            "label": city_name,
+            "sessions": row["sessions"],
+            "visitors": row["visitors"],
+        })
+        links.append({
+            "source": country_nodes[code]["id"],
+            "target": city_id,
+            "value": row["sessions"],
+        })
+
+    return JsonResponse({"nodes": nodes, "links": links, "days": days})
