@@ -64,12 +64,17 @@ class ClientAdmin(ReadOnlyAdmin):
 class SessionAdmin(ReadOnlyAdmin):
     list_display = (
         "session_id", "type_icon", "source_display", "client",
+        "country_display", "city_display",
         "page_count", "active_time_display",
         "has_interaction", "verdict_display", "started_at", "ended_at",
     )
-    list_filter = ("is_human", "has_interaction", "source")
-    search_fields = ("session_id",)
+    list_filter = (
+        "is_human", "has_interaction", "source",
+        "client__country", "client__city",
+    )
+    search_fields = ("session_id", "client__country_name", "client__city")
     raw_id_fields = ("client",)
+    list_select_related = ("client",)
     readonly_fields = (
         "session_id", "client", "source", "started_at", "ended_at", "page_count",
         "active_time", "has_interaction", "referrer", "referrer_domain", "is_human",
@@ -101,6 +106,18 @@ class SessionAdmin(ReadOnlyAdmin):
                 name,
             )
         return mark_safe('<span style="opacity:0.5">?</span>')
+
+    @admin.display(description="Country", ordering="client__country")
+    def country_display(self, obj):
+        flag = country_flag(obj.client.country)
+        name = obj.client.country_name or obj.client.country or "\u2014"
+        if flag:
+            return format_html("{} {}", flag, name)
+        return name
+
+    @admin.display(description="City", ordering="client__city")
+    def city_display(self, obj):
+        return obj.client.city or "\u2014"
 
     @admin.display(description="Active Time")
     def active_time_display(self, obj):
