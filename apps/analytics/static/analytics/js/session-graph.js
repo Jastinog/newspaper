@@ -98,23 +98,24 @@
             ctx.fillText(node.time || '0s', x, y);
         }
 
-        // Label below
-        var fontSize = type === 'country' ? 11 : type === 'city' ? 9 : 7;
-        if (globalScale < 0.5) fontSize += 3;
-        ctx.font = (type === 'country' ? 'bold ' : '') + fontSize + 'px -apple-system, system-ui, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'top';
+        // Label below (skip for sessions — time is already inside the square)
+        if (type !== 'session') {
+            var fontSize = type === 'country' ? 11 : 9;
+            if (globalScale < 0.5) fontSize += 3;
+            ctx.font = (type === 'country' ? 'bold ' : '') + fontSize + 'px -apple-system, system-ui, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
 
-        var label = node.label;
-        var labelY = y + h + 3;
-        var textW = ctx.measureText(label).width;
+            var label = node.label;
+            var labelY = y + h + 3;
+            var textW = ctx.measureText(label).width;
 
-        // Background pill
-        ctx.fillStyle = colors.labelBg;
-        ctx.fillRect(x - textW / 2 - 3, labelY - 1, textW + 6, fontSize + 4);
+            ctx.fillStyle = colors.labelBg;
+            ctx.fillRect(x - textW / 2 - 3, labelY - 1, textW + 6, fontSize + 4);
 
-        ctx.fillStyle = type === 'country' ? colors.countryStroke : type === 'city' ? colors.cityStroke : colors.sessStroke;
-        ctx.fillText(label, x, labelY);
+            ctx.fillStyle = type === 'country' ? colors.countryStroke : colors.cityStroke;
+            ctx.fillText(label, x, labelY);
+        }
 
         // Store for pointer area
         node._h = h;
