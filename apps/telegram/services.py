@@ -96,8 +96,16 @@ class TelegramService:
         if links:
             sources = "\n\n" + " \u2022 ".join(links)
 
+        # Clickable headline linking to the website
+        site_url = settings.SITE_URL
+        if site_url:
+            story_url = f"{site_url}/{lang}/story/{item.id}/"
+            title = f'{icon} <b><a href="{story_url}">{topic}</a></b>'
+        else:
+            title = f"{icon} <b>{topic}</b>"
+
         lines = [
-            f"{icon} <b>{topic}</b>",
+            title,
             "",
             md_to_telegram_html(summary),
         ]
