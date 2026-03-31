@@ -351,7 +351,6 @@
         cachedData = data;
         if (!container || !fgInstance) return;
         fgInstance.graphData(data);
-        setTimeout(function () { fgInstance.zoomToFit(400, 50); }, 500);
     };
 
     if (document.readyState === 'loading') {
