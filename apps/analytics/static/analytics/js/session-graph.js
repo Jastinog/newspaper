@@ -1,8 +1,8 @@
 /**
  * Session geography graph — force-directed network for admin analytics.
  *
- * Country nodes (large) → City nodes (small), sized by session count.
- * Uses ForceGraph.js (same lib as the similar-news graph).
+ * Country → City → Session, square nodes, straight lines.
+ * Uses ForceGraph.js.
  */
 (function () {
     'use strict';
@@ -11,20 +11,12 @@
     var container = null;
     var fgInstance = null;
 
-    /* ── Helpers ─────────────────────────────────── */
+    /* ── Node sizing (half-side) ────────────────── */
 
-    function cssVar(name) {
-        return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-    }
-
-    /* ── Node sizing ────────────────────────────── */
-
-    function countryRadius(sessions) {
-        return Math.max(18, Math.min(50, 10 + Math.sqrt(sessions) * 3));
-    }
-
-    function cityRadius(sessions) {
-        return Math.max(6, Math.min(28, 4 + Math.sqrt(sessions) * 2));
+    function nodeHalf(node) {
+        if (node.type === 'country') return Math.max(20, Math.min(50, 12 + Math.sqrt(node.sessions) * 3));
+        if (node.type === 'city') return Math.max(10, Math.min(30, 6 + Math.sqrt(node.sessions) * 2));
+        return 6; // session
     }
 
     /* ── Colors ─────────────────────────────────── */
@@ -39,74 +31,106 @@
             cityFill: isDark ? 'rgba(34,197,94,0.8)' : 'rgba(22,163,74,0.8)',
             cityStroke: isDark ? '#4ade80' : '#22c55e',
             cityText: isDark ? '#e5e7eb' : '#1f2937',
-            link: isDark ? 'rgba(148,163,184,0.25)' : 'rgba(100,116,139,0.2)',
+            sessFill: isDark ? 'rgba(234,179,8,0.7)' : 'rgba(202,138,4,0.7)',
+            sessStroke: isDark ? '#facc15' : '#ca8a04',
+            sessText: isDark ? '#fef9c3' : '#713f12',
+            link: isDark ? 'rgba(148,163,184,0.2)' : 'rgba(100,116,139,0.15)',
             labelBg: isDark ? 'rgba(17,24,39,0.75)' : 'rgba(255,255,255,0.8)',
         };
     }
 
-    /* ── Draw node ──────────────────────────────── */
+    /* ── Draw square node ───────────────────────── */
 
     function drawNode(node, ctx, globalScale, colors) {
-        var isCountry = node.type === 'country';
-        var r = isCountry ? countryRadius(node.sessions) : cityRadius(node.sessions);
+        var h = nodeHalf(node);
         var x = node.x, y = node.y;
+        var type = node.type;
 
-        // Circle
+        // Pick colors
+        var fill, stroke, textColor;
+        if (type === 'country') {
+            fill = colors.countryFill; stroke = colors.countryStroke; textColor = colors.countryText;
+        } else if (type === 'city') {
+            fill = colors.cityFill; stroke = colors.cityStroke; textColor = colors.cityText;
+        } else {
+            fill = colors.sessFill; stroke = colors.sessStroke; textColor = colors.sessText;
+        }
+
+        // Square with rounded corners
+        var r = Math.max(2, h * 0.15);
         ctx.beginPath();
-        ctx.arc(x, y, r, 0, 2 * Math.PI);
-        ctx.fillStyle = isCountry ? colors.countryFill : colors.cityFill;
+        ctx.moveTo(x - h + r, y - h);
+        ctx.lineTo(x + h - r, y - h);
+        ctx.arcTo(x + h, y - h, x + h, y - h + r, r);
+        ctx.lineTo(x + h, y + h - r);
+        ctx.arcTo(x + h, y + h, x + h - r, y + h, r);
+        ctx.lineTo(x - h + r, y + h);
+        ctx.arcTo(x - h, y + h, x - h, y + h - r, r);
+        ctx.lineTo(x - h, y - h + r);
+        ctx.arcTo(x - h, y - h, x - h + r, y - h, r);
+        ctx.closePath();
+        ctx.fillStyle = fill;
         ctx.fill();
-        ctx.strokeStyle = isCountry ? colors.countryStroke : colors.cityStroke;
-        ctx.lineWidth = isCountry ? 2 : 1;
+        ctx.strokeStyle = stroke;
+        ctx.lineWidth = type === 'country' ? 2 : 1;
         ctx.stroke();
 
-        // Sessions badge (inside circle for countries)
-        if (isCountry) {
-            ctx.font = 'bold ' + Math.max(10, r * 0.4) + 'px -apple-system, system-ui, sans-serif';
+        // Text inside square — country: session count, city: session count, session: time
+        if (type === 'country') {
+            ctx.font = 'bold ' + Math.max(10, h * 0.4) + 'px -apple-system, system-ui, sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillStyle = colors.countryText;
             ctx.fillText(node.sessions, x, y);
+        } else if (type === 'city') {
+            ctx.font = 'bold ' + Math.max(8, h * 0.45) + 'px -apple-system, system-ui, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#fff';
+            ctx.fillText(node.sessions, x, y);
+        } else {
+            // Session: show time inside
+            var tf = Math.max(6, h * 0.9);
+            ctx.font = 'bold ' + tf + 'px -apple-system, system-ui, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = colors.sessText;
+            ctx.fillText(node.time || '0s', x, y);
         }
 
         // Label below
-        var fontSize = isCountry ? 11 : 8;
-        if (globalScale < 0.6) fontSize = isCountry ? 14 : 10;
-        ctx.font = (isCountry ? 'bold ' : '') + fontSize + 'px -apple-system, system-ui, sans-serif';
+        var fontSize = type === 'country' ? 11 : type === 'city' ? 9 : 7;
+        if (globalScale < 0.5) fontSize += 3;
+        ctx.font = (type === 'country' ? 'bold ' : '') + fontSize + 'px -apple-system, system-ui, sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
 
         var label = node.label;
-        var labelY = y + r + 3;
+        var labelY = y + h + 3;
         var textW = ctx.measureText(label).width;
 
-        // Background pill for readability
+        // Background pill
         ctx.fillStyle = colors.labelBg;
         ctx.fillRect(x - textW / 2 - 3, labelY - 1, textW + 6, fontSize + 4);
 
-        ctx.fillStyle = isCountry ? colors.countryStroke : colors.cityText;
+        ctx.fillStyle = type === 'country' ? colors.countryStroke : type === 'city' ? colors.cityStroke : colors.sessStroke;
         ctx.fillText(label, x, labelY);
 
-        // City: small session count
-        if (!isCountry && node.sessions > 0) {
-            var badgeFontSize = 7;
-            ctx.font = badgeFontSize + 'px -apple-system, system-ui, sans-serif';
-            var badgeText = node.sessions + ' sess';
-            var bw = ctx.measureText(badgeText).width;
-            var by = labelY + fontSize + 2;
+        // Session: show pages below label
+        if (type === 'session' && node.pages > 0) {
+            var pf = 6;
+            ctx.font = pf + 'px -apple-system, system-ui, sans-serif';
+            var pText = node.pages + ' pg';
+            var pw = ctx.measureText(pText).width;
+            var py = labelY + fontSize + 2;
             ctx.fillStyle = colors.labelBg;
-            ctx.fillRect(x - bw / 2 - 2, by - 1, bw + 4, badgeFontSize + 3);
-            ctx.fillStyle = colors.cityStroke;
-            ctx.fillText(badgeText, x, by);
+            ctx.fillRect(x - pw / 2 - 2, py - 1, pw + 4, pf + 3);
+            ctx.fillStyle = colors.sessStroke;
+            ctx.fillText(pText, x, py);
         }
 
-        // Store bounding box for pointer area
-        var totalH = r + 4 + fontSize + (isCountry ? 0 : 12);
-        node._r = r;
-        node._bx = x - Math.max(r, textW / 2 + 3);
-        node._by = y - r;
-        node._bw = Math.max(r * 2, textW + 6);
-        node._bh = r + totalH;
+        // Store for pointer area
+        node._h = h;
     }
 
     /* ── Render graph ───────────────────────────── */
@@ -114,39 +138,54 @@
     function renderGraph(el, data) {
         var colors = getColors();
 
-        // Set initial positions: countries in a circle, cities near their country
+        // Initial positions: countries in a ring, cities around them, sessions around cities
         var countries = data.nodes.filter(function (n) { return n.type === 'country'; });
         var angleStep = (2 * Math.PI) / Math.max(countries.length, 1);
-        var ringR = Math.max(200, countries.length * 40);
+        var ringR = Math.max(250, countries.length * 50);
 
         countries.forEach(function (co, i) {
             co.x = Math.cos(angleStep * i) * ringR;
             co.y = Math.sin(angleStep * i) * ringR;
         });
 
-        // Place cities near their country
-        var countryPos = {};
-        countries.forEach(function (co) { countryPos[co.id] = { x: co.x, y: co.y }; });
-
-        var cityIndex = {};
+        // Build parent lookup from links
+        var parentMap = {};  // target id -> source id
+        var childrenMap = {}; // source id -> [target ids]
         data.links.forEach(function (l) {
-            if (!cityIndex[l.source]) cityIndex[l.source] = [];
-            cityIndex[l.source].push(l.target);
+            parentMap[l.target] = l.source;
+            if (!childrenMap[l.source]) childrenMap[l.source] = [];
+            childrenMap[l.source].push(l.target);
         });
 
+        var posById = {};
+        countries.forEach(function (co) { posById[co.id] = { x: co.x, y: co.y }; });
+
+        // Place cities near country
         data.nodes.forEach(function (n) {
             if (n.type !== 'city') return;
-            // Find parent country link
-            var parentLink = data.links.find(function (l) { return l.target === n.id; });
-            if (parentLink && countryPos[parentLink.source]) {
-                var cp = countryPos[parentLink.source];
-                var siblings = cityIndex[parentLink.source] || [];
+            var pid = parentMap[n.id];
+            if (pid && posById[pid]) {
+                var cp = posById[pid];
+                var siblings = childrenMap[pid] || [];
                 var idx = siblings.indexOf(n.id);
-                var spread = Math.min(siblings.length, 8);
-                var a = (2 * Math.PI * idx) / spread + Math.random() * 0.3;
-                var dist = 80 + Math.random() * 60;
-                n.x = cp.x + Math.cos(a) * dist;
-                n.y = cp.y + Math.sin(a) * dist;
+                var a = (2 * Math.PI * idx) / Math.max(siblings.length, 1);
+                n.x = cp.x + Math.cos(a) * 120;
+                n.y = cp.y + Math.sin(a) * 120;
+                posById[n.id] = { x: n.x, y: n.y };
+            }
+        });
+
+        // Place sessions near city
+        data.nodes.forEach(function (n) {
+            if (n.type !== 'session') return;
+            var pid = parentMap[n.id];
+            if (pid && posById[pid]) {
+                var cp = posById[pid];
+                var siblings = childrenMap[pid] || [];
+                var idx = siblings.indexOf(n.id);
+                var a = (2 * Math.PI * idx) / Math.max(siblings.length, 1) + Math.random() * 0.2;
+                n.x = cp.x + Math.cos(a) * 50;
+                n.y = cp.y + Math.sin(a) * 50;
             }
         });
 
@@ -160,18 +199,20 @@
             })
             .nodeCanvasObjectMode(function () { return 'replace'; })
             .nodePointerAreaPaint(function (node, color, ctx) {
-                if (node._r) {
-                    ctx.beginPath();
-                    ctx.arc(node.x, node.y, node._r + 5, 0, 2 * Math.PI);
-                    ctx.fillStyle = color;
-                    ctx.fill();
-                }
+                var h = node._h || 10;
+                ctx.fillStyle = color;
+                ctx.fillRect(node.x - h - 2, node.y - h - 2, (h + 2) * 2, (h + 2) * 2);
             })
-            .linkWidth(function (l) { return Math.max(0.5, Math.min(4, Math.sqrt(l.value) * 0.5)); })
+            .linkWidth(function (l) {
+                var s = (typeof l.source === 'object') ? l.source : null;
+                if (s && s.type === 'country') return 2;
+                if (s && s.type === 'city') return 1;
+                return 0.5;
+            })
             .linkColor(function () { return colors.link; })
-            .linkCurvature(0.15)
-            .d3VelocityDecay(0.4)
-            .d3AlphaDecay(0.05)
+            .linkCurvature(0)
+            .d3VelocityDecay(0.45)
+            .d3AlphaDecay(0.04)
             .onNodeHover(function (node) {
                 el.style.cursor = node ? 'grab' : 'default';
             })
@@ -183,17 +224,25 @@
                 node.fx = undefined;
                 node.fy = undefined;
             })
-            .cooldownTicks(80)
-            .warmupTicks(100);
+            .cooldownTicks(100)
+            .warmupTicks(120);
 
-        // Forces
+        // Forces — different strength per level
         fg.d3Force('charge').strength(function (n) {
-            return n.type === 'country' ? -800 : -200;
-        }).distanceMax(600);
+            if (n.type === 'country') return -1200;
+            if (n.type === 'city') return -300;
+            return -60;
+        }).distanceMax(800);
 
-        fg.d3Force('link').distance(function () {
-            return 120;
-        }).strength(0.6);
+        fg.d3Force('link').distance(function (l) {
+            var s = (typeof l.source === 'object') ? l.source : null;
+            if (s && s.type === 'country') return 150;
+            return 60;
+        }).strength(function (l) {
+            var s = (typeof l.source === 'object') ? l.source : null;
+            if (s && s.type === 'country') return 0.5;
+            return 0.8;
+        });
 
         // Zoom to fit once stable
         var fitted = false;
@@ -258,7 +307,6 @@
 
         requestAnimationFrame(function () {
             overlay.classList.add('sg-ready');
-            // Deep-copy data so fullscreen graph has its own simulation
             var copy = JSON.parse(JSON.stringify(data));
             renderGraph(box, copy);
             fsFg = fgInstance;
@@ -309,7 +357,6 @@
             });
     }
 
-    // Allow dashboard auto-refresh to update graph data
     window._updateSessionGraph = function (data) {
         cachedData = data;
         if (!container || !fgInstance) return;
