@@ -235,7 +235,7 @@
             return 0.8;
         });
 
-        // Zoom to fit once stable
+        // Zoom to fit once on first render only
         var fitted = false;
         fg.onEngineTick(function () {
             if (!fitted) {
@@ -243,7 +243,6 @@
                 fg.zoomToFit(0, 50);
             }
         });
-        fg.onEngineStop(function () { fg.zoomToFit(400, 50); });
 
         // Resize handler
         var resizeTimer;
