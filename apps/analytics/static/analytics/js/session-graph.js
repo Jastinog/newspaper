@@ -212,8 +212,8 @@
                 node.fy = node.y;
             })
             .onNodeDragEnd(function (node) {
-                node.fx = undefined;
-                node.fy = undefined;
+                node.fx = node.x;
+                node.fy = node.y;
             })
             .cooldownTicks(100)
             .warmupTicks(120);
