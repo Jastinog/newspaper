@@ -85,7 +85,7 @@
             var m = ctx.measureText(lines[i].text);
             lines[i].w = m.width;
             if (m.width > maxW) maxW = m.width;
-            var fSize = parseFloat(lines[i].font);
+            var fSize = parseFloat(lines[i].font.match(/(\d+)px/)[1]);
             lines[i].h = fSize;
             lineH.push(fSize);
         }
