@@ -11,14 +11,6 @@
     var container = null;
     var fgInstance = null;
 
-    /* ── Node sizing (half-side) ────────────────── */
-
-    function nodeHalf(node) {
-        if (node.type === 'country') return Math.max(20, Math.min(50, 12 + Math.sqrt(node.sessions) * 3));
-        if (node.type === 'city') return Math.max(10, Math.min(30, 6 + Math.sqrt(node.sessions) * 2));
-        return 6; // session
-    }
-
     /* ── Colors ─────────────────────────────────── */
 
     function getColors() {
@@ -39,86 +31,96 @@
         };
     }
 
-    /* ── Draw square node ───────────────────────── */
+    /* ── Rounded rect helper ──────────────────────── */
+
+    function roundRect(ctx, x, y, w, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.arcTo(x + w, y, x + w, y + r, r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+        ctx.lineTo(x + r, y + h);
+        ctx.arcTo(x, y + h, x, y + h - r, r);
+        ctx.lineTo(x, y + r);
+        ctx.arcTo(x, y, x + r, y, r);
+        ctx.closePath();
+    }
+
+    /* ── Draw node — text-fitted rectangle ─────── */
 
     function drawNode(node, ctx, globalScale, colors) {
-        var h = nodeHalf(node);
         var x = node.x, y = node.y;
         var type = node.type;
+        var padX, padY, fill, stroke, borderW;
 
-        // Pick colors
-        var fill, stroke, textColor;
         if (type === 'country') {
-            fill = colors.countryFill; stroke = colors.countryStroke; textColor = colors.countryText;
+            padX = 10; padY = 6;
+            fill = colors.countryFill; stroke = colors.countryStroke; borderW = 2;
         } else if (type === 'city') {
-            fill = colors.cityFill; stroke = colors.cityStroke; textColor = colors.cityText;
+            padX = 7; padY = 4;
+            fill = colors.cityFill; stroke = colors.cityStroke; borderW = 1;
         } else {
-            fill = colors.sessFill; stroke = colors.sessStroke; textColor = colors.sessText;
+            padX = 5; padY = 3;
+            fill = colors.sessFill; stroke = colors.sessStroke; borderW = 1;
         }
 
-        // Square with rounded corners
-        var r = Math.max(2, h * 0.15);
-        ctx.beginPath();
-        ctx.moveTo(x - h + r, y - h);
-        ctx.lineTo(x + h - r, y - h);
-        ctx.arcTo(x + h, y - h, x + h, y - h + r, r);
-        ctx.lineTo(x + h, y + h - r);
-        ctx.arcTo(x + h, y + h, x + h - r, y + h, r);
-        ctx.lineTo(x - h + r, y + h);
-        ctx.arcTo(x - h, y + h, x - h, y + h - r, r);
-        ctx.lineTo(x - h, y - h + r);
-        ctx.arcTo(x - h, y - h, x - h + r, y - h, r);
-        ctx.closePath();
+        // Build text lines and measure
+        var lines = [];
+        if (type === 'country') {
+            lines.push({ text: node.label, font: 'bold 11px -apple-system, system-ui, sans-serif', color: colors.countryText });
+            lines.push({ text: node.sessions + ' sess', font: '9px -apple-system, system-ui, sans-serif', color: 'rgba(255,255,255,0.75)' });
+        } else if (type === 'city') {
+            lines.push({ text: node.label, font: 'bold 9px -apple-system, system-ui, sans-serif', color: '#fff' });
+            lines.push({ text: node.sessions + ' sess', font: '7px -apple-system, system-ui, sans-serif', color: 'rgba(255,255,255,0.7)' });
+        } else {
+            lines.push({ text: node.time || '0s', font: 'bold 8px -apple-system, system-ui, sans-serif', color: colors.sessText });
+        }
+
+        // Measure each line
+        var maxW = 0;
+        var lineH = [];
+        for (var i = 0; i < lines.length; i++) {
+            ctx.font = lines[i].font;
+            var m = ctx.measureText(lines[i].text);
+            lines[i].w = m.width;
+            if (m.width > maxW) maxW = m.width;
+            var fSize = parseFloat(lines[i].font);
+            lines[i].h = fSize;
+            lineH.push(fSize);
+        }
+
+        var gap = lines.length > 1 ? 3 : 0;
+        var totalTextH = 0;
+        for (var j = 0; j < lineH.length; j++) totalTextH += lineH[j];
+        totalTextH += gap * (lines.length - 1);
+
+        var rectW = maxW + padX * 2;
+        var rectH = totalTextH + padY * 2;
+        var rx = x - rectW / 2;
+        var ry = y - rectH / 2;
+
+        // Draw rectangle
+        roundRect(ctx, rx, ry, rectW, rectH, 3);
         ctx.fillStyle = fill;
         ctx.fill();
         ctx.strokeStyle = stroke;
-        ctx.lineWidth = type === 'country' ? 2 : 1;
+        ctx.lineWidth = borderW;
         ctx.stroke();
 
-        // Text inside square — country: session count, city: session count, session: time
-        if (type === 'country') {
-            ctx.font = 'bold ' + Math.max(10, h * 0.4) + 'px -apple-system, system-ui, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillStyle = colors.countryText;
-            ctx.fillText(node.sessions, x, y);
-        } else if (type === 'city') {
-            ctx.font = 'bold ' + Math.max(8, h * 0.45) + 'px -apple-system, system-ui, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillStyle = '#fff';
-            ctx.fillText(node.sessions, x, y);
-        } else {
-            // Session: show time inside
-            var tf = Math.max(6, h * 0.9);
-            ctx.font = 'bold ' + tf + 'px -apple-system, system-ui, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillStyle = colors.sessText;
-            ctx.fillText(node.time || '0s', x, y);
+        // Draw text lines centered
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        var ty = ry + padY;
+        for (var k = 0; k < lines.length; k++) {
+            ctx.font = lines[k].font;
+            ctx.fillStyle = lines[k].color;
+            ctx.fillText(lines[k].text, x, ty);
+            ty += lines[k].h + gap;
         }
 
-        // Label below (skip for sessions — time is already inside the square)
-        if (type !== 'session') {
-            var fontSize = type === 'country' ? 11 : 9;
-            if (globalScale < 0.5) fontSize += 3;
-            ctx.font = (type === 'country' ? 'bold ' : '') + fontSize + 'px -apple-system, system-ui, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'top';
-
-            var label = node.label;
-            var labelY = y + h + 3;
-            var textW = ctx.measureText(label).width;
-
-            ctx.fillStyle = colors.labelBg;
-            ctx.fillRect(x - textW / 2 - 3, labelY - 1, textW + 6, fontSize + 4);
-
-            ctx.fillStyle = type === 'country' ? colors.countryStroke : colors.cityStroke;
-            ctx.fillText(label, x, labelY);
-        }
-
-        // Store for pointer area
-        node._h = h;
+        // Store bounding box for pointer area
+        node._rx = rx; node._ry = ry; node._rw = rectW; node._rh = rectH;
     }
 
     /* ── Render graph ───────────────────────────── */
@@ -187,9 +189,10 @@
             })
             .nodeCanvasObjectMode(function () { return 'replace'; })
             .nodePointerAreaPaint(function (node, color, ctx) {
-                var h = node._h || 10;
-                ctx.fillStyle = color;
-                ctx.fillRect(node.x - h - 2, node.y - h - 2, (h + 2) * 2, (h + 2) * 2);
+                if (node._rw) {
+                    ctx.fillStyle = color;
+                    ctx.fillRect(node._rx - 2, node._ry - 2, node._rw + 4, node._rh + 4);
+                }
             })
             .linkWidth(function (l) {
                 var s = (typeof l.source === 'object') ? l.source : null;
