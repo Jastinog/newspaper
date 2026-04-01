@@ -210,6 +210,12 @@
             }
         });
 
+        // Pin every node at its computed position — no simulation drift
+        data.nodes.forEach(function (n) {
+            n.fx = n.x;
+            n.fy = n.y;
+        });
+
         var fg = new ForceGraph()(el)
             .graphData(data)
             .width(el.clientWidth)
@@ -234,8 +240,7 @@
             })
             .linkColor(function () { return colors.link; })
             .linkCurvature(0)
-            .d3VelocityDecay(0.45)
-            .d3AlphaDecay(0.04)
+            .cooldownTicks(0)
             .onNodeHover(function (node) {
                 el.style.cursor = node ? 'grab' : 'default';
             })
@@ -246,55 +251,14 @@
             .onNodeDragEnd(function (node) {
                 node.fx = node.x;
                 node.fy = node.y;
-            })
-            .cooldownTicks(100)
-            .warmupTicks(120);
+            });
 
-        // Forces — different strength per level
-        fg.d3Force('charge').strength(function (n) {
-            if (n.type === 'country') return -1500;
-            if (n.type === 'city') return -500;
-            if (n.type === 'day') return -300;
-            return -80;
-        }).distanceMax(1200);
-
-        fg.d3Force('link').distance(function (l) {
-            var s = (typeof l.source === 'object') ? l.source : null;
-            var t = (typeof l.target === 'object') ? l.target : null;
-            if (s && s.type === 'country') return 200;
-            if (t && t.type === 'day') return 80 + nodeAge(t) * 180;
-            if (t && t.type === 'session') return 40;
-            return 100;
-        }).strength(function (l) {
-            var s = (typeof l.source === 'object') ? l.source : null;
-            var t = (typeof l.target === 'object') ? l.target : null;
-            if (s && s.type === 'country') return 0.4;
-            if (t && t.type === 'day') return 0.7 - nodeAge(t) * 0.3;
-            if (t && t.type === 'session') return 0.9;
-            return 0.6;
-        });
-
-        // Zoom to fit once on first render only
-        var fitted = false;
-        fg.onEngineTick(function () {
-            if (!fitted) {
-                fitted = true;
-                fg.zoomToFit(0, 50);
-            }
-        });
-
-        // Resize handler
-        var resizeTimer;
-        function onResize() {
-            clearTimeout(resizeTimer);
-            resizeTimer = setTimeout(function () {
-                fg.width(el.clientWidth).height(el.clientHeight);
-            }, 150);
-        }
-        window.addEventListener('resize', onResize);
+        // Kill all forces — layout is fully static
+        fg.d3Force('charge', null);
+        fg.d3Force('link', null);
+        fg.d3Force('center', null);
 
         fgInstance = fg;
-        fgInstance._onResize = onResize;
     }
 
     /* ── Fullscreen modal ───────────────────────── */
