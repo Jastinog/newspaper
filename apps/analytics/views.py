@@ -100,9 +100,10 @@ def traffic_graph_api(request):
 
 @staff_member_required
 def session_graph_api(request):
-    """Return force-graph data: country → city → session nodes with links."""
+    """Return force-graph data: country → city → day → session nodes with links."""
     days = min(max(int(request.GET.get("days", 30)), 1), 90)
-    since = timezone.now() - timedelta(days=days)
+    now = timezone.now()
+    since = now - timedelta(days=days)
 
     # Fetch sessions with client info (humans only)
     sessions = list(
@@ -117,12 +118,19 @@ def session_graph_api(request):
     links = []
     country_nodes = {}  # code -> node dict
     city_nodes = {}     # "code_city" -> node dict
+    day_nodes = {}      # "city_key_YYYY-MM-DD" -> node dict
+
+    # Compute time range for normalizing day age (0 = today, 1 = oldest)
+    total_days = days or 1
+    today = timezone.localtime(now).date()
 
     for s in sessions:
         c = s.client
         code = c.country or "??"
         country_name = c.country_name or code
         city_name = c.city or "Unknown"
+        local_dt = timezone.localtime(s.started_at)
+        session_date = local_dt.date()
 
         # Country node (deduplicated)
         if code not in country_nodes:
@@ -153,17 +161,36 @@ def session_graph_api(request):
             })
         city_nodes[city_key]["sessions"] += 1
 
-        # Session node
+        # Day node (deduplicated per city+date)
+        day_key = f"{city_key}_{session_date.isoformat()}"
+        if day_key not in day_nodes:
+            day_age = (today - session_date).days / total_days
+            day_age = max(0.0, min(1.0, day_age))
+            day_node = {
+                "id": f"d_{day_key}",
+                "type": "day",
+                "label": local_dt.strftime("%d.%m"),
+                "sessions": 0,
+                "age": round(day_age, 4),
+            }
+            day_nodes[day_key] = day_node
+            nodes.append(day_node)
+            links.append({
+                "source": city_nodes[city_key]["id"],
+                "target": day_node["id"],
+            })
+        day_nodes[day_key]["sessions"] += 1
+
         sid = f"s_{s.id}"
         nodes.append({
             "id": sid,
             "type": "session",
-            "label": format_duration(s.active_time),
             "time": format_duration(s.active_time),
-            "sessions": 1,
+            "hour": local_dt.strftime("%H:%M"),
+            "age": day_nodes[day_key]["age"],
         })
         links.append({
-            "source": city_nodes[city_key]["id"],
+            "source": day_nodes[day_key]["id"],
             "target": sid,
         })
 
