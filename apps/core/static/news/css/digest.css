@@ -80,10 +80,6 @@
     margin-bottom: 0.3rem;
     border-bottom: 1px solid var(--border-faint);
 }
-.digest-item-card .item-summary {
-    display: block;
-    text-indent: 0;
-}
 
 /* === HEADLINE === */
 .digest-headline {
@@ -315,7 +311,13 @@ a.item-topic:hover {
 .item-summary {
     color: var(--fg-muted);
     font-size: 0.88rem;
-    text-indent: 0.8em;
+}
+.item-summary p {
+    margin: 0 0 0.5em;
+    text-indent: 0;
+}
+.item-summary p:last-child {
+    margin-bottom: 0;
 }
 
 .digest-section .summary code {

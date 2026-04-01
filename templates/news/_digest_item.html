@@ -1,4 +1,4 @@
-{% load news_extras i18n %}
+{% load news_extras markdown_extras i18n %}
 <div class="{% if item.best_image_url %}item-hero-card{% else %}item-image-wrap{% endif %}">
     {% if item.best_image_url %}
     <div class="item-hero-card__blur" style="background-image: url('{{ item.best_image_url }}')"></div>
@@ -18,7 +18,7 @@
     </div>
 </div>
 <a href="{% url 'story_detail' item.id %}" class="item-topic">{{ item.loc_topic }}</a>
-<span class="item-summary">{{ item.loc_summary|strip_markdown }}</span>
+<div class="item-summary">{{ item.loc_summary|markdown }}</div>
 <span class="item-actions">
     <a href="{% url 'research' item.id %}" class="research-hint research-link" data-item-id="{{ item.id }}">{% trans "research" %} &rarr;</a>
 </span>

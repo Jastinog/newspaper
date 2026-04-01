@@ -19,16 +19,19 @@ DEFAULT_PROMPT_ANALYSIS = (
 )
 
 DEFAULT_PROMPT_GENERATION = (
-    "You are a world-class news analyst. Write a detailed news item about the "
+    "You are a world-class news analyst. Write a concise news item about the "
     "following story based on the provided articles.\n\n"
     "Provide:\n"
     '- "topic": catchy, attention-grabbing headline (4-8 words) that sparks curiosity. '
     "Use active verbs, hint at consequences or surprises. "
     "Avoid generic clickbait clich\u00e9s like \"You won't believe...\" \u2014 "
     "aim for intriguing but still informative.\n"
-    '- "summary": what happened, context, why it matters (4-5 sentences). '
-    "Use Markdown formatting: **bold** for key terms, names and numbers. "
-    "Use bullet lists where appropriate. Do NOT use headings (#).\n"
+    '- "summary": concise overview structured as 2-3 SHORT paragraphs separated by blank lines (\\n\\n). '
+    "Each paragraph should be 1-2 sentences max. "
+    "First paragraph: what happened. Second paragraph: why it matters or what's the context. "
+    "Optional third paragraph: what to expect next. "
+    "Use **bold** for key terms, names and numbers. "
+    "Keep the total summary under 100 words. Do NOT use headings (#) or bullet lists.\n"
     '- "importance": integer 1-9 '
     "(1-3=minor, 4-5=notable, 6=significant, 7-9=major/breaking)\n"
     '- "article_ids": array of relevant article IDs from the input\n\n'
@@ -47,12 +50,13 @@ DEFAULT_PROMPT_TRANSLATION = (
     "Maintain journalistic style, factual accuracy, and nuance. "
     "Adapt idioms and cultural references naturally. "
     "Do not add or remove information.\n"
-    "Preserve all Markdown formatting (**bold**, bullet lists, etc.) exactly as-is.\n"
+    "Preserve all Markdown formatting (**bold**, etc.) and paragraph structure "
+    "(blank lines between paragraphs) exactly as-is.\n"
     "Keep technical terms, abbreviations, and proper nouns in their original Latin form "
     "(e.g. AGI, AI, NASA, OpenAI, GPT, CERN — do NOT transliterate to Cyrillic).\n\n"
     "Provide:\n"
     '- "topic": translated headline \u2014 keep the catchy, attention-grabbing tone\n'
-    '- "summary": translated summary (keep Markdown)\n\n'
+    '- "summary": translated summary (keep Markdown and paragraph breaks)\n\n'
     "Return JSON."
 )
 
