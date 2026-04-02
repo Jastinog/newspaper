@@ -140,16 +140,17 @@
 
     /* ── Static layout ──────────────────────────── */
 
+    // Minimum arc spacing so nodes don't overlap
+    var NODE_PAD = 45;   // min px between sibling centers
+    var SESS_PAD = 30;   // min px between session centers
+
+    function spreadRadius(count, pad) {
+        // radius needed so that `count` items spaced evenly have >= pad px gap
+        if (count <= 1) return 0;
+        return Math.max(pad * count / (2 * Math.PI), 60);
+    }
+
     function layoutNodes(data) {
-        var countries = data.nodes.filter(function (n) { return n.type === 'country'; });
-        var angleStep = (2 * Math.PI) / Math.max(countries.length, 1);
-        var ringR = Math.max(400, countries.length * 80);
-
-        countries.forEach(function (co, i) {
-            co.x = Math.cos(angleStep * i) * ringR;
-            co.y = Math.sin(angleStep * i) * ringR;
-        });
-
         var parentMap = {};
         var childrenMap = {};
         data.links.forEach(function (l) {
@@ -158,49 +159,65 @@
             childrenMap[l.source].push(l.target);
         });
 
+        // Countries in a ring, radius scales with count
+        var countries = data.nodes.filter(function (n) { return n.type === 'country'; });
+        var coRadius = Math.max(400, spreadRadius(countries.length, 250));
+        var coStep = (2 * Math.PI) / Math.max(countries.length, 1);
+        countries.forEach(function (co, i) {
+            co.x = Math.cos(coStep * i) * coRadius;
+            co.y = Math.sin(coStep * i) * coRadius;
+        });
+
         var posById = {};
         countries.forEach(function (co) { posById[co.id] = { x: co.x, y: co.y }; });
 
+        // Cities around country
         data.nodes.forEach(function (n) {
             if (n.type !== 'city') return;
             var pid = parentMap[n.id];
-            if (pid && posById[pid]) {
-                var cp = posById[pid];
-                var siblings = childrenMap[pid] || [];
-                var idx = siblings.indexOf(n.id);
-                var a = (2 * Math.PI * idx) / Math.max(siblings.length, 1);
-                n.x = cp.x + Math.cos(a) * 180;
-                n.y = cp.y + Math.sin(a) * 180;
-                posById[n.id] = { x: n.x, y: n.y };
-            }
+            if (!pid || !posById[pid]) return;
+            var cp = posById[pid];
+            var sibs = childrenMap[pid] || [];
+            var idx = sibs.indexOf(n.id);
+            var dist = Math.max(180, spreadRadius(sibs.length, NODE_PAD));
+            var a = (2 * Math.PI * idx) / Math.max(sibs.length, 1);
+            n.x = cp.x + Math.cos(a) * dist;
+            n.y = cp.y + Math.sin(a) * dist;
+            posById[n.id] = { x: n.x, y: n.y };
         });
 
+        // Days around city — spread by age along a spiral arm
         data.nodes.forEach(function (n) {
             if (n.type !== 'day') return;
             var pid = parentMap[n.id];
-            if (pid && posById[pid]) {
-                var cp = posById[pid];
-                var siblings = childrenMap[pid] || [];
-                var idx = siblings.indexOf(n.id);
-                var a = (2 * Math.PI * idx) / Math.max(siblings.length, 1);
-                var dist = 80 + nodeAge(n) * 200;
-                n.x = cp.x + Math.cos(a) * dist;
-                n.y = cp.y + Math.sin(a) * dist;
-                posById[n.id] = { x: n.x, y: n.y };
-            }
+            if (!pid || !posById[pid]) return;
+            var cp = posById[pid];
+            var sibs = childrenMap[pid] || [];
+            var idx = sibs.indexOf(n.id);
+            var count = sibs.length;
+            // Fan angle: up to full circle, but widen arc spacing for few items
+            var arc = Math.min(2 * Math.PI, count * 0.6);
+            var startA = -arc / 2;
+            var a = count > 1 ? startA + (arc * idx) / (count - 1) : 0;
+            var age = nodeAge(n);
+            var dist = 90 + age * 180;
+            n.x = cp.x + Math.cos(a) * dist;
+            n.y = cp.y + Math.sin(a) * dist;
+            posById[n.id] = { x: n.x, y: n.y };
         });
 
+        // Sessions around day — evenly spaced, radius scales with count
         data.nodes.forEach(function (n) {
             if (n.type !== 'session') return;
             var pid = parentMap[n.id];
-            if (pid && posById[pid]) {
-                var cp = posById[pid];
-                var siblings = childrenMap[pid] || [];
-                var idx = siblings.indexOf(n.id);
-                var a = (2 * Math.PI * idx) / Math.max(siblings.length, 1) + (Math.random() - 0.5) * 0.4;
-                n.x = cp.x + Math.cos(a) * 50;
-                n.y = cp.y + Math.sin(a) * 50;
-            }
+            if (!pid || !posById[pid]) return;
+            var cp = posById[pid];
+            var sibs = childrenMap[pid] || [];
+            var idx = sibs.indexOf(n.id);
+            var dist = Math.max(40, spreadRadius(sibs.length, SESS_PAD));
+            var a = (2 * Math.PI * idx) / Math.max(sibs.length, 1);
+            n.x = cp.x + Math.cos(a) * dist;
+            n.y = cp.y + Math.sin(a) * dist;
         });
 
         data.nodes.forEach(function (n) { n.fx = n.x; n.fy = n.y; });
