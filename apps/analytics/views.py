@@ -107,7 +107,7 @@ def session_graph_api(request):
 
     # Fetch sessions with client info (humans only)
     sessions = list(
-        Session.objects.filter(started_at__gte=since, client__is_bot=False)
+        Session.objects.filter(started_at__gte=since, client__is_bot=False, active_time__gte=60)
         .exclude(client__country="")
         .select_related("client")
         .order_by("-started_at")
