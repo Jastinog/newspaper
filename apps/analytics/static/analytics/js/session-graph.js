@@ -212,6 +212,33 @@
         var colors = getColors();
         layoutNodes(data);
 
+        // Build descendant lookup for group-drag
+        var childrenOf = {};
+        data.links.forEach(function (l) {
+            var src = l.source, tgt = l.target;
+            if (!childrenOf[src]) childrenOf[src] = [];
+            childrenOf[src].push(tgt);
+        });
+        var nodeById = {};
+        data.nodes.forEach(function (n) { nodeById[n.id] = n; });
+
+        function getDescendants(id) {
+            var result = [];
+            var stack = childrenOf[id] ? childrenOf[id].slice() : [];
+            while (stack.length) {
+                var cid = stack.pop();
+                var child = nodeById[cid];
+                if (child) {
+                    result.push(child);
+                    if (childrenOf[cid]) {
+                        for (var i = 0; i < childrenOf[cid].length; i++)
+                            stack.push(childrenOf[cid][i]);
+                    }
+                }
+            }
+            return result;
+        }
+
         var fg = new ForceGraph()(el)
             .graphData(data)
             .width(el.clientWidth)
@@ -241,10 +268,25 @@
                 el.style.cursor = node ? 'grab' : 'default';
             })
             .onNodeDrag(function (node) {
+                var prevX = node._prevDragX != null ? node._prevDragX : node.fx;
+                var prevY = node._prevDragY != null ? node._prevDragY : node.fy;
+                var dx = node.x - prevX;
+                var dy = node.y - prevY;
+                node._prevDragX = node.x;
+                node._prevDragY = node.y;
                 node.fx = node.x;
                 node.fy = node.y;
+                var desc = getDescendants(node.id);
+                for (var i = 0; i < desc.length; i++) {
+                    desc[i].x += dx;
+                    desc[i].y += dy;
+                    desc[i].fx = desc[i].x;
+                    desc[i].fy = desc[i].y;
+                }
             })
             .onNodeDragEnd(function (node) {
+                node._prevDragX = null;
+                node._prevDragY = null;
                 node.fx = node.x;
                 node.fy = node.y;
             });
