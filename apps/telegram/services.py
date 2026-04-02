@@ -65,16 +65,6 @@ class TelegramService:
         lang = self.channel.language.code
         topic = item.get_topic(lang) or item.get_topic("en")
         summary = item.get_summary(lang) or item.get_summary("en")
-        importance = item.importance
-
-        # Importance indicator
-        if importance >= 8:
-            icon = "\U0001f525"  # fire
-        elif importance >= 6:
-            icon = "\u26a1"  # lightning
-        else:
-            icon = "\U0001f539"  # small blue diamond
-
         # Section hashtag
         hashtag = ""
         if item.section:
@@ -100,9 +90,9 @@ class TelegramService:
         site_url = settings.SITE_URL
         if site_url:
             story_url = f"{site_url}/{lang}/story/{item.id}/"
-            title = f'{icon} <b><a href="{story_url}">{topic}</a></b>'
+            title = f'<b><a href="{story_url}">{topic}</a></b>'
         else:
-            title = f"{icon} <b>{topic}</b>"
+            title = f"<b>{topic}</b>"
 
         lines = [
             title,
