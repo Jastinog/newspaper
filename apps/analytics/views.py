@@ -110,8 +110,21 @@ def session_graph_api(request):
         Session.objects.filter(started_at__gte=since, client__is_bot=False, active_time__gte=60)
         .exclude(client__country="")
         .select_related("client")
-        .order_by("-started_at")
+        .order_by("-active_time")
     )
+
+    # Group by city+date, keep top 5 longest per day
+    day_buckets: dict[str, list] = {}
+    for s in sessions:
+        c = s.client
+        code = c.country or "??"
+        city_name = c.city or "Unknown"
+        local_dt = timezone.localtime(s.started_at)
+        key = f"{code}_{city_name}_{local_dt.date().isoformat()}"
+        bucket = day_buckets.setdefault(key, [])
+        if len(bucket) < 5:
+            bucket.append(s)
+    sessions = [s for bucket in day_buckets.values() for s in bucket]
 
     # Build nodes + links
     nodes = []
