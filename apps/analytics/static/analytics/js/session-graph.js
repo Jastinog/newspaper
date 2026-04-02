@@ -138,12 +138,9 @@
         node._rx = rx; node._ry = ry; node._rw = rectW; node._rh = rectH;
     }
 
-    /* ── Render graph ───────────────────────────── */
+    /* ── Static layout ──────────────────────────── */
 
-    function renderGraph(el, data) {
-        var colors = getColors();
-
-        // Initial positions: countries in a ring, cities around them, sessions around cities
+    function layoutNodes(data) {
         var countries = data.nodes.filter(function (n) { return n.type === 'country'; });
         var angleStep = (2 * Math.PI) / Math.max(countries.length, 1);
         var ringR = Math.max(400, countries.length * 80);
@@ -153,9 +150,8 @@
             co.y = Math.sin(angleStep * i) * ringR;
         });
 
-        // Build parent lookup from links
-        var parentMap = {};  // target id -> source id
-        var childrenMap = {}; // source id -> [target ids]
+        var parentMap = {};
+        var childrenMap = {};
         data.links.forEach(function (l) {
             parentMap[l.target] = l.source;
             if (!childrenMap[l.source]) childrenMap[l.source] = [];
@@ -165,7 +161,6 @@
         var posById = {};
         countries.forEach(function (co) { posById[co.id] = { x: co.x, y: co.y }; });
 
-        // Place cities near country
         data.nodes.forEach(function (n) {
             if (n.type !== 'city') return;
             var pid = parentMap[n.id];
@@ -180,7 +175,6 @@
             }
         });
 
-        // Place day nodes near city — newer closer, older further
         data.nodes.forEach(function (n) {
             if (n.type !== 'day') return;
             var pid = parentMap[n.id];
@@ -196,7 +190,6 @@
             }
         });
 
-        // Place sessions around their day node
         data.nodes.forEach(function (n) {
             if (n.type !== 'session') return;
             var pid = parentMap[n.id];
@@ -210,11 +203,14 @@
             }
         });
 
-        // Pin every node at its computed position — no simulation drift
-        data.nodes.forEach(function (n) {
-            n.fx = n.x;
-            n.fy = n.y;
-        });
+        data.nodes.forEach(function (n) { n.fx = n.x; n.fy = n.y; });
+    }
+
+    /* ── Render graph ───────────────────────────── */
+
+    function renderGraph(el, data) {
+        var colors = getColors();
+        layoutNodes(data);
 
         var fg = new ForceGraph()(el)
             .graphData(data)
@@ -349,12 +345,6 @@
                 if (e) e.textContent = '\u2717 Error loading data';
             });
     }
-
-    window._updateSessionGraph = function (data) {
-        cachedData = data;
-        if (!container || !fgInstance) return;
-        fgInstance.graphData(data);
-    };
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', loadGraph);

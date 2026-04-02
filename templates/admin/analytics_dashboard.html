@@ -611,14 +611,6 @@
                 window._updateVisitorMap(JSON.parse(data.city_markers));
             }
 
-            // Session graph
-            if (window._updateSessionGraph) {
-                fetch("/analytics/api/session-graph/")
-                    .then(function(r) { return r.ok ? r.json() : null; })
-                    .then(function(gd) { if (gd) window._updateSessionGraph(gd); })
-                    .catch(function() {});
-            }
-
             updateTable("table-live", data.live_sessions, [
                 {value: function(r) { return r.country; }, cls: "py-1"},
                 {value: function(r) { return r.city; }, cls: "py-1 text-xs"},
