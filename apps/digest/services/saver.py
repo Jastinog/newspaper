@@ -1,6 +1,5 @@
 import logging
 
-from django.db import transaction
 from django.db.models import Max
 from django.utils import timezone
 
@@ -49,64 +48,17 @@ class DigestSaver:
 
         self.link_articles(item, common_data.get("article_ids", []))
 
+        now = timezone.now()
         ItemPipeline.objects.create(
             item=item,
             story_label=story.get("label", ""),
             article_ids=story.get("article_ids", []),
             search_queries=story.get("search_queries", []),
             refined_articles=refined,
-            analyzed_at=timezone.now(),
-            refined_at=timezone.now(),
-            generated_at=timezone.now(),
-            translated_at=timezone.now(),
+            analyzed_at=now, refined_at=now,
+            generated_at=now, translated_at=now,
         )
         return item
-
-    def save(self, digest: Digest, section_items: list, headline: str) -> Digest:
-        """Create items for an existing digest (atomic).
-
-        Clears any existing items first (idempotent re-run).
-        """
-        default_lang = Language.default()
-        if not default_lang:
-            raise RuntimeError("No default language set. Run initdigest first.")
-
-        with transaction.atomic():
-            digest.items.all().delete()
-            digest.translations.all().delete()
-
-            if headline:
-                DigestTranslation.objects.create(
-                    digest=digest, language=default_lang, headline=headline,
-                )
-
-            order = 0
-            used_image_ids = set()
-            for section, items in section_items:
-                for item_data in items:
-                    try:
-                        importance = max(0, min(9, int(item_data.get("importance", 0))))
-                    except (TypeError, ValueError):
-                        importance = 0
-
-                    item = DigestItem.objects.create(
-                        digest=digest, section=section,
-                        order=order, importance=importance,
-                    )
-                    DigestItemTranslation.objects.create(
-                        item=item, language=default_lang,
-                        topic=item_data.get("topic", ""),
-                        summary=item_data.get("summary", ""),
-                    )
-                    valid_ids = self.link_articles(item, item_data.get("article_ids", []))
-                    image_id = self.assign_image(item, used_image_ids, valid_ids)
-                    if image_id:
-                        used_image_ids.add(image_id)
-                    order += 1
-
-        item_count = digest.items.count()
-        logger.info("Saved digest %s: %d items", digest.date, item_count)
-        return digest
 
     def link_articles(self, item: DigestItem, raw_article_ids: list) -> list[int]:
         """Link articles to an item and set freshness. Returns validated article IDs."""

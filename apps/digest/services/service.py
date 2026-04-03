@@ -101,14 +101,11 @@ class DigestService:
         used_image_ids = set()
         item_count = 0
 
-        all_langs = [(default_lang.code, default_lang.name)]
-        all_langs.extend((l.code, l.name) for l in target_langs)
-
         for section, stories in section_stories:
             for story in stories:
                 try:
                     item = self._refine_and_generate(
-                        digest, section, story, all_langs,
+                        digest, section, story,
                         default_lang, target_langs, used_ids, used_image_ids,
                     )
                 except Exception:
@@ -119,22 +116,32 @@ class DigestService:
                     continue
 
                 item_count += 1
-                if digest.stage < Digest.Stage.GENERATED:
-                    digest.stage = Digest.Stage.GENERATED
-                    digest.save(update_fields=["stage"])
+
+        if item_count and digest.stage < Digest.Stage.GENERATED:
+            digest.stage = Digest.Stage.GENERATED
+            digest.save(update_fields=["stage"])
 
         return item_count
 
-    def _refine_and_generate(self, digest, section, story, all_langs,
+    def _refine_and_generate(self, digest, section, story,
                              default_lang, target_langs, used_ids, used_image_ids):
-        """Refine → generate → save → assign image. Returns item or None."""
+        """Refine → generate → validate → save → assign image. Returns item or None."""
         refined, refine_usage = self.refiner.refine(story, used_ids=used_ids)
         if not refined:
             return None
 
+        all_langs = [(default_lang.code, default_lang.name)]
+        all_langs.extend((l.code, l.name) for l in target_langs)
+
         by_lang, common_data, gen_usage = self.generator.generate(
             story, refined, languages=all_langs,
         )
+
+        # Validate: default language must have topic and summary
+        default_data = by_lang.get(default_lang.code, {})
+        if not default_data.get("topic") or not default_data.get("summary"):
+            logger.warning("Empty generation for '%s', skipping", story.get("label", "?"))
+            return None
 
         item = self.saver.save_item(
             digest, section, story, by_lang, common_data,

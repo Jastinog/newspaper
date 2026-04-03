@@ -82,11 +82,12 @@ def _build_digest_context(request, date=None, pinned_slugs=None):
             "articles__feed", "articles__images",
         ).all())
 
-        # Annotate items with localized text for template (prefetch-safe, no extra queries)
+        # Annotate items with localized text, skip empty items
         for item in items:
             item.loc_topic = item.get_topic(current_lang)
             item.loc_summary = item.get_summary(current_lang)
             item.loc_section_name = item.section.get_name(current_lang) if item.section else ""
+        items = [i for i in items if i.loc_topic and i.loc_summary]
 
         if section_id:
             filtered_items = [i for i in items if str(i.section_id) == section_id]
