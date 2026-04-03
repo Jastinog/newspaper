@@ -44,14 +44,14 @@ class DigestConfigAdmin(ModelAdmin):
             "fields": (
                 ("hours_lookback", "articles_per_section"),
                 ("similarity_threshold", "chunks_per_query"),
-                "article_snippet_length",
+                "article_snippet_tokens",
             ),
         }),
         ("Refinement", {
             "classes": ["tab"],
             "description": "How articles are enriched after story identification",
             "fields": (
-                ("context_trim_length", "refine_search_top_k"),
+                ("context_trim_tokens", "refine_search_top_k"),
                 "max_articles_per_story",
             ),
         }),

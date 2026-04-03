@@ -16,23 +16,38 @@ logger = logging.getLogger(__name__)
 class DigestSaver:
     """Saves digest data to database."""
 
-    def save_item(self, digest: Digest, section, story: dict, item_data: dict,
-                  refined: list, default_lang) -> DigestItem:
-        """Create a single DigestItem with translation, pipeline, and linked articles."""
+    def save_item(self, digest: Digest, section, story: dict,
+                  by_lang: dict, common_data: dict,
+                  refined: list, default_lang, target_langs=None) -> DigestItem:
+        """Create a single DigestItem with all translations, pipeline, and linked articles.
+
+        Args:
+            by_lang: {"en": {"topic": str, "summary": str}, "ru": {...}, ...}
+            common_data: {"importance": int, "article_ids": [int]}
+        """
         try:
-            importance = max(0, min(9, int(item_data.get("importance", 0))))
+            importance = max(0, min(9, int(common_data.get("importance", 0))))
         except (TypeError, ValueError):
             importance = 0
 
         item = DigestItem.objects.create(
             digest=digest, section=section, importance=importance,
         )
-        DigestItemTranslation.objects.create(
-            item=item, language=default_lang,
-            topic=item_data.get("topic", ""),
-            summary=item_data.get("summary", ""),
-        )
-        self.link_articles(item, item_data.get("article_ids", []))
+
+        translations = []
+        all_languages = [default_lang] + list(target_langs or [])
+        for lang in all_languages:
+            lang_data = by_lang.get(lang.code, {})
+            if lang_data:
+                translations.append(DigestItemTranslation(
+                    item=item, language=lang,
+                    topic=lang_data.get("topic", ""),
+                    summary=lang_data.get("summary", ""),
+                ))
+        if translations:
+            DigestItemTranslation.objects.bulk_create(translations)
+
+        self.link_articles(item, common_data.get("article_ids", []))
 
         ItemPipeline.objects.create(
             item=item,
@@ -43,6 +58,7 @@ class DigestSaver:
             analyzed_at=timezone.now(),
             refined_at=timezone.now(),
             generated_at=timezone.now(),
+            translated_at=timezone.now(),
         )
         return item
 

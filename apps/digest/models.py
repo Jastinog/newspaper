@@ -19,23 +19,22 @@ DEFAULT_PROMPT_ANALYSIS = (
 )
 
 DEFAULT_PROMPT_GENERATION = (
-    "You are a world-class news analyst. Write a concise news item about the "
-    "following story based on the provided articles.\n\n"
-    "Provide:\n"
-    '- "topic": catchy, attention-grabbing headline (4-8 words) that sparks curiosity. '
-    "Use active verbs, hint at consequences or surprises. "
-    "Avoid generic clickbait clich\u00e9s like \"You won't believe...\" \u2014 "
-    "aim for intriguing but still informative.\n"
-    '- "summary": concise overview structured as 2-3 SHORT paragraphs separated by blank lines (\\n\\n). '
-    "Each paragraph should be 1-2 sentences max. "
-    "First paragraph: what happened. Second paragraph: why it matters or what's the context. "
-    "Optional third paragraph: what to expect next. "
-    "Use **bold** for key terms, names and numbers. "
-    "Keep the total summary under 100 words. Do NOT use headings (#) or bullet lists.\n"
-    '- "importance": integer 1-9 '
-    "(1-3=minor, 4-5=notable, 6=significant, 7-9=major/breaking)\n"
+    "You are a sharp, engaging news writer. Write a punchy news item that reads like "
+    "it was written by a top journalist — vivid, human, not robotic or dry.\n\n"
+    "Provide for EACH language ({languages}):\n"
+    '- "topic": catchy, attention-grabbing headline (4-8 words) — use active verbs, '
+    "hint at impact or surprise. No generic clickbait.\n"
+    '- "summary": ONE paragraph, 3-5 sentences max. Lead with what happened, '
+    "add why it matters, close with what's next. Write naturally — as a person would "
+    "tell a friend about this news. Use **bold** for key names and numbers. "
+    "No headings, no bullet lists.\n\n"
+    "Also provide:\n"
+    '- "importance": integer 1-9 (1-3=minor, 4-5=notable, 6=significant, 7-9=major/breaking)\n'
     '- "article_ids": array of relevant article IDs from the input\n\n'
-    "Return JSON."
+    "For non-English languages: adapt naturally, not literal translation. "
+    "Keep technical terms and acronyms in Latin form (AI, NASA, GPT, OpenAI, etc.).\n\n"
+    'Return JSON: {{"en": {{"topic": ..., "summary": ...}}, "ru": {{...}}, ..., '
+    '"importance": N, "article_ids": [...]}}'
 )
 
 DEFAULT_PROMPT_HEADLINE = (
@@ -82,7 +81,7 @@ class DigestConfig(models.Model):
         default=2000, help_text="Max tokens for story analysis response",
     )
     max_tokens_generation = models.PositiveIntegerField(
-        default=1500, help_text="Max tokens for item generation response",
+        default=2500, help_text="Max tokens for item generation response (includes all languages)",
     )
     max_tokens_headline = models.PositiveIntegerField(
         default=1000, help_text="Max tokens for headline generation response",
@@ -105,19 +104,19 @@ class DigestConfig(models.Model):
     chunks_per_query = models.PositiveIntegerField(
         default=60, help_text="Max article chunks per embedding query",
     )
-    article_snippet_length = models.PositiveIntegerField(
-        default=300, help_text="Snippet length (chars) sent to analyzer",
+    article_snippet_tokens = models.PositiveIntegerField(
+        default=80, help_text="Snippet length (tokens) sent to analyzer per article",
     )
 
     # ── Story Refinement ──────────────────────────────────────
-    context_trim_length = models.PositiveIntegerField(
-        default=700, help_text="Article content length (chars) sent to generator",
+    context_trim_tokens = models.PositiveIntegerField(
+        default=250, help_text="Article content length (tokens) sent to generator per article (~1000 chars)",
     )
     refine_search_top_k = models.PositiveIntegerField(
         default=10, help_text="Additional articles to find per refine query",
     )
     max_articles_per_story = models.PositiveIntegerField(
-        default=7, help_text="Max articles sent to generator per story",
+        default=3, help_text="Max articles sent to generator per story",
     )
 
     # ── Generation ────────────────────────────────────────────

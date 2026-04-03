@@ -21,7 +21,7 @@ class StoryAnalyzer:
             title = sanitize_text(a["title"])
             feed = sanitize_text(a["feed"])
             pub = a["published"]
-            snippet = sanitize_text(a["snippet"][:self.config.article_snippet_length])
+            snippet = sanitize_text(a["snippet"])
             date_part = f", {pub}" if pub else ""
             snippet_part = f" -- {snippet}" if snippet else ""
             lines.append(f'- [ID:{a["id"]}] "{title}" ({feed}{date_part}){snippet_part}')

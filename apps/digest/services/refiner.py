@@ -1,30 +1,14 @@
 import logging
 from datetime import datetime, timedelta, timezone
 
+from django.db.models import Exists, OuterRef
 from pgvector.django import CosineDistance
 
-from apps.core.services.ai import EmbeddingClient
-from apps.feed.models import Article, ArticleChunk
+from apps.core.services.ai import EmbeddingClient, trim_to_tokens
+from apps.feed.models import Article, ArticleChunk, ArticleImage
 from apps.digest.models import ArticleUse, DigestConfig
 
 logger = logging.getLogger(__name__)
-
-
-def trim_content(text: str, max_length: int) -> str:
-    """Trim text to max_length, breaking at paragraph or sentence boundaries."""
-    if not text or len(text) <= max_length:
-        return text or ""
-    truncated = text[:max_length]
-    # Prefer paragraph boundary
-    last_para = truncated.rfind('\n\n')
-    if last_para > max_length * 0.5:
-        return truncated[:last_para].rstrip()
-    # Try sentence boundary
-    for sep in ('. ', '! ', '? ', '.\n', '!\n', '?\n'):
-        pos = truncated.rfind(sep)
-        if pos > max_length * 0.5:
-            return truncated[:pos + 1]
-    return truncated + "..."
 
 
 class StoryRefiner:
@@ -87,16 +71,23 @@ class StoryRefiner:
         if not article_scores:
             return [], usage
 
-        # Sort by relevance and limit to top N
-        sorted_ids = sorted(article_scores, key=lambda aid: article_scores[aid], reverse=True)
-        top_ids = sorted_ids[:cfg.max_articles_per_story]
-
-        # Fetch full article data
-        articles = (
+        # Fetch candidates with image info, prioritize: has_image > relevance
+        candidate_ids = list(article_scores.keys())
+        has_image = Exists(
+            ArticleImage.objects.filter(
+                article=OuterRef("pk"), downloaded=True,
+            ).exclude(image="")
+        )
+        articles = list(
             Article.objects
             .select_related("feed")
-            .filter(id__in=top_ids, published__gte=cutoff)
+            .filter(id__in=candidate_ids, published__gte=cutoff)
+            .annotate(has_image=has_image)
         )
+
+        # Sort: images first, then by relevance score
+        articles.sort(key=lambda a: (a.has_image, article_scores.get(a.id, 0)), reverse=True)
+        articles = articles[:cfg.max_articles_per_story]
 
         article_dicts = []
         for a in articles:
@@ -105,7 +96,7 @@ class StoryRefiner:
                 "title": a.title,
                 "feed": a.feed.title if a.feed else "",
                 "published": a.published.strftime("%Y-%m-%d") if a.published else "",
-                "content": trim_content(a.content, cfg.context_trim_length),
+                "content": trim_to_tokens(a.content, cfg.context_trim_tokens) if a.content else "",
             })
 
         logger.info("Refined '%s': %d candidates -> %d articles",

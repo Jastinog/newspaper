@@ -11,7 +11,6 @@ Usage:
 from datetime import date, datetime
 
 from django.core.management.base import BaseCommand
-from django.utils import timezone
 
 from apps.billing.models import APIUsage
 from apps.billing.services import record_digest_usage
@@ -19,16 +18,12 @@ from apps.core.models import Language
 from apps.core.services.ai import (
     EMBEDDING_MODEL, OpenAIClient, EmbeddingClient, calculate_cost,
 )
-from apps.digest.models import (
-    Digest, DigestConfig, DigestItemTranslation,
-    DigestSection, ItemPipeline,
-)
+from apps.digest.models import Digest, DigestConfig, DigestSection
 from apps.digest.services.analyzer import StoryAnalyzer
 from apps.digest.services.collector import SectionArticleCollector
 from apps.digest.services.generator import ItemGenerator
 from apps.digest.services.refiner import StoryRefiner
 from apps.digest.services.saver import DigestSaver
-from apps.digest.services.translator import ItemTranslator
 
 
 class Command(BaseCommand):
@@ -150,6 +145,10 @@ class Command(BaseCommand):
         generator = ItemGenerator(client=client, config=config)
         saved = []
 
+        target_langs = list(Language.active_targets()) if options["translate"] else []
+        all_langs = [(default_lang.code, default_lang.name)]
+        all_langs.extend((lang.code, lang.name) for lang in target_langs)
+
         for idx, story in enumerate(to_process):
             self.stdout.write(self.style.MIGRATE_HEADING(
                 f"\n--- [{idx + 1}/{len(to_process)}] {story['label']} ---"
@@ -165,17 +164,27 @@ class Command(BaseCommand):
                 self.stderr.write(self.style.WARNING("   No articles, skipping"))
                 continue
 
-            # Generate
-            item_data, gen_usage = generator.generate(story, refined)
+            # Generate (with translations if --translate)
+            by_lang, common_data, gen_usage = generator.generate(story, refined, languages=all_langs)
             costs.append(("generate", gen_usage, config.chat_model))
 
+            en_data = by_lang.get(default_lang.code, {})
             self.stdout.write(f"   Generate: {gen_usage.get('total_tokens', 0):,} tokens")
-            self.stdout.write(f"   Topic:      {item_data.get('topic', '')}")
-            self.stdout.write(f"   Importance: {item_data.get('importance', 0)}")
-            self.stdout.write(f"   Summary:    {item_data.get('summary', '')[:150]}...")
+            self.stdout.write(f"   Topic:      {en_data.get('topic', '')}")
+            self.stdout.write(f"   Importance: {common_data.get('importance', 0)}")
+            self.stdout.write(f"   Summary:    {en_data.get('summary', '')[:150]}...")
 
-            # Save (shared logic)
-            item = saver.save_item(digest, section, story, item_data, refined, default_lang)
+            # Show translations
+            for code, _ in all_langs:
+                if code != default_lang.code:
+                    lang_data = by_lang.get(code, {})
+                    self.stdout.write(f"   [{code}] Topic: {lang_data.get('topic', '')}")
+
+            # Save with all translations
+            item = saver.save_item(
+                digest, section, story, by_lang, common_data,
+                refined, default_lang, target_langs,
+            )
 
             # APIUsage per step
             record_digest_usage(refine_usage, step=APIUsage.Step.REFINE,
@@ -187,44 +196,6 @@ class Command(BaseCommand):
 
             saved.append(item)
             self.stdout.write(f"   Saved: DigestItem #{item.pk} ({item.articles.count()} articles)")
-
-        # Translate (optional)
-        if options["translate"] and saved:
-            target_langs = list(Language.active_targets())
-            if target_langs:
-                self.stdout.write(self.style.MIGRATE_HEADING("\nTranslating"))
-                translator = ItemTranslator(client=client, config=config)
-                for item in saved:
-                    t_en = item.translations.filter(language=default_lang).first()
-                    if not t_en:
-                        continue
-                    for lang in target_langs:
-                        try:
-                            translated, t_usage = translator.translate_item(
-                                t_en.topic, t_en.summary, lang.name,
-                            )
-                            costs.append(("translate", t_usage, config.chat_model))
-                            DigestItemTranslation.objects.update_or_create(
-                                item=item, language=lang,
-                                defaults={
-                                    "topic": translated.get("topic", ""),
-                                    "summary": translated.get("summary", ""),
-                                },
-                            )
-                            record_digest_usage(t_usage, step=APIUsage.Step.TRANSLATE,
-                                                api_type=APIUsage.APIType.CHAT,
-                                                model=config.chat_model, digest=digest, item=item)
-                            self.stdout.write(
-                                f"   #{item.pk} -> {lang.code}: {translated.get('topic', '')}"
-                            )
-                        except Exception as e:
-                            self.stderr.write(f"   #{item.pk} -> {lang.code}: FAILED ({e})")
-
-                # Batch update translated_at
-                translated_ids = [item.pk for item in saved]
-                ItemPipeline.objects.filter(
-                    item_id__in=translated_ids, translated_at__isnull=True,
-                ).update(translated_at=timezone.now())
 
         return saved, costs
 

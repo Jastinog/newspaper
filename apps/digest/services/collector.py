@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 
 from pgvector.django import CosineDistance
 
+from apps.core.services.ai import trim_to_tokens
 from apps.feed.models import Article, ArticleChunk
 from apps.digest.models import ArticleUse, DigestConfig, DigestSection
 
@@ -144,11 +145,11 @@ class SectionArticleCollector:
         return set(ArticleUse.objects.values_list("article_id", flat=True))
 
     def _article_to_dict(self, a: Article) -> dict:
-        snippet_len = self.config.article_snippet_length
+        snippet_tokens = self.config.article_snippet_tokens
         return {
             "id": a.id,
             "title": a.title,
             "feed": a.feed.title if a.feed else "",
             "published": a.published.strftime("%Y-%m-%d") if a.published else "",
-            "snippet": a.content[:snippet_len] if a.content else "",
+            "snippet": trim_to_tokens(a.content, snippet_tokens) if a.content else "",
         }

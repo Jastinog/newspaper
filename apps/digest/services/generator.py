@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 class ItemGenerator:
-    """Generates a single news item in the default language from refined articles."""
+    """Generates a single news item with translations in one API call."""
 
     def __init__(self, client: OpenAIClient = None, config: DigestConfig = None):
         self.client = client or OpenAIClient()
@@ -27,22 +27,28 @@ class ItemGenerator:
             lines.append(f'- [ID:{a["id"]}] "{title}" ({feed}{date_part}){content_part}')
         return "\n".join(lines)
 
-    def generate(self, story: dict, articles: list[dict]) -> tuple[dict, dict]:
-        """Generate one news item from a story and its articles.
+    def generate(self, story: dict, articles: list[dict],
+                 languages: list[tuple[str, str]]) -> tuple[dict, dict, dict]:
+        """Generate one news item in all languages from a story and its articles.
+
+        Args:
+            story: {"label": str, "article_ids": [int], "search_queries": [str]}
+            articles: refined article dicts with content
+            languages: [(code, name), ...] all languages including default
 
         Returns:
-            (item_data, usage) where item_data = {"topic": str, "summary": str, "importance": int, "article_ids": [int]}
+            (by_lang, common, usage) where:
+                by_lang = {"en": {"topic": str, "summary": str}, "ru": {...}, ...}
+                common = {"importance": int, "article_ids": [int]}
         """
         if not articles:
-            return {
-                "topic": story.get("label", ""),
-                "summary": "",
-                "importance": 0,
-                "article_ids": [],
-            }, {}
+            empty_lang = {code: {"topic": story.get("label", ""), "summary": ""} for code, _ in languages}
+            return empty_lang, {"importance": 0, "article_ids": []}, {}
 
         cfg = self.config
-        system = cfg.system_prompt_generation
+        lang_labels = ", ".join(f"{name} ({code})" for code, name in languages)
+
+        system = cfg.system_prompt_generation.format(languages=lang_labels)
         user = (
             f"Story: {story.get('label', 'Unknown')}\n\n"
             f"Articles:\n\n{self._build_article_list(articles)}"
@@ -66,7 +72,21 @@ class ItemGenerator:
                 f"Response (first 300 chars): {fixed[:300]}"
             )
 
-        return data, usage
+        common = {
+            "importance": data.get("importance", 0),
+            "article_ids": data.get("article_ids", []),
+        }
+
+        by_lang = {}
+        for code, _ in languages:
+            lang_data = data.get(code, {})
+            if isinstance(lang_data, dict):
+                by_lang[code] = {
+                    "topic": lang_data.get("topic", ""),
+                    "summary": lang_data.get("summary", ""),
+                }
+
+        return by_lang, common, usage
 
 
 class HeadlineGenerator:
