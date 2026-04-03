@@ -143,12 +143,17 @@ class DigestService:
             logger.warning("Empty generation for '%s', skipping", story.get("label", "?"))
             return None
 
+        # Fallback to refined article IDs if LLM didn't return them
+        refined_ids = [a["id"] for a in refined]
+        if not common_data.get("article_ids"):
+            common_data["article_ids"] = refined_ids
+
         item = self.saver.save_item(
             digest, section, story, by_lang, common_data,
             refined, default_lang, target_langs,
         )
 
-        article_ids = common_data.get("article_ids", [])
+        article_ids = common_data["article_ids"]
         image_id = self.saver.assign_image(item, used_image_ids, article_ids)
         if image_id:
             used_image_ids.add(image_id)
