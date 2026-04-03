@@ -108,8 +108,6 @@ def _build_digest_context(request, date=None, pinned_slugs=None):
                 else:
                     section_groups.append(group)
 
-    headline = digest.get_headline(current_lang) if digest else ""
-
     seo = {
         "title": f"{SITE_NAME} — {_('Daily News Digest')}",
         "description": SITE_DESCRIPTION,
@@ -121,7 +119,6 @@ def _build_digest_context(request, date=None, pinned_slugs=None):
 
     return {
         "digest": digest,
-        "headline": headline,
         "section_groups": section_groups,
         "pinned_groups": pinned_groups,
         "all_groups": all_groups,
