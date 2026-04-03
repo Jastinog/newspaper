@@ -6,15 +6,29 @@
 
 {% block content %}
 
-{# --- Auto-refresh indicator --- #}
-<div class="flex items-center justify-end mb-4">
+{# --- Tab navigation + auto-refresh --- #}
+<div x-data="{ tab: 'overview' }" class="space-y-6">
+
+{# Tab bar #}
+<div class="flex items-center justify-between mb-4">
+    <nav class="bg-base-100 flex flex-row font-medium gap-1 p-1 rounded-default text-important dark:bg-white/[.06] *:flex *:flex-row *:gap-1 *:font-medium *:whitespace-nowrap *:items-center *:px-2.5 *:py-[5px] *:rounded-default *:cursor-pointer *:hover:bg-base-700/[.06] *:dark:hover:bg-white/[.06] [&>.active]:bg-white [&>.active]:shadow-xs [&>.active]:dark:bg-base-700 [&>.active]:hover:bg-white [&>.active]:dark:hover:bg-base-700">
+        <a x-on:click="tab='overview'" x-bind:class="{'active': tab=='overview'}">Overview</a>
+        <a x-on:click="tab='visitors'" x-bind:class="{'active': tab=='visitors'}">Visitors</a>
+        <a x-on:click="tab='content'" x-bind:class="{'active': tab=='content'}">Content & Geo</a>
+        <a x-on:click="tab='tech'" x-bind:class="{'active': tab=='tech'}">Tech & Bots</a>
+    </nav>
     <div class="flex items-center gap-2">
         <span id="ad-status" class="text-xs text-gray-400"></span>
         <span id="ad-dot" class="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
     </div>
 </div>
 
-{# --- KPI Cards --- #}
+{# ================================================================ #}
+{# TAB 1: Overview                                                  #}
+{# ================================================================ #}
+<div x-show="tab=='overview'" x-cloak>
+
+{# --- KPI Cards row 1 --- #}
 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
     {% component "unfold/components/card.html" with title="Human Views Today" %}
         <span id="kpi-human-views" class="text-3xl font-bold text-green-600 dark:text-green-400">{{ today_human_views }}</span>
@@ -41,17 +55,24 @@
     {% endcomponent %}
 </div>
 
+{# --- KPI Cards row 2 --- #}
 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-    {% component "unfold/components/card.html" with title="Bot Views Today" %}
-        <span id="kpi-bot-views" class="text-2xl font-bold text-gray-500 dark:text-gray-400">{{ today_bot_views }}</span>
+    {% component "unfold/components/card.html" with title="Bounce Rate" %}
+        <span id="kpi-bounce" class="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{{ bounce_rate }}%</span>
+        <div class="text-xs text-gray-500 mt-1">single-page sessions</div>
+    {% endcomponent %}
+
+    {% component "unfold/components/card.html" with title="New / Returning" %}
+        <span class="text-2xl font-bold">
+            <span id="kpi-new" class="text-green-600 dark:text-green-400">{{ new_visitors }}</span>
+            <span class="text-gray-400">/</span>
+            <span id="kpi-returning" class="text-blue-600 dark:text-blue-400">{{ returning_visitors }}</span>
+        </span>
+        <div class="text-xs text-gray-500 mt-1">visitors today</div>
     {% endcomponent %}
 
     {% component "unfold/components/card.html" with title="7-Day Human Views" %}
         <span class="text-2xl font-bold text-green-600 dark:text-green-400">{{ week_human_views }}</span>
-    {% endcomponent %}
-
-    {% component "unfold/components/card.html" with title="7-Day Visitors" %}
-        <span class="text-2xl font-bold text-blue-600 dark:text-blue-400">{{ week_visitors }}</span>
     {% endcomponent %}
 
     {% component "unfold/components/card.html" with title="30-Day Bot / Human" %}
@@ -62,7 +83,7 @@
     {% endcomponent %}
 </div>
 
-{# --- Real-time --- #}
+{# --- Real-time charts --- #}
 <h2 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">Real-time</h2>
 
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
@@ -79,7 +100,7 @@
     {% endcomponent %}
 </div>
 
-{# --- Daily: last 30 days --- #}
+{# --- Daily charts --- #}
 <h2 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">Daily (last 30 days)</h2>
 
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
@@ -110,14 +131,205 @@
     {% endcomponent %}
 </div>
 
-{# --- Geography --- #}
-<h2 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">Geography (30 days)</h2>
+{# --- Live sessions --- #}
+{% component "unfold/components/card.html" with title="Live Sessions (last 15 min)" %}
+    <div style="max-height: 320px; overflow-y: auto;">
+    <table class="w-full text-sm">
+        <thead>
+            <tr class="border-b border-gray-200 dark:border-gray-700">
+                <th class="text-left py-2 font-medium"></th>
+                <th class="text-left py-2 font-medium">City</th>
+                <th class="text-left py-2 font-medium">Browser</th>
+                <th class="text-right py-2 font-medium">Pages</th>
+                <th class="text-right py-2 font-medium">Time</th>
+                <th class="text-right py-2 font-medium">Started</th>
+            </tr>
+        </thead>
+        <tbody id="table-live">
+            {% for s in live_sessions %}
+            <tr class="border-b border-gray-100 dark:border-gray-800">
+                <td class="py-1">{{ s.country }}</td>
+                <td class="py-1 text-xs">{{ s.city }}</td>
+                <td class="py-1 text-xs">{{ s.browser }} / {{ s.os }}</td>
+                <td class="text-right py-1">{{ s.pages }}</td>
+                <td class="text-right py-1 text-xs">{{ s.time }}</td>
+                <td class="text-right py-1 text-xs text-gray-500">{{ s.started }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" class="py-4 text-center text-gray-400">No active sessions</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+{% endcomponent %}
 
-<div class="mb-8">
-    {% component "unfold/components/card.html" with title="Visitor Map (humans only)" %}
-        <div id="visitor-map" style="width: 100%; height: 480px; border-radius: 8px; z-index: 0;"></div>
+</div>{# /overview #}
+
+
+{# ================================================================ #}
+{# TAB 2: Visitors                                                  #}
+{# ================================================================ #}
+<div x-show="tab=='visitors'" x-cloak>
+
+<div x-data="visitorsPanel()" x-init="load()">
+    <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-semibold text-gray-700 dark:text-gray-300">All Visitors (last 30 days)</h2>
+        <div x-show="loading" class="text-xs text-gray-400">Loading...</div>
+    </div>
+
+    <template x-if="!loading && clients.length === 0">
+        <div class="text-center text-gray-400 py-12">No visitor data</div>
+    </template>
+
+    <div class="space-y-2">
+        <template x-for="client in clients" :key="client.id">
+            <div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                {# Client header — click to expand #}
+                <button x-on:click="client._open = !client._open"
+                        class="w-full flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors text-left">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <span class="text-lg" x-text="client.country"></span>
+                        <span class="font-medium text-sm truncate" x-text="(client.city || client.country_name || 'Unknown')"></span>
+                        <span class="text-xs text-gray-400" x-text="client.browser + ' / ' + client.os"></span>
+                        <span class="text-xs px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-500" x-text="client.device"></span>
+                    </div>
+                    <div class="flex items-center gap-4 text-xs text-gray-500 shrink-0 ml-4">
+                        <span><span class="font-semibold text-indigo-500" x-text="client.session_count"></span> sess</span>
+                        <span><span class="font-semibold text-green-500" x-text="client.total_pages"></span> pages</span>
+                        <span x-text="client.total_time"></span>
+                        <span class="text-gray-400" x-text="client.last_seen"></span>
+                        <svg class="w-4 h-4 transition-transform" :class="client._open && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </div>
+                </button>
+
+                {# Sessions list #}
+                <div x-show="client._open" x-transition.duration.200ms class="border-t border-gray-100 dark:border-gray-700">
+                    <template x-for="sess in client.sessions" :key="sess.id">
+                        <div class="border-b border-gray-50 dark:border-gray-700 last:border-b-0">
+                            {# Session header #}
+                            <button x-on:click="sess._open = !sess._open"
+                                    class="w-full flex items-center justify-between px-6 py-2 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors text-left">
+                                <div class="flex items-center gap-3 text-sm">
+                                    <span class="font-mono text-xs text-gray-500" x-text="sess.started"></span>
+                                    <span class="font-medium" x-text="sess.duration"></span>
+                                    <span class="text-gray-400" x-text="sess.pages + ' pages'"></span>
+                                    <template x-if="sess.referrer">
+                                        <span class="text-xs text-blue-500" x-text="'via ' + sess.referrer"></span>
+                                    </template>
+                                </div>
+                                <svg class="w-3.5 h-3.5 text-gray-400 transition-transform" :class="sess._open && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </button>
+
+                            {# Activity timeline #}
+                            <div x-show="sess._open" x-transition.duration.200ms class="bg-gray-50 dark:bg-gray-900 px-6 py-2">
+                                <template x-for="(act, i) in sess.activities" :key="i">
+                                    <div class="flex items-center gap-3 py-1 text-xs border-l-2 pl-3 ml-2"
+                                         :class="act.type === 'page_view' ? 'border-green-400' : act.type === 'click' ? 'border-blue-400' : 'border-yellow-400'">
+                                        <span class="font-mono text-gray-400 w-16 shrink-0" x-text="act.time"></span>
+                                        <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase"
+                                              :class="act.type === 'page_view' ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' : act.type === 'click' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'"
+                                              x-text="act.type === 'page_view' ? 'VIEW' : act.type.toUpperCase()"></span>
+                                        <span class="font-mono truncate text-gray-600 dark:text-gray-300" x-text="act.path"></span>
+                                    </div>
+                                </template>
+                                <template x-if="sess.activities.length === 0">
+                                    <div class="text-gray-400 text-xs py-2">No activities recorded</div>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </template>
+    </div>
+</div>
+
+</div>{# /visitors #}
+
+
+{# ================================================================ #}
+{# TAB 3: Content & Geo                                             #}
+{# ================================================================ #}
+<div x-show="tab=='content'" x-cloak>
+
+<h2 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">Pages & Referrers</h2>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
+    {% component "unfold/components/card.html" with title="Top Pages (7 days)" %}
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-gray-200 dark:border-gray-700">
+                    <th class="text-left py-2 font-medium">Page</th>
+                    <th class="text-right py-2 font-medium">Views</th>
+                </tr>
+            </thead>
+            <tbody id="table-pages">
+                {% for row in top_pages %}
+                <tr class="border-b border-gray-100 dark:border-gray-800">
+                    <td class="py-2 truncate max-w-xs text-xs font-mono">{{ row.path }}</td>
+                    <td class="text-right py-2">{{ row.views }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="2" class="py-4 text-center text-gray-400">No data</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endcomponent %}
+
+    {% component "unfold/components/card.html" with title="Top Referrers (30 days)" %}
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-gray-200 dark:border-gray-700">
+                    <th class="text-left py-2 font-medium">Domain</th>
+                    <th class="text-right py-2 font-medium">Sessions</th>
+                </tr>
+            </thead>
+            <tbody id="table-referrers">
+                {% for row in top_referrers %}
+                <tr class="border-b border-gray-100 dark:border-gray-800">
+                    <td class="py-2 truncate max-w-xs">{{ row.referrer_domain }}</td>
+                    <td class="text-right py-2">{{ row.sessions }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="2" class="py-4 text-center text-gray-400">No referrers</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
     {% endcomponent %}
 </div>
+
+{# --- Entry pages --- #}
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
+    {% component "unfold/components/card.html" with title="Entry Pages (7 days)" %}
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-gray-200 dark:border-gray-700">
+                    <th class="text-left py-2 font-medium">First Page in Session</th>
+                    <th class="text-right py-2 font-medium">Sessions</th>
+                </tr>
+            </thead>
+            <tbody id="table-entry-pages">
+                {% for row in entry_pages %}
+                <tr class="border-b border-gray-100 dark:border-gray-800">
+                    <td class="py-2 truncate max-w-xs text-xs font-mono">{{ row.path }}</td>
+                    <td class="text-right py-2">{{ row.entries }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="2" class="py-4 text-center text-gray-400">No data</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endcomponent %}
+
+    <div></div>
+</div>
+
+{# --- Geography --- #}
+<h2 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">Geography (30 days)</h2>
 
 <div class="mb-8">
     {% component "unfold/components/card.html" with title="Session Geography Graph" %}
@@ -184,54 +396,14 @@
     {% endcomponent %}
 </div>
 
-{# --- Content & Referrers --- #}
-<h2 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">Content & Referrers</h2>
+</div>{# /content #}
 
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
-    {% component "unfold/components/card.html" with title="Top Pages (7 days)" %}
-        <table class="w-full text-sm">
-            <thead>
-                <tr class="border-b border-gray-200 dark:border-gray-700">
-                    <th class="text-left py-2 font-medium">Page</th>
-                    <th class="text-right py-2 font-medium">Views</th>
-                </tr>
-            </thead>
-            <tbody id="table-pages">
-                {% for row in top_pages %}
-                <tr class="border-b border-gray-100 dark:border-gray-800">
-                    <td class="py-2 truncate max-w-xs text-xs font-mono">{{ row.path }}</td>
-                    <td class="text-right py-2">{{ row.views }}</td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="2" class="py-4 text-center text-gray-400">No data</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    {% endcomponent %}
 
-    {% component "unfold/components/card.html" with title="Top Referrers (30 days)" %}
-        <table class="w-full text-sm">
-            <thead>
-                <tr class="border-b border-gray-200 dark:border-gray-700">
-                    <th class="text-left py-2 font-medium">Domain</th>
-                    <th class="text-right py-2 font-medium">Sessions</th>
-                </tr>
-            </thead>
-            <tbody id="table-referrers">
-                {% for row in top_referrers %}
-                <tr class="border-b border-gray-100 dark:border-gray-800">
-                    <td class="py-2 truncate max-w-xs">{{ row.referrer_domain }}</td>
-                    <td class="text-right py-2">{{ row.sessions }}</td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="2" class="py-4 text-center text-gray-400">No referrers</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    {% endcomponent %}
-</div>
+{# ================================================================ #}
+{# TAB 4: Tech & Bots                                               #}
+{# ================================================================ #}
+<div x-show="tab=='tech'" x-cloak>
 
-{# --- Devices & Browsers --- #}
 <h2 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">Devices & Browsers (30 days)</h2>
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
@@ -254,7 +426,6 @@
     {% endcomponent %}
 </div>
 
-{# --- Bot Analytics --- #}
 <h2 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">Bot Analytics (30 days)</h2>
 
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
@@ -279,156 +450,19 @@
         </table>
     {% endcomponent %}
 
-    {% component "unfold/components/card.html" with title="Live Sessions (last 15 min)" %}
-        <div style="max-height: 320px; overflow-y: auto;">
-        <table class="w-full text-sm">
-            <thead>
-                <tr class="border-b border-gray-200 dark:border-gray-700">
-                    <th class="text-left py-2 font-medium"></th>
-                    <th class="text-left py-2 font-medium">City</th>
-                    <th class="text-left py-2 font-medium">Browser</th>
-                    <th class="text-right py-2 font-medium">Pages</th>
-                    <th class="text-right py-2 font-medium">Time</th>
-                    <th class="text-right py-2 font-medium">Started</th>
-                </tr>
-            </thead>
-            <tbody id="table-live">
-                {% for s in live_sessions %}
-                <tr class="border-b border-gray-100 dark:border-gray-800">
-                    <td class="py-1">{{ s.country }}</td>
-                    <td class="py-1 text-xs">{{ s.city }}</td>
-                    <td class="py-1 text-xs">{{ s.browser }} / {{ s.os }}</td>
-                    <td class="text-right py-1">{{ s.pages }}</td>
-                    <td class="text-right py-1 text-xs">{{ s.time }}</td>
-                    <td class="text-right py-1 text-xs text-gray-500">{{ s.started }}</td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="6" class="py-4 text-center text-gray-400">No active sessions</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        </div>
+    {% component "unfold/components/card.html" with title="Bot Views Today" %}
+        <span id="kpi-bot-views" class="text-3xl font-bold text-gray-500 dark:text-gray-400">{{ today_bot_views }}</span>
+        <div class="text-xs text-gray-500 mt-2">7-day visitors: {{ week_visitors }}</div>
     {% endcomponent %}
 </div>
 
-{# --- Visitor Map (Leaflet + MarkerCluster) --- #}
-<link rel="stylesheet" href="{% static 'analytics/css/leaflet.css' %}">
-<link rel="stylesheet" href="{% static 'analytics/css/MarkerCluster.css' %}">
-<link rel="stylesheet" href="{% static 'analytics/css/MarkerCluster.Default.css' %}">
-<script src="{% static 'analytics/js/leaflet.js' %}"></script>
-<script src="{% static 'analytics/js/leaflet.markercluster.js' %}"></script>
-<style>
-.leaflet-marker-custom {
-    background: rgba(34, 197, 94, 0.85);
-    border: 2px solid #15803d;
-    border-radius: 50%;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
-}
-.marker-cluster-small {
-    background-color: rgba(34, 197, 94, 0.3) !important;
-}
-.marker-cluster-small div {
-    background-color: rgba(34, 197, 94, 0.7) !important;
-    color: #fff !important;
-    font-weight: 600;
-}
-.marker-cluster-medium {
-    background-color: rgba(234, 179, 8, 0.3) !important;
-}
-.marker-cluster-medium div {
-    background-color: rgba(234, 179, 8, 0.7) !important;
-    color: #fff !important;
-    font-weight: 600;
-}
-.marker-cluster-large {
-    background-color: rgba(239, 68, 68, 0.3) !important;
-}
-.marker-cluster-large div {
-    background-color: rgba(239, 68, 68, 0.7) !important;
-    color: #fff !important;
-    font-weight: 600;
-}
-.dark .leaflet-control-zoom a { background: #374151 !important; color: #d1d5db !important; border-color: #4b5563 !important; }
-.dark .leaflet-popup-content-wrapper, .dark .leaflet-popup-tip { background: #1f2937 !important; color: #e5e7eb !important; }
-</style>
-<script>
-(function() {
-    var MARKERS = {{ city_markers|safe }};
-    var el = document.getElementById("visitor-map");
-    if (!el) return;
+</div>{# /tech #}
 
-    var map = L.map("visitor-map", {
-        scrollWheelZoom: true,
-        zoomControl: true,
-    }).setView([30, 10], 2);
+</div>{# /x-data tabs wrapper #}
 
-    var isDark = document.documentElement.classList.contains("dark");
-    var tileUrl = isDark
-        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-        : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
-
-    L.tileLayer(tileUrl, {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        maxZoom: 19,
-        subdomains: "abcd",
-    }).addTo(map);
-
-    // Fix tiles not loading when container isn't fully laid out yet
-    setTimeout(function() { map.invalidateSize(); }, 200);
-
-    function markerSize(sessions) {
-        if (sessions >= 50) return 20;
-        if (sessions >= 20) return 16;
-        if (sessions >= 5) return 12;
-        return 8;
-    }
-
-    function buildClusterGroup(data) {
-        var cluster = L.markerClusterGroup({
-            maxClusterRadius: 40,
-            spiderfyOnMaxZoom: true,
-            showCoverageOnHover: false,
-            zoomToBoundsOnClick: true,
-        });
-
-        data.forEach(function(m) {
-            var size = markerSize(m.sessions);
-            var icon = L.divIcon({
-                className: "leaflet-marker-custom",
-                iconSize: [size, size],
-                iconAnchor: [size / 2, size / 2],
-            });
-            var marker = L.marker([m.lat, m.lng], {icon: icon});
-            marker.bindPopup(
-                "<b>" + m.city + "</b><br>" +
-                m.country + "<br>" +
-                "<span style='color:#22c55e;font-weight:600'>" + m.sessions + "</span> sessions, " +
-                "<span style='color:#3b82f6;font-weight:600'>" + m.visitors + "</span> visitors"
-            );
-            cluster.addLayer(marker);
-        });
-
-        return cluster;
-    }
-
-    var clusterLayer = buildClusterGroup(MARKERS);
-    map.addLayer(clusterLayer);
-
-    // Fit bounds if we have markers
-    if (MARKERS.length > 0) {
-        var bounds = clusterLayer.getBounds();
-        if (bounds.isValid()) {
-            map.fitBounds(bounds, {padding: [30, 30], maxZoom: 6});
-        }
-    }
-
-    window._updateVisitorMap = function(newMarkers) {
-        map.removeLayer(clusterLayer);
-        clusterLayer = buildClusterGroup(newMarkers);
-        map.addLayer(clusterLayer);
-    };
-})();
-</script>
+{# ================================================================ #}
+{# External scripts                                                  #}
+{# ================================================================ #}
 
 {# --- Session Geography Graph (ForceGraph) --- #}
 <script src="https://cdn.jsdelivr.net/npm/force-graph/dist/force-graph.min.js"></script>
@@ -453,6 +487,34 @@
 .sg-fs-close:hover { color: #fff; }
 .sg-fs-box { flex: 1; overflow: hidden; }
 </style>
+
+{# --- Visitors panel script --- #}
+<script>
+function visitorsPanel() {
+    return {
+        clients: [],
+        loading: false,
+        async load() {
+            this.loading = true;
+            try {
+                var resp = await fetch("{% url 'analytics_visitors_api' %}");
+                var data = await resp.json();
+                this.clients = data.clients.map(function(c) {
+                    c._open = false;
+                    c.sessions = c.sessions.map(function(s) {
+                        s._open = false;
+                        return s;
+                    });
+                    return c;
+                });
+            } catch(e) {
+                console.error("Failed to load visitors:", e);
+            }
+            this.loading = false;
+        }
+    };
+}
+</script>
 
 {# --- Auto-refresh script --- #}
 <script>
@@ -563,6 +625,9 @@
             updateKPI("kpi-avg-duration", data.avg_duration);
             updateKPI("kpi-avg-pages", data.avg_pages);
             updateKPI("kpi-active-now", data.active_now);
+            updateKPI("kpi-bounce", data.bounce_rate + "%");
+            updateKPI("kpi-new", data.new_visitors);
+            updateKPI("kpi-returning", data.returning_visitors);
 
             var vcEl = document.getElementById("kpi-views-change");
             if (vcEl) {
@@ -601,15 +666,15 @@
                 {value: function(r) { return r.sessions; }, cls: "text-right py-2"},
             ], "No referrers");
 
+            updateTable("table-entry-pages", data.entry_pages, [
+                {value: function(r) { return r.path; }, cls: "py-2 truncate max-w-xs text-xs font-mono"},
+                {value: function(r) { return r.entries; }, cls: "text-right py-2"},
+            ], "No data");
+
             updateTable("table-bots", data.top_bots, [
                 {value: function(r) { return r.bot_name; }, cls: "py-2"},
                 {value: function(r) { return r.count; }, cls: "text-right py-2"},
             ], "No bots");
-
-            // Map
-            if (data.city_markers && window._updateVisitorMap) {
-                window._updateVisitorMap(JSON.parse(data.city_markers));
-            }
 
             updateTable("table-live", data.live_sessions, [
                 {value: function(r) { return r.country; }, cls: "py-1"},

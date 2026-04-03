@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from django.db.models import Count, Q
 from django.contrib.admin import site as admin_site
 from django.contrib.admin.views.decorators import staff_member_required
 from django.http import JsonResponse
@@ -8,7 +9,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from .dashboard import build_analytics_context
-from .models import Session
+from .models import Activity, Client, Session
 from .utils import country_flag, format_duration
 
 
@@ -22,6 +23,94 @@ def analytics_dashboard(request):
 @staff_member_required
 def analytics_dashboard_api(request):
     return JsonResponse(build_analytics_context(request))
+
+
+@staff_member_required
+def visitors_api(request):
+    """Return client list with sessions for the Visitors tab (lazy-loaded)."""
+    days = min(max(int(request.GET.get("days", 30)), 1), 90)
+    since = timezone.now() - timedelta(days=days)
+
+    clients = list(
+        Client.objects.filter(is_bot=False, last_seen__gte=since)
+        .annotate(
+            session_count=Count(
+                "session", filter=Q(session__is_human=True, session__started_at__gte=since),
+            ),
+        )
+        .filter(session_count__gt=0)
+        .order_by("-last_seen")[:100]
+    )
+
+    client_ids = [c.pk for c in clients]
+
+    sessions = list(
+        Session.objects.filter(
+            client_id__in=client_ids, is_human=True, started_at__gte=since,
+        )
+        .order_by("-started_at")
+    )
+    sessions_by_client = {}
+    for s in sessions:
+        sessions_by_client.setdefault(s.client_id, []).append(s)
+
+    session_ids = [s.pk for s in sessions]
+    activities = list(
+        Activity.objects.filter(session_id__in=session_ids)
+        .filter(type__in=[
+            Activity.ActivityType.PAGE_VIEW,
+            Activity.ActivityType.SCROLL,
+            Activity.ActivityType.CLICK,
+        ])
+        .order_by("timestamp")
+    )
+    activities_by_session = {}
+    for a in activities:
+        activities_by_session.setdefault(a.session_id, []).append(a)
+
+    TYPE_LABELS = {
+        Activity.ActivityType.PAGE_VIEW: "page_view",
+        Activity.ActivityType.SCROLL: "scroll",
+        Activity.ActivityType.CLICK: "click",
+    }
+
+    result = []
+    for c in clients:
+        c_sessions = sessions_by_client.get(c.pk, [])
+        sessions_out = []
+        for s in c_sessions:
+            acts = activities_by_session.get(s.pk, [])
+            sessions_out.append({
+                "id": s.pk,
+                "started": timezone.localtime(s.started_at).strftime("%d.%m %H:%M"),
+                "duration": format_duration(s.active_time),
+                "pages": s.page_count,
+                "referrer": s.referrer_domain or "",
+                "activities": [
+                    {
+                        "type": TYPE_LABELS.get(a.type, a.type),
+                        "path": a.path,
+                        "time": timezone.localtime(a.timestamp).strftime("%H:%M:%S"),
+                    }
+                    for a in acts
+                ],
+            })
+        result.append({
+            "id": c.pk,
+            "device": c.device_type or "?",
+            "browser": c.browser or "?",
+            "os": c.os or "?",
+            "country": country_flag(c.country),
+            "country_name": c.country_name or "",
+            "city": c.city or "",
+            "last_seen": timezone.localtime(c.last_seen).strftime("%d.%m %H:%M"),
+            "sessions": sessions_out,
+            "session_count": len(c_sessions),
+            "total_pages": sum(s.page_count for s in c_sessions),
+            "total_time": format_duration(sum(s.active_time for s in c_sessions)),
+        })
+
+    return JsonResponse({"clients": result})
 
 
 @staff_member_required

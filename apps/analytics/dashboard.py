@@ -291,31 +291,6 @@ def build_analytics_context(request):
     for row in top_cities:
         row["flag"] = _country_flag(row["client__country"])
 
-    # City markers with coordinates for Leaflet map
-    city_markers_qs = list(
-        Session.objects.filter(started_at__gte=thirty_days_ago, is_human=True)
-        .exclude(client__city="")
-        .exclude(client__latitude__isnull=True)
-        .exclude(client__longitude__isnull=True)
-        .values(
-            "client__city", "client__country", "client__country_name",
-            "client__latitude", "client__longitude",
-        )
-        .annotate(sessions=Count("id"), visitors=Count("client", distinct=True))
-        .order_by("-sessions")
-    )
-    city_markers = json.dumps([
-        {
-            "lat": row["client__latitude"],
-            "lng": row["client__longitude"],
-            "city": row["client__city"],
-            "country": row["client__country_name"],
-            "sessions": row["sessions"],
-            "visitors": row["visitors"],
-        }
-        for row in city_markers_qs
-    ])
-
     # ── Top pages ─────────────────────────────────────────────
     top_pages = list(
         base_pv.filter(timestamp__gte=seven_days_ago)
@@ -422,6 +397,41 @@ def build_analytics_context(request):
         .count()
     )
 
+    # ── Bounce rate (today) ─────────────────────────────────
+    if today_session_count:
+        bounce_count = today_sessions.filter(page_count__lte=1).count()
+        bounce_rate = round(100 * bounce_count / today_session_count)
+    else:
+        bounce_rate = 0
+
+    # ── New vs Returning visitors (today) ─────────────────
+    today_client_ids = (
+        Session.objects.filter(started_at__gte=today_start, is_human=True)
+        .values_list("client_id", flat=True).distinct()
+    )
+    new_visitors = Client.objects.filter(
+        pk__in=today_client_ids, first_seen__gte=today_start,
+    ).count()
+    returning_visitors = max(0, today_visitors - new_visitors) if today_visitors else 0
+
+    # ── Entry pages (first page in session, 7 days) ──────
+    entry_page_ids = (
+        Activity.objects.filter(
+            type=Activity.ActivityType.PAGE_VIEW,
+            session__is_human=True,
+            session__started_at__gte=seven_days_ago,
+        )
+        .order_by("session_id", "timestamp")
+        .distinct("session_id")
+        .values_list("id", flat=True)
+    )
+    entry_pages = list(
+        Activity.objects.filter(id__in=entry_page_ids)
+        .values("path")
+        .annotate(entries=Count("id"))
+        .order_by("-entries")[:10]
+    )
+
     # ── Live sessions table ───────────────────────────────────
     fifteen_min_ago = now - timedelta(minutes=15)
     recent_sessions = list(
@@ -468,7 +478,6 @@ def build_analytics_context(request):
         "os_chart": os_chart,
         # Tables
         "top_countries": top_countries,
-        "city_markers": city_markers,
         "top_cities": top_cities,
         "top_pages": top_pages,
         "top_referrers": top_referrers,
@@ -477,4 +486,9 @@ def build_analytics_context(request):
         # Bot stats
         "bot_requests_30d": f"{bot_requests_30d:,}",
         "human_requests_30d": f"{human_requests_30d:,}",
+        # New metrics
+        "bounce_rate": bounce_rate,
+        "new_visitors": new_visitors,
+        "returning_visitors": returning_visitors,
+        "entry_pages": entry_pages,
     }
