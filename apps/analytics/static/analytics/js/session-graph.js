@@ -140,8 +140,8 @@
 
     /* ── Static tree layout (countries horizontal, subtrees vertical) ── */
 
-    var LEVEL_Y = [0, 80, 160, 230];   // country, city, day, session
-    var COL_W = 28;                     // min horizontal gap between leaf nodes
+    var LEVEL_Y = [0, 100, 200, 290];   // country, city, day, session
+    var COL_W = 80;                     // min horizontal gap between leaf nodes
 
     function layoutNodes(data) {
         var nodeById = {};
@@ -187,7 +187,7 @@
         var cursorX = 0;
         for (var c = 0; c < countries.length; c++) {
             cursorX = placeTree(countries[c].id, 0, cursorX);
-            cursorX += COL_W * 2; // gap between country trees
+            cursorX += COL_W * 3; // gap between country trees
         }
 
         data.nodes.forEach(function (n) { n.fx = n.x; n.fy = n.y; });
