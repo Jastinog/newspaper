@@ -39,11 +39,11 @@ class ItemGenerator:
         Returns:
             (by_lang, common, usage) where:
                 by_lang = {"en": {"topic": str, "summary": str}, "ru": {...}, ...}
-                common = {"importance": int, "article_ids": [int]}
+                common = {"importance": int}
         """
         if not articles:
             empty_lang = {code: {"topic": story.get("label", ""), "summary": ""} for code, _ in languages}
-            return empty_lang, {"importance": 0, "article_ids": []}, {}
+            return empty_lang, {"importance": 0}, {}
 
         cfg = self.config
         lang_labels = ", ".join(f"{name} ({code})" for code, name in languages)
@@ -74,7 +74,6 @@ class ItemGenerator:
 
         common = {
             "importance": data.get("importance", 0),
-            "article_ids": data.get("article_ids", []),
         }
 
         by_lang = {}

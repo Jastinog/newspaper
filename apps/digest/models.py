@@ -29,12 +29,11 @@ DEFAULT_PROMPT_GENERATION = (
     "tell a friend about this news. Use **bold** for key names and numbers. "
     "No headings, no bullet lists.\n\n"
     "Also provide:\n"
-    '- "importance": integer 1-9 (1-3=minor, 4-5=notable, 6=significant, 7-9=major/breaking)\n'
-    '- "article_ids": array of relevant article IDs from the input\n\n'
+    '- "importance": integer 1-9 (1-3=minor, 4-5=notable, 6=significant, 7-9=major/breaking)\n\n'
     "For non-English languages: adapt naturally, not literal translation. "
     "Keep technical terms and acronyms in Latin form (AI, NASA, GPT, OpenAI, etc.).\n\n"
     'Return JSON: {{"en": {{"topic": ..., "summary": ...}}, "ru": {{...}}, ..., '
-    '"importance": N, "article_ids": [...]}}'
+    '"importance": N}}'
 )
 
 DEFAULT_PROMPT_HEADLINE = (
