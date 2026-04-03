@@ -131,7 +131,7 @@ class DigestService:
             return None
 
         all_langs = [(default_lang.code, default_lang.name)]
-        all_langs.extend((l.code, l.name) for l in target_langs)
+        all_langs.extend((lang.code, lang.name) for lang in target_langs)
 
         by_lang, common_data, gen_usage = self.generator.generate(
             story, refined, languages=all_langs,
