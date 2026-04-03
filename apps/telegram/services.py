@@ -119,18 +119,27 @@ class TelegramService:
 
     # ── Publishing ────────────────────────────────────────────
 
+    PLACEHOLDER = Path(__file__).resolve().parent.parent / "core" / "static" / "news" / "img" / "placeholder.webp"
+
     def send_item(self, item: DigestItem) -> None:
-        """Format and send a single digest item, with image fallback to text."""
+        """Format and send a single digest item, with image fallback to placeholder."""
         text = self._format_item(item)
 
-        if self.channel.include_images and item.image and item.image.image:
-            image_path = Path(settings.MEDIA_ROOT) / str(item.image.image)
-            if image_path.exists():
-                try:
-                    self.send_photo(image_path, text)
-                    return
-                except Exception:
-                    logger.debug("Image send failed for item %s, falling back to text", item.pk)
+        if self.channel.include_images:
+            image_path = None
+            if item.image and item.image.image:
+                image_path = Path(settings.MEDIA_ROOT) / str(item.image.image)
+                if not image_path.exists():
+                    image_path = None
+
+            if image_path is None:
+                image_path = self.PLACEHOLDER
+
+            try:
+                self.send_photo(image_path, text)
+                return
+            except Exception:
+                logger.debug("Image send failed for item %s, falling back to text", item.pk)
 
         self.send_message(text)
 
