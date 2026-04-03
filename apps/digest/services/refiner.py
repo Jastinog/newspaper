@@ -86,9 +86,25 @@ class StoryRefiner:
             .annotate(has_image=has_image)
         )
 
-        # Sort: images first, then by relevance score
+        # Pick top articles, diversifying across feeds for broader context
         articles.sort(key=lambda a: (a.has_image, article_scores.get(a.id, 0)), reverse=True)
-        articles = articles[:cfg.max_articles_per_story]
+        selected = []
+        seen_feeds = set()
+        # First pass: one per feed (best from each source)
+        for a in articles:
+            if a.feed_id not in seen_feeds:
+                selected.append(a)
+                seen_feeds.add(a.feed_id)
+                if len(selected) >= cfg.max_articles_per_story:
+                    break
+        # Second pass: fill remaining slots if needed
+        if len(selected) < cfg.max_articles_per_story:
+            for a in articles:
+                if a not in selected:
+                    selected.append(a)
+                    if len(selected) >= cfg.max_articles_per_story:
+                        break
+        articles = selected
 
         article_dicts = []
         for a in articles:
