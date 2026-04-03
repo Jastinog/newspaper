@@ -6,6 +6,7 @@ from django.db.models.functions import ExtractHour, TruncDate, TruncMinute
 from django.utils import timezone
 
 from .models import Activity, Client, Session
+from .utils import country_flag, format_duration
 
 # ── Color palette ─────────────────────────────────────────
 GREEN = ("rgb(34, 197, 94)", "rgba(34, 197, 94, 0.5)")
@@ -69,23 +70,18 @@ def _chart(labels, datasets):
     return json.dumps({"labels": labels, "datasets": datasets})
 
 
-def _format_duration(seconds):
-    if not seconds:
-        return "0s"
-    if seconds < 60:
-        return f"{seconds}s"
-    m, s = divmod(seconds, 60)
-    if m < 60:
-        return f"{m}m {s}s" if s else f"{m}m"
-    h, m = divmod(m, 60)
-    return f"{h}h {m}m"
-
-
-def _country_flag(code):
-    if not code or len(code) != 2:
-        return ""
-    c = code.upper()
-    return chr(0x1F1E6 + ord(c[0]) - 65) + chr(0x1F1E6 + ord(c[1]) - 65)
+def _pie_chart(queryset, label_field, palette):
+    """Build a JSON pie/bar chart from a queryset with 'count' annotations."""
+    rows = list(queryset)
+    return json.dumps({
+        "labels": [r[label_field].title() if label_field == "device_type" else r[label_field] for r in rows],
+        "datasets": [{
+            "label": "Clients",
+            "data": [r["count"] for r in rows],
+            "backgroundColor": palette[:len(rows)],
+            "borderWidth": 0,
+        }],
+    })
 
 
 def build_analytics_context(request):
@@ -207,7 +203,7 @@ def build_analytics_context(request):
     # ── Daily charts (last 30 days) ───────────────────────────
     daily_qs = (
         base_pv.filter(timestamp__gte=thirty_days_ago)
-        .extra(select={"day": "DATE(timestamp)"})
+        .annotate(day=TruncDate("timestamp"))
         .values("day")
         .annotate(
             views=Count("id"),
@@ -279,7 +275,7 @@ def build_analytics_context(request):
     )
     top_countries = all_countries[:10]
     for row in top_countries:
-        row["flag"] = _country_flag(row["client__country"])
+        row["flag"] = country_flag(row["client__country"])
 
     top_cities = list(
         Session.objects.filter(started_at__gte=thirty_days_ago, is_human=True)
@@ -289,7 +285,7 @@ def build_analytics_context(request):
         .order_by("-sessions")[:10]
     )
     for row in top_cities:
-        row["flag"] = _country_flag(row["client__country"])
+        row["flag"] = country_flag(row["client__country"])
 
     # ── Top pages ─────────────────────────────────────────────
     top_pages = list(
@@ -314,69 +310,36 @@ def build_analytics_context(request):
         last_seen__gte=thirty_days_ago, is_bot=False,
     )
 
-    device_breakdown = list(
-        human_clients_30d
-        .exclude(device_type="")
-        .values("device_type")
-        .annotate(count=Count("id"))
-        .order_by("-count")
-    )
     device_palette = [
         "rgba(99,102,241,0.7)", "rgba(34,197,94,0.7)",
         "rgba(234,179,8,0.7)", "rgba(236,72,153,0.7)",
     ]
-    device_chart = json.dumps({
-        "labels": [r["device_type"].title() for r in device_breakdown],
-        "datasets": [{
-            "label": "Clients",
-            "data": [r["count"] for r in device_breakdown],
-            "backgroundColor": device_palette[:len(device_breakdown)],
-            "borderWidth": 0,
-        }],
-    })
-
-    browser_breakdown = list(
-        human_clients_30d
-        .exclude(browser="")
-        .values("browser")
-        .annotate(count=Count("id"))
-        .order_by("-count")[:8]
+    device_chart = _pie_chart(
+        human_clients_30d.exclude(device_type="")
+        .values("device_type").annotate(count=Count("id")).order_by("-count"),
+        "device_type", device_palette,
     )
+
     browser_palette = [
         "rgba(59,130,246,0.7)", "rgba(236,72,153,0.7)", "rgba(34,197,94,0.7)",
         "rgba(234,179,8,0.7)", "rgba(168,85,247,0.7)", "rgba(6,182,212,0.7)",
         "rgba(99,102,241,0.7)", "rgba(156,163,175,0.7)",
     ]
-    browser_chart = json.dumps({
-        "labels": [r["browser"] for r in browser_breakdown],
-        "datasets": [{
-            "label": "Clients",
-            "data": [r["count"] for r in browser_breakdown],
-            "backgroundColor": browser_palette[:len(browser_breakdown)],
-            "borderWidth": 0,
-        }],
-    })
-
-    os_breakdown = list(
-        human_clients_30d
-        .exclude(os="")
-        .values("os")
-        .annotate(count=Count("id"))
-        .order_by("-count")[:6]
+    browser_chart = _pie_chart(
+        human_clients_30d.exclude(browser="")
+        .values("browser").annotate(count=Count("id")).order_by("-count")[:8],
+        "browser", browser_palette,
     )
+
     os_palette = [
         "rgba(99,102,241,0.7)", "rgba(236,72,153,0.7)", "rgba(34,197,94,0.7)",
         "rgba(234,179,8,0.7)", "rgba(59,130,246,0.7)", "rgba(168,85,247,0.7)",
     ]
-    os_chart = json.dumps({
-        "labels": [r["os"] for r in os_breakdown],
-        "datasets": [{
-            "label": "Clients",
-            "data": [r["count"] for r in os_breakdown],
-            "backgroundColor": os_palette[:len(os_breakdown)],
-            "borderWidth": 0,
-        }],
-    })
+    os_chart = _pie_chart(
+        human_clients_30d.exclude(os="")
+        .values("os").annotate(count=Count("id")).order_by("-count")[:6],
+        "os", os_palette,
+    )
 
     # ── Bot analytics ─────────────────────────────────────────
     top_bots = list(
@@ -441,13 +404,13 @@ def build_analytics_context(request):
     )
     live_sessions = [
         {
-            "country": _country_flag(s.client.country),
+            "country": country_flag(s.client.country),
             "city": s.client.city or "—",
             "browser": s.client.browser or "?",
             "os": s.client.os or "?",
             "device": s.client.device_type or "?",
             "pages": s.page_count,
-            "time": _format_duration(s.active_time),
+            "time": format_duration(s.active_time),
             "started": s.started_at.strftime("%H:%M:%S"),
         }
         for s in recent_sessions
@@ -459,7 +422,7 @@ def build_analytics_context(request):
         "today_bot_views": f"{today_bot_views:,}",
         "today_visitors": f"{today_visitors:,}",
         "today_session_count": f"{today_session_count:,}",
-        "avg_duration": _format_duration(round(avg_duration)),
+        "avg_duration": format_duration(round(avg_duration)),
         "avg_pages": f"{avg_pages:.1f}",
         "active_now": active_now,
         "views_change": views_change,

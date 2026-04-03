@@ -13,6 +13,14 @@ from .models import Activity, Client, Session
 from .utils import country_flag, format_duration
 
 
+def _parse_days(request, default, maximum):
+    """Parse and clamp the 'days' query parameter."""
+    try:
+        return min(max(int(request.GET.get("days", default)), 1), maximum)
+    except (ValueError, TypeError):
+        return default
+
+
 @staff_member_required
 def analytics_dashboard(request):
     context = {**admin_site.each_context(request), "title": "Analytics Dashboard"}
@@ -28,7 +36,7 @@ def analytics_dashboard_api(request):
 @staff_member_required
 def visitors_api(request):
     """Return client list with sessions for the Visitors tab (lazy-loaded)."""
-    days = min(max(int(request.GET.get("days", 30)), 1), 90)
+    days = _parse_days(request, default=30, maximum=90)
     since = timezone.now() - timedelta(days=days)
 
     clients = list(
@@ -116,7 +124,7 @@ def visitors_api(request):
 @staff_member_required
 def traffic_graph_api(request):
     """Return traffic graph data: country -> city -> client (humans only)."""
-    days = min(max(int(request.GET.get("days", 7)), 1), 30)
+    days = _parse_days(request, default=7, maximum=30)
     since = timezone.now() - timedelta(days=days)
 
     rows = list(
@@ -190,7 +198,7 @@ def traffic_graph_api(request):
 @staff_member_required
 def session_graph_api(request):
     """Return force-graph data: country → city → day → session nodes with links."""
-    days = min(max(int(request.GET.get("days", 30)), 1), 90)
+    days = _parse_days(request, default=30, maximum=90)
     now = timezone.now()
     since = now - timedelta(days=days)
 
