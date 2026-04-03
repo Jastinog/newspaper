@@ -5,6 +5,7 @@ from django.db.models import Exists, OuterRef
 from pgvector.django import CosineDistance
 
 from apps.core.services.ai import EmbeddingClient, trim_to_tokens
+from apps.core.services.utils import sanitize_text
 from apps.feed.models import Article, ArticleChunk, ArticleImage
 from apps.digest.models import ArticleUse, DigestConfig
 
@@ -96,7 +97,7 @@ class StoryRefiner:
                 "title": a.title,
                 "feed": a.feed.title if a.feed else "",
                 "published": a.published.strftime("%Y-%m-%d") if a.published else "",
-                "content": trim_to_tokens(a.content, cfg.context_trim_tokens) if a.content else "",
+                "content": trim_to_tokens(sanitize_text(a.content), cfg.context_trim_tokens) if a.content else "",
             })
 
         logger.info("Refined '%s': %d candidates -> %d articles",

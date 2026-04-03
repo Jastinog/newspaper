@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 from pgvector.django import CosineDistance
 
 from apps.core.services.ai import trim_to_tokens
+from apps.core.services.utils import sanitize_text
 from apps.feed.models import Article, ArticleChunk
 from apps.digest.models import ArticleUse, DigestConfig, DigestSection
 
@@ -151,5 +152,5 @@ class SectionArticleCollector:
             "title": a.title,
             "feed": a.feed.title if a.feed else "",
             "published": a.published.strftime("%Y-%m-%d") if a.published else "",
-            "snippet": trim_to_tokens(a.content, snippet_tokens) if a.content else "",
+            "snippet": trim_to_tokens(sanitize_text(a.content), snippet_tokens) if a.content else "",
         }

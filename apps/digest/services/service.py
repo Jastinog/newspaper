@@ -111,10 +111,12 @@ class DigestService:
 
         with ThreadPoolExecutor(max_workers=self.config.max_workers) as pool:
             for section, stories in section_stories:
+                # Snapshot so workers don't see concurrent mutations
+                snapshot = frozenset(used_ids)
                 futures = {
                     pool.submit(
                         self._refine_and_generate, digest, section, story,
-                        default_lang, target_langs, used_ids,
+                        default_lang, target_langs, snapshot,
                     ): story
                     for story in stories
                 }
@@ -127,7 +129,6 @@ class DigestService:
                     item, common_data = result
                     article_ids = common_data.get("article_ids", [])
 
-                    # Image assignment in main thread (thread-safe)
                     image_id = self.saver.assign_image(item, used_image_ids, article_ids)
                     if image_id:
                         used_image_ids.add(image_id)
