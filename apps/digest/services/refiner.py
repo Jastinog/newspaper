@@ -86,24 +86,37 @@ class StoryRefiner:
             .annotate(has_image=has_image)
         )
 
-        # Pick top articles, diversifying across feeds for broader context
-        articles.sort(key=lambda a: (a.has_image, article_scores.get(a.id, 0)), reverse=True)
+        # Pick top articles: diverse feeds, ensure at least one has an image
+        articles.sort(key=lambda a: article_scores.get(a.id, 0), reverse=True)
         selected = []
         seen_feeds = set()
-        # First pass: one per feed (best from each source)
+        has_any_image = False
+
+        # First pass: best article per feed (diverse sources)
         for a in articles:
             if a.feed_id not in seen_feeds:
                 selected.append(a)
                 seen_feeds.add(a.feed_id)
+                if a.has_image:
+                    has_any_image = True
                 if len(selected) >= cfg.max_articles_per_story:
                     break
-        # Second pass: fill remaining slots if needed
-        if len(selected) < cfg.max_articles_per_story:
-            for a in articles:
-                if a not in selected:
-                    selected.append(a)
-                    if len(selected) >= cfg.max_articles_per_story:
-                        break
+
+        # Fill remaining slots
+        for a in articles:
+            if len(selected) >= cfg.max_articles_per_story:
+                break
+            if a not in selected:
+                selected.append(a)
+                if a.has_image:
+                    has_any_image = True
+
+        # Guarantee at least one article with image (swap lowest-scored if needed)
+        if not has_any_image:
+            img_article = next((a for a in articles if a.has_image and a not in selected), None)
+            if img_article and selected:
+                selected[-1] = img_article
+
         articles = selected
 
         article_dicts = []
