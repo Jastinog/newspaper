@@ -7,17 +7,14 @@ from apps.core.models import Language
 from apps.core.services.ai import (
     EMBEDDING_MODEL, OpenAIClient, EmbeddingClient,
 )
-from apps.digest.models import (
-    ArticleUse, Digest, DigestConfig, DigestItemTranslation, DigestTranslation,
-)
+from apps.digest.models import ArticleUse, Digest, DigestConfig
 
 from .analyzer import StoryAnalyzer
 from .collector import SectionArticleCollector
 from .deduplicator import StoryDeduplicator
-from .generator import HeadlineGenerator, ItemGenerator
+from .generator import ItemGenerator
 from .refiner import StoryRefiner
 from .saver import DigestSaver
-from .translator import ItemTranslator
 
 
 logger = logging.getLogger(__name__)
@@ -28,7 +25,6 @@ class DigestService:
     1. Collect articles per section (embedding search)
     2. Analyze each section → identify stories, deduplicate
     3. For each story: refine → generate (all languages) → save → assign image → VISIBLE
-    4. Generate headline
     """
 
     def __init__(self, config: DigestConfig = None):
@@ -39,8 +35,6 @@ class DigestService:
         self.analyzer = StoryAnalyzer(client=self.client, config=self.config)
         self.refiner = StoryRefiner(embedder=self.embedder, config=self.config)
         self.generator = ItemGenerator(client=self.client, config=self.config)
-        self.headline_generator = HeadlineGenerator(client=self.client, config=self.config)
-        self.translator = ItemTranslator(client=self.client, config=self.config)
         self.deduplicator = StoryDeduplicator(embedder=self.embedder)
         self.saver = DigestSaver()
 
@@ -83,9 +77,6 @@ class DigestService:
                                           target_langs)
         if item_count == 0:
             raise RuntimeError("No items generated.")
-
-        # ── 4. Headline ──
-        self._generate_headline(digest, default_lang, target_langs)
 
         digest.stage = Digest.Stage.DONE
         digest.save(update_fields=["stage"])
@@ -165,27 +156,3 @@ class DigestService:
 
         return item
 
-    # ── Headline ─────────────────────────────────────────────────
-
-    def _generate_headline(self, digest, default_lang, target_langs):
-        items_data = [
-            {"topic": row["topic"], "importance": row["item__importance"]}
-            for row in DigestItemTranslation.objects
-            .filter(item__digest=digest, language=default_lang)
-            .values("topic", "item__importance")
-        ]
-        headline, usage = self.headline_generator.generate(items_data)
-        record_digest_usage(usage, step=APIUsage.Step.HEADLINE,
-                            api_type=APIUsage.APIType.CHAT,
-                            model=self.config.chat_model, digest=digest)
-        DigestTranslation.objects.create(digest=digest, language=default_lang, headline=headline)
-
-        for lang in target_langs:
-            try:
-                translated, h_usage = self.translator.translate_headline(headline, lang.name)
-                record_digest_usage(h_usage, step=APIUsage.Step.TRANSLATE,
-                                    api_type=APIUsage.APIType.CHAT,
-                                    model=self.config.chat_model, digest=digest)
-                self.saver.save_translations(digest, lang, [], translated)
-            except Exception:
-                logger.exception("Headline translation to %s failed", lang.code)
