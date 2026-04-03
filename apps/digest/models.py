@@ -120,10 +120,10 @@ class DigestConfig(models.Model):
 
     # ── Generation ────────────────────────────────────────────
     items_per_section_min = models.PositiveIntegerField(
-        default=6, help_text="Min stories the analyzer should identify per section",
+        default=15, help_text="Min stories the analyzer should identify per section",
     )
     items_per_section_max = models.PositiveIntegerField(
-        default=8, help_text="Max stories the analyzer should identify per section",
+        default=20, help_text="Max stories the analyzer should identify per section",
     )
     max_workers = models.PositiveIntegerField(
         default=5, help_text="Max parallel workers (for batch mode)",
