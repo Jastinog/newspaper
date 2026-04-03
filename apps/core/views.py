@@ -20,6 +20,13 @@ from apps.research.models import Research
 SITE_NAME = _("Newspaper")
 SITE_DESCRIPTION = _("Daily AI-curated news digest from 100+ RSS sources worldwide")
 
+
+def _og_description(text, limit=200):
+    """Collapse whitespace and truncate for use in og:description meta tag."""
+    if not text:
+        return ""
+    return " ".join(text.split())[:limit]
+
 _PINNED_COOKIE = "pinned_sections"
 _PINNED_MAX_AGE = 365 * 24 * 60 * 60
 
@@ -185,7 +192,7 @@ def article_detail(request, pk, slug=""):
     if article.slug and article.slug != slug:
         return redirect(article.get_absolute_url(), permanent=True)
 
-    description = article.content[:160] if article.content else article.title
+    description = _og_description(article.content) or article.title
     seo = {
         "title": f"{article.title} — {SITE_NAME}",
         "description": description,
@@ -267,7 +274,7 @@ def story_detail(request, item_id):
 
     seo = {
         "title": f"{topic} — {SITE_NAME}",
-        "description": summary[:160] if summary else topic,
+        "description": _og_description(summary) or topic,
         "canonical": request.build_absolute_uri(reverse("story_detail", args=[item.pk])),
         "og_type": "article",
         "og_image": request.build_absolute_uri(item.best_image_url) if item.best_image_url else "",
@@ -311,7 +318,7 @@ def research(request, item_id):
 
     seo = {
         "title": f"{dive.title} — {SITE_NAME}",
-        "description": dive.subtitle or dive.title,
+        "description": _og_description(dive.subtitle) or dive.title,
         "canonical": request.build_absolute_uri(request.get_full_path()),
         "og_type": "article",
     }
