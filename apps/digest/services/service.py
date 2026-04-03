@@ -1,8 +1,5 @@
 import logging
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date
-
-from django.db import close_old_connections
 
 from apps.billing.models import APIUsage
 from apps.billing.services import record_digest_usage
@@ -99,83 +96,65 @@ class DigestService:
 
     def _generate_items(self, digest, section_stories, default_lang,
                         target_langs) -> int:
-        """Generate all items. Each is saved with translations + image immediately.
-
-        Sections are processed sequentially (for article dedup).
-        Stories within a section run in parallel.
-        Image assignment happens in the main thread as each story completes.
-        """
+        """Generate all items sequentially. Each is saved and visible immediately."""
         used_ids = set(ArticleUse.objects.values_list("article_id", flat=True))
         used_image_ids = set()
         item_count = 0
 
-        with ThreadPoolExecutor(max_workers=self.config.max_workers) as pool:
-            for section, stories in section_stories:
-                # Snapshot so workers don't see concurrent mutations
-                snapshot = frozenset(used_ids)
-                futures = {
-                    pool.submit(
-                        self._refine_and_generate, digest, section, story,
-                        default_lang, target_langs, snapshot,
-                    ): story
-                    for story in stories
-                }
+        all_langs = [(default_lang.code, default_lang.name)]
+        all_langs.extend((l.code, l.name) for l in target_langs)
 
-                for future in as_completed(futures):
-                    result = future.result()
-                    if not result:
-                        continue
+        for section, stories in section_stories:
+            for story in stories:
+                try:
+                    item = self._refine_and_generate(
+                        digest, section, story, all_langs,
+                        default_lang, target_langs, used_ids, used_image_ids,
+                    )
+                except Exception:
+                    logger.exception("Story '%s' failed", story.get("label", "?"))
+                    continue
 
-                    item, common_data = result
-                    article_ids = common_data.get("article_ids", [])
+                if not item:
+                    continue
 
-                    image_id = self.saver.assign_image(item, used_image_ids, article_ids)
-                    if image_id:
-                        used_image_ids.add(image_id)
-
-                    used_ids.update(article_ids)
-                    item_count += 1
-
-                    if digest.stage < Digest.Stage.GENERATED:
-                        digest.stage = Digest.Stage.GENERATED
-                        digest.save(update_fields=["stage"])
+                item_count += 1
+                if digest.stage < Digest.Stage.GENERATED:
+                    digest.stage = Digest.Stage.GENERATED
+                    digest.save(update_fields=["stage"])
 
         return item_count
 
-    def _refine_and_generate(self, digest, section, story, default_lang,
-                             target_langs, used_ids):
-        """Worker: refine → generate → save (text + translations). Returns (item, common_data)."""
-        close_old_connections()
-        try:
-            refined, refine_usage = self.refiner.refine(story, used_ids=used_ids)
-            if not refined:
-                return None
-
-            all_langs = [(default_lang.code, default_lang.name)]
-            all_langs.extend((l.code, l.name) for l in target_langs)
-
-            by_lang, common_data, gen_usage = self.generator.generate(
-                story, refined, languages=all_langs,
-            )
-
-            item = self.saver.save_item(
-                digest, section, story, by_lang, common_data,
-                refined, default_lang, target_langs,
-            )
-
-            record_digest_usage(refine_usage, step=APIUsage.Step.REFINE,
-                                api_type=APIUsage.APIType.EMBEDDING,
-                                model=EMBEDDING_MODEL, digest=digest, item=item)
-            record_digest_usage(gen_usage, step=APIUsage.Step.GENERATE,
-                                api_type=APIUsage.APIType.CHAT,
-                                model=self.config.chat_model, digest=digest, item=item)
-
-            return item, common_data
-        except Exception:
-            logger.exception("Story '%s' failed", story.get("label", "?"))
+    def _refine_and_generate(self, digest, section, story, all_langs,
+                             default_lang, target_langs, used_ids, used_image_ids):
+        """Refine → generate → save → assign image. Returns item or None."""
+        refined, refine_usage = self.refiner.refine(story, used_ids=used_ids)
+        if not refined:
             return None
-        finally:
-            close_old_connections()
+
+        by_lang, common_data, gen_usage = self.generator.generate(
+            story, refined, languages=all_langs,
+        )
+
+        item = self.saver.save_item(
+            digest, section, story, by_lang, common_data,
+            refined, default_lang, target_langs,
+        )
+
+        article_ids = common_data.get("article_ids", [])
+        image_id = self.saver.assign_image(item, used_image_ids, article_ids)
+        if image_id:
+            used_image_ids.add(image_id)
+        used_ids.update(article_ids)
+
+        record_digest_usage(refine_usage, step=APIUsage.Step.REFINE,
+                            api_type=APIUsage.APIType.EMBEDDING,
+                            model=EMBEDDING_MODEL, digest=digest, item=item)
+        record_digest_usage(gen_usage, step=APIUsage.Step.GENERATE,
+                            api_type=APIUsage.APIType.CHAT,
+                            model=self.config.chat_model, digest=digest, item=item)
+
+        return item
 
     # ── Headline ─────────────────────────────────────────────────
 
