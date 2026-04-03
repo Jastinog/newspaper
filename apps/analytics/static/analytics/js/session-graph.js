@@ -138,10 +138,10 @@
         node._rx = rx; node._ry = ry; node._rw = rectW; node._rh = rectH;
     }
 
-    /* ── Static tree layout (left → right) ──────── */
+    /* ── Static tree layout (countries horizontal, subtrees vertical) ── */
 
-    var LEVEL_X = [0, 250, 470, 650];  // country, city, day, session
-    var ROW_H = 28;                     // min vertical gap between leaf nodes
+    var LEVEL_Y = [0, 80, 160, 230];   // country, city, day, session
+    var COL_W = 28;                     // min horizontal gap between leaf nodes
 
     function layoutNodes(data) {
         var nodeById = {};
@@ -155,7 +155,6 @@
 
         var countries = data.nodes.filter(function (n) { return n.type === 'country'; });
 
-        // Count leaf nodes (sessions) in each subtree for vertical sizing
         function leafCount(id) {
             var kids = childrenMap[id];
             if (!kids || !kids.length) return 1;
@@ -164,33 +163,31 @@
             return total;
         }
 
-        // Assign positions top-down: x by level, y by accumulated leaf slots
-        var cursorY = 0;
-
-        function placeTree(id, level) {
+        // Place subtree top-down: y by level, x by accumulated leaf slots
+        function placeTree(id, level, cursorX) {
             var node = nodeById[id];
-            if (!node) return;
+            if (!node) return cursorX;
             var kids = childrenMap[id];
-            node.x = LEVEL_X[level] || (LEVEL_X[LEVEL_X.length - 1] + 150 * (level - LEVEL_X.length + 1));
+            node.y = LEVEL_Y[level] || (LEVEL_Y[LEVEL_Y.length - 1] + 70 * (level - LEVEL_Y.length + 1));
 
             if (!kids || !kids.length) {
-                node.y = cursorY;
-                cursorY += ROW_H;
-                return;
+                node.x = cursorX;
+                return cursorX + COL_W;
             }
 
-            var yStart = cursorY;
+            var xStart = cursorX;
             for (var i = 0; i < kids.length; i++) {
-                placeTree(kids[i], level + 1);
+                cursorX = placeTree(kids[i], level + 1, cursorX);
             }
-            var yEnd = cursorY - ROW_H;
-            // Parent centered vertically on its children
-            node.y = (yStart + yEnd) / 2;
+            var xEnd = cursorX - COL_W;
+            node.x = (xStart + xEnd) / 2;
+            return cursorX;
         }
 
+        var cursorX = 0;
         for (var c = 0; c < countries.length; c++) {
-            placeTree(countries[c].id, 0);
-            cursorY += ROW_H; // gap between countries
+            cursorX = placeTree(countries[c].id, 0, cursorX);
+            cursorX += COL_W * 2; // gap between country trees
         }
 
         data.nodes.forEach(function (n) { n.fx = n.x; n.fy = n.y; });
