@@ -178,6 +178,12 @@
     mask-image: linear-gradient(to right, black 80%, transparent);
     -webkit-mask-image: linear-gradient(to right, black 80%, transparent);
 }
+.digest-section h3 .section-count {
+    flex: none;
+    font-size: 0.6rem;
+    font-weight: 400;
+    opacity: 0.5;
+}
 
 .digest-grid .digest-section .summary {
     padding-top: 0.7rem;
