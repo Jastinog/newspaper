@@ -38,7 +38,16 @@ class DigestService:
         self.deduplicator = StoryDeduplicator(embedder=self.embedder)
         self.saver = DigestSaver()
 
-    def run(self, digest_date: date = None, languages: list[str] = None) -> Digest:
+    def run(self, digest_date: date = None, languages: list[str] = None,
+            on_event=None) -> Digest:
+        """Run the full digest pipeline.
+
+        Args:
+            on_event: optional callback(event, **kwargs) for progress reporting.
+                Events: 'collect', 'analyze_section', 'analyze_done',
+                        'generate_start', 'generate_item', 'generate_skip', 'done'
+        """
+        emit = on_event or (lambda *a, **kw: None)
         digest_date = digest_date or date.today()
         default_lang = Language.default()
         if not default_lang:
@@ -52,12 +61,14 @@ class DigestService:
         Digest.objects.filter(date=digest_date).delete()
         digest = Digest.objects.create(date=digest_date)
 
-        # ── 1. Collect candidates (fast) ──
+        # 1. Collect
         section_articles = self.collector.collect()
-        if not any(articles for _, articles in section_articles):
+        total_articles = sum(len(a) for _, a in section_articles)
+        if total_articles == 0:
             raise RuntimeError("No articles found. Check embeddings and sections.")
+        emit("collect", sections=len(section_articles), articles=total_articles)
 
-        # ── 2. Analyze → stories → deduplicate ──
+        # 2. Analyze + deduplicate
         section_stories = []
         for section, articles in section_articles:
             try:
@@ -67,46 +78,61 @@ class DigestService:
                                     model=self.config.chat_model, digest=digest)
                 if stories:
                     section_stories.append((section, stories))
+                    emit("analyze_section", section=section.slug,
+                         articles=len(articles), stories=len(stories))
             except Exception:
                 logger.exception("Analysis failed for [%s]", section.slug)
+                emit("analyze_section", section=section.slug,
+                     articles=len(articles), stories=0, error=True)
 
         section_stories = self.deduplicator.deduplicate(section_stories)
+        total_stories = sum(len(s) for _, s in section_stories)
+        emit("analyze_done", sections=len(section_stories), stories=total_stories)
 
-        # ── 3. Generate items — each one immediately display-ready ──
+        # 3. Generate
+        emit("generate_start", stories=total_stories)
         item_count = self._generate_items(digest, section_stories, default_lang,
-                                          target_langs)
+                                          target_langs, emit)
         if item_count == 0:
             raise RuntimeError("No items generated.")
 
         digest.stage = Digest.Stage.DONE
         digest.save(update_fields=["stage"])
+        emit("done", items=item_count)
         logger.info("Digest %s complete: %d items", digest.date, item_count)
         return digest
 
     # ── Item generation ──────────────────────────────────────────
 
     def _generate_items(self, digest, section_stories, default_lang,
-                        target_langs) -> int:
+                        target_langs, emit) -> int:
         """Generate all items sequentially. Each is saved and visible immediately."""
         used_ids = set(ArticleUse.objects.values_list("article_id", flat=True))
         used_image_ids = set()
         item_count = 0
+        story_index = 0
 
         for section, stories in section_stories:
             for story in stories:
+                story_index += 1
+                label = story.get("label", "?")
                 try:
                     item = self._refine_and_generate(
                         digest, section, story,
                         default_lang, target_langs, used_ids, used_image_ids,
                     )
                 except Exception:
-                    logger.exception("Story '%s' failed", story.get("label", "?"))
+                    logger.exception("Story '%s' failed", label)
+                    emit("generate_skip", index=story_index, label=label, reason="error")
                     continue
 
                 if not item:
+                    emit("generate_skip", index=story_index, label=label, reason="empty")
                     continue
 
                 item_count += 1
+                emit("generate_item", index=story_index, label=label,
+                     section=section.slug, item_count=item_count)
 
         if item_count and digest.stage < Digest.Stage.GENERATED:
             digest.stage = Digest.Stage.GENERATED
