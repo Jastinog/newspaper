@@ -108,11 +108,19 @@ def _build_digest_context(request, date=None, pinned_slugs=None):
                 else:
                     section_groups.append(group)
 
+    # Best image from top item for social sharing
+    og_image = ""
+    if digest:
+        top_item = digest.items.filter(image__isnull=False).exclude(image__image="").order_by("-importance").first()
+        if top_item and top_item.best_image_url:
+            og_image = request.build_absolute_uri(top_item.best_image_url)
+
     seo = {
         "title": f"{SITE_NAME} — {_('Daily News Digest')}",
         "description": SITE_DESCRIPTION,
         "canonical": request.build_absolute_uri("/"),
         "og_type": "website",
+        "og_image": og_image,
     }
 
     all_groups = sorted(pinned_groups + section_groups, key=lambda g: g["section"].order)
@@ -188,6 +196,8 @@ def article_detail(request, pk, slug=""):
     }
 
     hero_image = article.images.filter(is_primary=True).exclude(image="").first()
+    if hero_image and hero_image.image:
+        seo["og_image"] = request.build_absolute_uri(hero_image.image.url)
 
     return render(request, "news/article.html", {
         "article": article, "seo": seo, "hero_image": hero_image,
@@ -260,7 +270,7 @@ def story_detail(request, item_id):
         "description": summary[:160] if summary else topic,
         "canonical": request.build_absolute_uri(reverse("story_detail", args=[item.pk])),
         "og_type": "article",
-        "og_image": item.best_image_url,
+        "og_image": request.build_absolute_uri(item.best_image_url) if item.best_image_url else "",
         "published_time": item.digest.date.isoformat() if item.digest else "",
         "section": section_name,
     }
