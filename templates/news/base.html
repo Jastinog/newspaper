@@ -8,6 +8,11 @@
     <meta name="description" content="{{ seo.description|default:"Your daily news digest from 500+ sources worldwide. Key stories with credibility ratings, media bias spectrum, and in-depth research on every major event." }}">
     {% if seo.canonical %}<link rel="canonical" href="{{ seo.canonical }}">{% endif %}
 
+    <!-- Hreflang alternates for multilingual SEO -->
+    {% for alt in hreflang_urls %}
+    <link rel="alternate" hreflang="{{ alt.lang }}" href="{{ alt.url }}">
+    {% endfor %}
+
     <!-- Open Graph -->
     <meta property="og:title" content="{{ seo.title|default:"Newspaper" }}">
     <meta property="og:description" content="{{ seo.description|default:"Daily news digest from 500+ sources with credibility ratings and deep research" }}">

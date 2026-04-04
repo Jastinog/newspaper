@@ -7,6 +7,8 @@ from apps.research.models import Research
 
 
 class StaticSitemap(Sitemap):
+    i18n = True
+    alternates = True
     priority = 1.0
     changefreq = "hourly"
 
@@ -24,6 +26,8 @@ class StaticSitemap(Sitemap):
 
 
 class DigestSitemap(Sitemap):
+    i18n = True
+    alternates = True
     priority = 0.9
     changefreq = "daily"
 
@@ -42,6 +46,8 @@ class DigestSitemap(Sitemap):
 
 
 class StorySitemap(Sitemap):
+    i18n = True
+    alternates = True
     limit = 5000
     priority = 0.8
     changefreq = "never"
@@ -61,6 +67,8 @@ class StorySitemap(Sitemap):
 
 
 class CategorySitemap(Sitemap):
+    i18n = True
+    alternates = True
     priority = 0.7
     changefreq = "daily"
 
@@ -79,6 +87,8 @@ class CategorySitemap(Sitemap):
 
 
 class ResearchSitemap(Sitemap):
+    i18n = True
+    alternates = True
     priority = 0.6
     changefreq = "never"
 
@@ -97,6 +107,8 @@ class ResearchSitemap(Sitemap):
 
 
 class ArticleSitemap(Sitemap):
+    i18n = True
+    alternates = True
     limit = 5000
     priority = 0.5
     changefreq = "monthly"
