@@ -131,6 +131,9 @@ class ArticleImage(models.Model):
 
     class Meta:
         unique_together = [("article", "source_url")]
+        indexes = [
+            models.Index(fields=["is_primary", "downloaded"]),
+        ]
 
     def __str__(self):
         return f"Image for {self.article_id} ({'primary' if self.is_primary else 'alt'})"

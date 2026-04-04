@@ -234,6 +234,9 @@ class Digest(models.Model):
 
     class Meta:
         ordering = ["-date"]
+        indexes = [
+            models.Index(fields=["stage", "-date"]),
+        ]
 
     def __str__(self):
         return f"Digest {self.date}"
@@ -274,6 +277,9 @@ class DigestItem(models.Model):
 
     class Meta:
         ordering = ["section__order", "-freshness", "order"]
+        indexes = [
+            models.Index(fields=["digest", "-freshness"]),
+        ]
 
     def __str__(self):
         return self.get_topic("en") or f"Item #{self.pk}"
