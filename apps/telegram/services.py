@@ -106,12 +106,19 @@ class TelegramService:
 
         return "\n".join(lines)
 
+    DIGEST_TITLE = {
+        "uk": "Дайджест",
+        "ru": "Дайджест",
+        "en": "News Digest",
+    }
+
     def _format_header(self, digest: Digest) -> str:
         lang = self.channel.language.code
         headline = digest.get_headline(lang) or digest.get_headline("en")
         date_str = digest.date.strftime("%d.%m.%Y")
+        title = self.DIGEST_TITLE.get(lang, "News Digest")
 
-        header = f"\U0001f4f0 <b>Дайджест {date_str}</b>"
+        header = f"\U0001f4f0 <b>{title} {date_str}</b>"
         if headline:
             header += f"\n\n<i>{headline}</i>"
         header += "\n\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500"
