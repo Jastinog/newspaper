@@ -5,12 +5,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ seo.title|default:"Newspaper" }}</title>
-    <meta name="description" content="{{ seo.description|default:"Daily AI-curated news digest from 100+ RSS sources worldwide" }}">
+    <meta name="description" content="{{ seo.description|default:"Your daily news digest from 500+ sources worldwide. Key stories with credibility ratings, media bias spectrum, and in-depth research on every major event." }}">
     {% if seo.canonical %}<link rel="canonical" href="{{ seo.canonical }}">{% endif %}
 
     <!-- Open Graph -->
     <meta property="og:title" content="{{ seo.title|default:"Newspaper" }}">
-    <meta property="og:description" content="{{ seo.description|default:"Daily AI-curated news digest" }}">
+    <meta property="og:description" content="{{ seo.description|default:"Daily news digest from 500+ sources with credibility ratings and deep research" }}">
     <meta property="og:type" content="{{ seo.og_type|default:"website" }}">
     {% if seo.canonical %}<meta property="og:url" content="{{ seo.canonical }}">{% endif %}
     <meta property="og:site_name" content="Newspaper">
@@ -21,7 +21,7 @@
     <!-- Twitter Card -->
     <meta name="twitter:card" content="{% if seo.og_image %}summary_large_image{% else %}summary{% endif %}">
     <meta name="twitter:title" content="{{ seo.title|default:"Newspaper" }}">
-    <meta name="twitter:description" content="{{ seo.description|default:"Daily AI-curated news digest" }}">
+    <meta name="twitter:description" content="{{ seo.description|default:"Daily news digest from 500+ sources with credibility ratings and deep research" }}">
     {% if seo.og_image %}<meta name="twitter:image" content="{{ seo.og_image }}">{% endif %}
 
     <!-- Favicon -->
