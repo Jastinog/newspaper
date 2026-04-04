@@ -40,9 +40,7 @@ def _parse_pinned_cookie(request):
 
 def _latest_digest(qs, date=None):
     """Return the best-matching *completed* digest, optionally filtered by date."""
-    qs = qs.filter(stage=Digest.Stage.DONE).prefetch_related(
-        "items__image", "items__section__translations", "items__translations",
-    )
+    qs = qs.filter(stage=Digest.Stage.DONE)
     if date:
         return qs.filter(date=date).first()
     return qs.first()
@@ -76,6 +74,7 @@ def _build_digest_context(request, date=None, pinned_slugs=None):
             next_date = next_digest.date
 
     # Group items by section
+    items = []
     section_groups = []
     pinned_groups = []
     active_section = None
@@ -118,17 +117,21 @@ def _build_digest_context(request, date=None, pinned_slugs=None):
                 else:
                     section_groups.append(group)
 
-    # Best image from top item for social sharing
+    # Pick OG image from already-loaded items to avoid an extra query
     og_image = ""
-    if digest:
-        top_item = digest.items.filter(image__isnull=False).exclude(image__image="").order_by("-importance").first()
+    if digest and items:
+        top_item = max(
+            (i for i in items if i.image_id and getattr(i.image, "image", "")),
+            key=lambda i: i.importance,
+            default=None,
+        )
         if top_item and top_item.best_image_url:
-            og_image = request.build_absolute_uri(top_item.best_image_url)
+            og_image = f"{settings.SITE_URL}{top_item.best_image_url}"
 
     seo = {
         "title": f"{SITE_NAME} — {_('Daily News Digest')}",
         "description": SITE_DESCRIPTION,
-        "canonical": request.build_absolute_uri("/"),
+        "canonical": f"{settings.SITE_URL}/",
         "og_type": "website",
         "og_image": og_image,
     }
@@ -158,16 +161,39 @@ _HTMX_TEMPLATES = {
 
 
 def index(request, date=None):
+    is_htmx = request.headers.get("HX-Request") == "true" and not request.headers.get("HX-Boosted")
+    has_pinned = bool(request.COOKIES.get(_PINNED_COOKIE, ""))
+    has_section = bool(request.GET.get("section"))
+    lang = get_language() or "en"
+
+    # Serve cached full-page response when there's no personalization
+    can_cache = not is_htmx and not has_pinned and not has_section
+    if can_cache:
+        cache_key = f"index:{lang}:{date or 'latest'}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return cached
+
     context = _build_digest_context(request, date=date)
     if context is None:
         return redirect("index")
 
-    if request.headers.get("HX-Request") == "true" and not request.headers.get("HX-Boosted"):
+    if is_htmx:
         target = request.headers.get("HX-Target", "contentArea")
         template = _HTMX_TEMPLATES.get(target, "news/_content_area.html")
         return render(request, template, context)
 
-    return render(request, "news/index.html", context)
+    response = render(request, "news/index.html", context)
+
+    if can_cache and context.get("digest"):
+        digest_date = str(context["digest"].date)
+        # Warm date-keyed entry so /digest/YYYY-MM-DD/ also hits cache
+        cache.set(f"index:{lang}:{digest_date}", response, 60 * 60)
+        # "latest" alias with shorter TTL; also invalidated by DigestService on DONE
+        if not date:
+            cache.set(f"index:{lang}:latest", response, 60 * 5)
+
+    return response
 
 
 @require_POST

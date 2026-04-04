@@ -1,11 +1,18 @@
+import logging
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from urllib.parse import urlparse
 
+from django.db import close_old_connections
 from django.utils import timezone
 
 from .models import Activity, Client, Session
 from .services import build_client_defaults, resolve_path
 from .utils import get_client_ip, hash_with_salt, parse_ua, resolve_geo
+
+logger = logging.getLogger(__name__)
+
+_bot_tracking_pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix="bot_track")
 
 # Paths to skip tracking (prefixes)
 SKIP_PREFIXES = (
@@ -58,49 +65,58 @@ class BotTrackingMiddleware:
         if not ua_info.get("is_bot", False):
             return response
 
-        # Get IP and geo info
+        # Extract from request now — the request object must not escape into the background thread
         ip = get_client_ip(request)
-        ip_hash = hash_with_salt(ip) if ip else ""
-        geo = resolve_geo(ip)
-
-        # Create or update client (use IP hash as stable identifier for bots)
-        # Bots don't have localStorage client_id, so we derive one from IP + UA
-        bot_client_id = uuid.uuid5(
-            uuid.NAMESPACE_URL, f"bot:{ip_hash}:{ua_info.get('bot_name', '')}"
-        )
-
-        client, _ = Client.objects.update_or_create(
-            client_id=bot_client_id,
-            defaults=build_client_defaults(ua_info, ua_string, ip_hash, geo),
-        )
-
-        # Create a short-lived HTTP session (immediately closed)
         referrer = request.META.get("HTTP_REFERER", "")[:2000]
-        referrer_domain = ""
-        if referrer:
-            try:
-                referrer_domain = urlparse(referrer).netloc[:253]
-            except Exception:
-                pass
 
-        session = Session.objects.create(
-            client=client,
-            source=Session.Source.HTTP,
-            referrer=referrer,
-            referrer_domain=referrer_domain,
-            page_count=1,
-            ended_at=timezone.now(),
-        )
-
-        view_name, article, category = resolve_path(path)
-
-        Activity.objects.create(
-            session=session,
-            type=Activity.ActivityType.PAGE_VIEW,
-            path=path[:2000],
-            view_name=view_name[:100],
-            article=article,
-            category=category,
-        )
+        # Background thread so DB writes don't block TTFB
+        _bot_tracking_pool.submit(self._track, ip, ua_string, ua_info, path, referrer)
 
         return response
+
+    @staticmethod
+    def _track(ip, ua_string, ua_info, path, referrer):
+        """Persist bot tracking data in a background thread."""
+        try:
+            ip_hash = hash_with_salt(ip) if ip else ""
+            geo = resolve_geo(ip)
+
+            bot_client_id = uuid.uuid5(
+                uuid.NAMESPACE_URL, f"bot:{ip_hash}:{ua_info.get('bot_name', '')}"
+            )
+
+            client, _ = Client.objects.update_or_create(
+                client_id=bot_client_id,
+                defaults=build_client_defaults(ua_info, ua_string, ip_hash, geo),
+            )
+
+            referrer_domain = ""
+            if referrer:
+                try:
+                    referrer_domain = urlparse(referrer).netloc[:253]
+                except Exception:
+                    pass
+
+            session = Session.objects.create(
+                client=client,
+                source=Session.Source.HTTP,
+                referrer=referrer,
+                referrer_domain=referrer_domain,
+                page_count=1,
+                ended_at=timezone.now(),
+            )
+
+            view_name, article, category = resolve_path(path)
+
+            Activity.objects.create(
+                session=session,
+                type=Activity.ActivityType.PAGE_VIEW,
+                path=path[:2000],
+                view_name=view_name[:100],
+                article=article,
+                category=category,
+            )
+        except Exception:
+            logger.exception("Bot tracking failed")
+        finally:
+            close_old_connections()

@@ -98,6 +98,13 @@ class DigestService:
 
         digest.stage = Digest.Stage.DONE
         digest.save(update_fields=["stage"])
+
+        # Invalidate cached index pages so the new digest is served immediately
+        from django.conf import settings
+        from django.core.cache import cache
+        for lang_code, _ in settings.LANGUAGES:
+            cache.delete(f"index:{lang_code}:latest")
+
         emit("done", items=item_count)
         logger.info("Digest %s complete: %d items", digest.date, item_count)
         return digest

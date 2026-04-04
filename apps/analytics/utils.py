@@ -2,6 +2,7 @@ import hashlib
 import logging
 import re
 from datetime import date
+from functools import lru_cache
 
 from django.conf import settings
 
@@ -184,13 +185,20 @@ def get_client_ip(request) -> str:
     return request.META.get("REMOTE_ADDR", "")
 
 
+_EMPTY_GEO = {"country": "", "country_name": "", "city": "", "latitude": None, "longitude": None}
+
+
 def resolve_geo(ip: str) -> dict:
-    """Resolve IP to country/city/coordinates via GeoIP database."""
-    reader = _get_geoip_reader()
-    if not reader or not ip:
-        return {"country": "", "country_name": "", "city": "", "latitude": None, "longitude": None}
+    """Resolve IP to country/city/coordinates via GeoIP database (cached)."""
+    if not ip or not _get_geoip_reader():
+        return _EMPTY_GEO
+    return _resolve_geo_cached(ip)
+
+
+@lru_cache(maxsize=2048)
+def _resolve_geo_cached(ip: str) -> dict:
     try:
-        resp = reader.city(ip)
+        resp = _get_geoip_reader().city(ip)
         return {
             "country": (resp.country.iso_code or "")[:2],
             "country_name": (resp.country.name or "")[:100],
@@ -199,7 +207,7 @@ def resolve_geo(ip: str) -> dict:
             "longitude": resp.location.longitude,
         }
     except Exception:
-        return {"country": "", "country_name": "", "city": "", "latitude": None, "longitude": None}
+        return _EMPTY_GEO
 
 
 def country_flag(code: str) -> str:
