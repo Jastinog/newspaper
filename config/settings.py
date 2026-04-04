@@ -1,5 +1,7 @@
 import os
 from datetime import timedelta
+
+from celery.schedules import crontab
 from pathlib import Path
 
 from django.urls import reverse_lazy
@@ -156,6 +158,10 @@ CELERY_BEAT_SCHEDULE = {
     "telegram-publish-next": {
         "task": "telegram.publish_next",
         "schedule": timedelta(minutes=15),
+    },
+    "warm-sitemap-cache": {
+        "task": "core.warm_sitemap_cache",
+        "schedule": crontab(hour=0, minute=5),
     },
 }
 
