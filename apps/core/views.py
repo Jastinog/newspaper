@@ -166,34 +166,30 @@ def index(request, date=None):
     has_section = bool(request.GET.get("section"))
     lang = get_language() or "en"
 
-    # Serve cached full-page response when there's no personalization
+    # Cache context dict, not the rendered response — caching the full HttpResponse
+    # would bake one user's CSRF token into the HTML served to everyone.
     can_cache = not is_htmx and not has_pinned and not has_section
+    context = None
     if can_cache:
         cache_key = f"index:{lang}:{date or 'latest'}"
-        cached = cache.get(cache_key)
-        if cached is not None:
-            return cached
+        context = cache.get(cache_key)
 
-    context = _build_digest_context(request, date=date)
     if context is None:
-        return redirect("index")
+        context = _build_digest_context(request, date=date)
+        if context is None:
+            return redirect("index")
+        if can_cache and context.get("digest"):
+            digest_date = str(context["digest"].date)
+            cache.set(f"index:{lang}:{digest_date}", context, 60 * 60)
+            if not date:
+                cache.set(f"index:{lang}:latest", context, 60 * 5)
 
     if is_htmx:
         target = request.headers.get("HX-Target", "contentArea")
         template = _HTMX_TEMPLATES.get(target, "news/_content_area.html")
         return render(request, template, context)
 
-    response = render(request, "news/index.html", context)
-
-    if can_cache and context.get("digest"):
-        digest_date = str(context["digest"].date)
-        # Warm date-keyed entry so /digest/YYYY-MM-DD/ also hits cache
-        cache.set(f"index:{lang}:{digest_date}", response, 60 * 60)
-        # "latest" alias with shorter TTL; also invalidated by DigestService on DONE
-        if not date:
-            cache.set(f"index:{lang}:latest", response, 60 * 5)
-
-    return response
+    return render(request, "news/index.html", context)
 
 
 @require_POST
