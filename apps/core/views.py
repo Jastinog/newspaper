@@ -39,11 +39,13 @@ def _parse_pinned_cookie(request):
 
 
 def _latest_digest(qs, date=None):
-    """Return the best-matching digest from a queryset, optionally filtered by date."""
-    qs = qs.prefetch_related("items__image", "items__section__translations", "items__translations")
+    """Return the best-matching *completed* digest, optionally filtered by date."""
+    qs = qs.filter(stage=Digest.Stage.DONE).prefetch_related(
+        "items__image", "items__section__translations", "items__translations",
+    )
     if date:
         return qs.filter(date=date).first()
-    return qs.order_by("-date").first()
+    return qs.first()
 
 
 def _build_digest_context(request, date=None, pinned_slugs=None):
@@ -65,8 +67,9 @@ def _build_digest_context(request, date=None, pinned_slugs=None):
     # Prev/next navigation
     prev_date = next_date = None
     if digest:
-        prev_digest = Digest.objects.filter(date__lt=digest.date).order_by("-date").only("date").first()
-        next_digest = Digest.objects.filter(date__gt=digest.date).order_by("date").only("date").first()
+        done = Digest.objects.filter(stage=Digest.Stage.DONE)
+        prev_digest = done.filter(date__lt=digest.date).only("date").first()
+        next_digest = done.filter(date__gt=digest.date).order_by("date").only("date").first()
         if prev_digest:
             prev_date = prev_digest.date
         if next_digest:
