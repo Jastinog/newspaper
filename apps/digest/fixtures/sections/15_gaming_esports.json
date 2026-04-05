@@ -1,0 +1,42 @@
+{
+    "slug": "gaming-esports",
+    "order": 15,
+    "description": "Video games, game releases, esports tournaments, gaming industry, streaming platforms",
+    "translations": {
+        "en": "Gaming & Esports",
+        "ru": "Игры • Киберспорт",
+        "uk": "Ігри • Кіберспорт"
+    },
+    "embeddings": [
+        "AAA video game launch review scores and player reception for major studio title release",
+        "Esports world championship tournament bracket results prize pool winners and team standings",
+        "Microsoft Activision Sony gaming industry acquisition merger regulatory approval or antitrust block",
+        "Nintendo Switch console hardware announcement or first-party exclusive game reveal and release date",
+        "PlayStation exclusive game announcement Sony studio project reveal or PS5 firmware system update",
+        "Xbox Game Pass subscription service new titles added monthly lineup and subscriber milestone count",
+        "Steam PC gaming platform record concurrent players sale event or Valve hardware announcement news",
+        "Mobile gaming revenue market report top-grossing smartphone game downloads and monetization trends",
+        "Game developer studio mass layoffs workforce reduction or unexpected permanent closure and shutdown",
+        "Twitch streamer controversy platform policy change or YouTube Gaming exclusive streaming deal signed",
+        "Professional esports player transfer signing between organizations and roster change announcement news",
+        "Indie game breakout hit surprise success story from small developer team on digital storefront",
+        "New gaming console hardware reveal specifications pricing or next-generation GPU graphics card launch",
+        "Unreal Engine major version update or Unity game engine licensing pricing controversy and developer backlash",
+        "League of Legends Worlds championship tournament match results team performance and meta strategy analysis",
+        "Fortnite Battle Royale new season launch map changes collaborations and competitive tournament announcement",
+        "Counter-Strike 2 Major tournament results Valve competitive update and professional scene roster shuffles",
+        "VR virtual reality headset game release Meta Quest hardware sales or immersive gaming technology advance",
+        "Game modding community creation going viral popular mod release or developer officially supporting modders",
+        "Speedrunning world record broken at Games Done Quick marathon charity event or new category route discovered",
+        "Gaming community controversy toxic behavior incident harassment scandal or industry accountability debate",
+        "Retro game preservation initiative classic console emulation legal battle or digital storefront delisting",
+        "Cloud gaming service update GeForce Now Xbox Cloud Gaming latency improvements or new platform launch",
+        "The Game Awards annual ceremony winner announcements world premiere trailer reveals and industry speeches",
+        "Loot box gambling regulation government legislation age rating update or in-game purchase consumer protection",
+        "Japanese anime-styled game visual novel release or JRPG title localization announcement for western markets",
+        "MMORPG major expansion launch server queue issues new raid content or subscription model change announcement",
+        "Highly anticipated game delay pushed back to new release date or project cancellation confirmed by studio",
+        "Gaming accessibility feature controller adaptive technology or disability-inclusive game design recognition award",
+        "Gamescom Tokyo Game Show or PAX convention major game announcement reveal and hands-on preview impressions"
+    ]
+}

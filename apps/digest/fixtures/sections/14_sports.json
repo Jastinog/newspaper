@@ -1,0 +1,42 @@
+{
+    "slug": "sports",
+    "order": 14,
+    "description": "Major sports leagues, Olympics, championships, transfers, records, doping",
+    "translations": {
+        "en": "Sports",
+        "ru": "Спорт",
+        "uk": "Спорт"
+    },
+    "embeddings": [
+        "Champions League Europa League match result FIFA World Cup qualifier major soccer transfer",
+        "NBA playoff series outcome regular season standings basketball free agency signing",
+        "NFL game score Super Bowl news draft pick American football trade deadline move",
+        "MLB pennant race standings World Series result baseball free agent contract signing",
+        "NHL Stanley Cup playoff result hockey trade deadline deal expansion franchise update",
+        "Summer Winter Olympic Games medal result host city preparation qualifying event",
+        "Grand Slam tennis tournament draw ATP WTA ranking shift major upset result",
+        "Formula 1 Grand Prix race result constructor standings driver contract negotiation",
+        "Marquee player transfer deal record-breaking signing fee contract extension announcement",
+        "Athlete doping test failure anti-doping agency investigation competition ban ruling",
+        "Championship boxing title fight UFC pay-per-view main event MMA ranking change",
+        "Cricket Test match series result ICC World Cup outcome IPL auction highlight",
+        "Sports broadcasting rights deal league revenue report franchise valuation ranking",
+        "Golf major championship leaderboard PGA Tour schedule change LIV Golf development",
+        "Track and field world record athletics Diamond League result marathon race outcome",
+        "Alpine skiing World Cup standings figure skating championship winter sports medal event",
+        "Tour de France stage result Giro d'Italia outcome professional cycling team news",
+        "Swimming world record attempt FINA championship result aquatic sports rule change",
+        "NCAA March Madness tournament bracket college football playoff result NIL deal news",
+        "High-profile athlete injury report ACL tear recovery sports medicine breakthrough",
+        "FIFA governance reform proposal IOC host city selection sports organization corruption probe",
+        "Skateboarding surfing rock climbing competition result extreme sports event coverage",
+        "Volleyball Nations League result handball championship outcome team sport tournament bracket",
+        "Table tennis world ranking badminton All England result racket sport competition news",
+        "Olympic freestyle wrestling championship result weight class rule change federation news",
+        "Horse racing Triple Crown event Kentucky Derby result thoroughbred racing industry news",
+        "America's Cup yacht racing SailGP result competitive sailing event coverage",
+        "Sports betting legalization update gambling regulation change wagering market expansion news",
+        "Women's professional league expansion pay equity milestone female athlete achievement record",
+        "Paralympic Games medal result para-athlete record disability sports funding development"
+    ]
+}

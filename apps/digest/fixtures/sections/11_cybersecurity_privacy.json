@@ -1,0 +1,42 @@
+{
+    "slug": "cybersecurity-privacy",
+    "order": 11,
+    "description": "Cybersecurity, data breaches, hacking, privacy, surveillance, digital rights",
+    "translations": {
+        "en": "Cybersecurity & Privacy",
+        "ru": "Кибербезопасность • Приватность",
+        "uk": "Кібербезпека • Приватність"
+    },
+    "embeddings": [
+        "Major data breach exposing millions user records leaked credential database personal information theft",
+        "Ransomware attack on hospital corporation government agency demanding cryptocurrency payment",
+        "State-sponsored hacking campaign Chinese Russian cyber espionage against Western targets",
+        "Zero-day vulnerability discovery critical software exploit patch emergency security update",
+        "GDPR enforcement fine Digital Services Act compliance international privacy law development",
+        "Government surveillance program facial recognition deployment by police mass monitoring controversy",
+        "Phishing campaign takedown business email compromise scheme social engineering fraud operation",
+        "Cyberattack targeting power grid water treatment plant critical infrastructure control system",
+        "End-to-end encryption policy debate government backdoor mandate messaging app security",
+        "Dark web marketplace seizure law enforcement sting operation underground forum shutdown",
+        "Software supply chain compromise malicious package injection third-party vendor breach cascade",
+        "Bug bounty program payout responsible vulnerability disclosure security researcher recognition",
+        "IoT device security flaw smart home hacking demonstration connected device firmware vulnerability",
+        "AI-generated deepfake threat synthetic media fraud machine learning powered cyberattack tool",
+        "Cloud service misconfiguration exposing sensitive data AWS Azure security incident report",
+        "Election infrastructure security audit voting machine vulnerability campaign hacking attempt",
+        "Insider threat incident employee data exfiltration case privileged access abuse investigation",
+        "Cyber insurance market shift breach cost analysis report incident response industry trend",
+        "Children online privacy regulation age verification mandate social media youth protection law",
+        "Commercial spyware vendor NSO Group Pegasus infection mercenary surveillance tool sale",
+        "DDoS attack campaign against financial institution botnet takedown traffic amplification attack",
+        "Password security standard update passkey adoption progress multi-factor authentication mandate",
+        "VPN service regulation proxy ban authoritarian country internet censorship circumvention tool",
+        "Browser tracking protection update cookie consent enforcement cross-site fingerprinting defense",
+        "CISO leadership change major company cybersecurity workforce shortage industry consolidation",
+        "Threat intelligence sharing initiative CISA advisory coordinated vulnerability disclosure framework",
+        "Malware strain analysis report new trojan variant reverse engineering nation-state toolkit",
+        "Security conference presentation DEF CON Black Hat RSA revealing new attack technique",
+        "Data sovereignty law requiring local storage cross-border data transfer restriction localization mandate",
+        "Biometric data protection lawsuit fingerprint face scan collection regulation BIPA enforcement"
+    ]
+}

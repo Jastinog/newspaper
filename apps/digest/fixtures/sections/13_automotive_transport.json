@@ -1,0 +1,42 @@
+{
+    "slug": "automotive-transport",
+    "order": 13,
+    "description": "Electric vehicles, autonomous driving, aviation, railways, shipping, transportation policy",
+    "translations": {
+        "en": "Automotive & Transport",
+        "ru": "Авто • Транспорт",
+        "uk": "Авто • Транспорт"
+    },
+    "embeddings": [
+        "Electric vehicle sales figures global EV market share growth adoption rate statistics",
+        "Tesla quarterly earnings production numbers Gigafactory update Elon Musk business decision",
+        "BYD export expansion Chinese EV manufacturer entering European Asian markets",
+        "Autonomous driving software update self-driving car test permit Level 4 autonomy milestone",
+        "EV battery chemistry breakthrough solid-state cell development charging network expansion plan",
+        "Airline industry earnings route expansion announcement flight cancellation aviation safety review",
+        "High-speed rail project approval bullet train route expansion intercity railway construction update",
+        "Container shipping rate fluctuation port congestion maritime logistics disruption fleet order",
+        "Uber Lyft regulatory battle ride-hailing driver pay dispute gig economy transportation policy",
+        "Toyota Volkswagen GM Ford production announcement factory investment strategic pivot",
+        "Rivian Lucid EV startup delivery milestone funding round production ramp challenge",
+        "Autonomous trucking highway pilot program self-driving freight corridor driverless delivery test",
+        "Urban public transit expansion project subway system upgrade bus rapid transit investment",
+        "E-bike e-scooter regulation change micromobility company expansion urban cycling infrastructure",
+        "Traffic safety regulation update speed limit change distracted driving law crash statistics",
+        "Flying taxi certification progress eVTOL aircraft test flight urban air mobility startup funding",
+        "Automotive recall announcement safety defect investigation NHTSA enforcement action",
+        "Highway construction project bridge repair funding road infrastructure spending legislation",
+        "Electric aircraft development milestone battery-powered regional plane test flight aviation decarbonization",
+        "Cargo drone delivery service launch autonomous aerial logistics drone corridor regulation",
+        "Vehicle emissions standard tightening tailpipe pollution rule fuel efficiency mandate update",
+        "Car-sharing platform growth vehicle subscription service launch fleet management innovation",
+        "Connected car data privacy concern vehicle-to-everything communication in-car software platform",
+        "Major auto show reveal concept car unveiling new model launch announcement",
+        "Used car market price trend wholesale auction data pre-owned vehicle demand shift",
+        "Commercial truck electrification electric bus fleet order heavy-duty vehicle emission standard",
+        "Motorcycle industry sales data electric motorcycle launch two-wheeler market development",
+        "Automotive semiconductor supply disruption chip allocation decision production halt impact",
+        "Transportation worker strike airline pilot dispute rail union negotiation port labor action",
+        "Hyperloop feasibility study vacuum tube transport proposal novel mobility concept development"
+    ]
+}

@@ -1,0 +1,42 @@
+{
+    "slug": "crime-justice",
+    "order": 10,
+    "description": "Crime, law enforcement, court rulings, investigations, legal proceedings",
+    "translations": {
+        "en": "Crime & Justice",
+        "ru": "Криминал • Правосудие",
+        "uk": "Кримінал • Правосуддя"
+    },
+    "embeddings": [
+        "Major criminal investigation high-profile arrest fugitive manhunt suspect apprehension",
+        "Supreme Court ruling landmark constitutional decision appellate court precedent",
+        "Organized crime network drug cartel operation transnational trafficking syndicate bust",
+        "White-collar crime prosecution Ponzi scheme securities fraud embezzlement case",
+        "Police use-of-force incident department reform mandate law enforcement accountability",
+        "Prison overcrowding sentencing reform legislation criminal justice overhaul proposal",
+        "Terrorism investigation extremist cell disruption domestic radicalization arrest",
+        "International Criminal Court proceeding war crimes tribunal genocide prosecution",
+        "Mass shooting incident gun violence statistics firearms regulation legislative debate",
+        "Human trafficking ring bust forced labor prosecution victim rescue operation",
+        "Corporate class action lawsuit antitrust enforcement multimillion dollar settlement",
+        "Wrongful conviction exoneration DNA evidence reversal innocence project victory",
+        "Cybercrime indictment online fraud ring prosecution digital evidence criminal trial",
+        "Political corruption trial bribery charges against officials public office misconduct",
+        "Juvenile justice system reform youth detention conditions alternative sentencing minors",
+        "Domestic violence legislation update stalking prosecution standard protective order enforcement",
+        "Money laundering scheme prosecution shell company crackdown illicit financial flow tracking",
+        "Death penalty case ruling execution moratorium capital punishment policy debate",
+        "Whistleblower retaliation case leaked document prosecution informant protection law",
+        "Wildlife poaching prosecution illegal logging enforcement environmental crime penalty",
+        "Immigration law enforcement operation deportation proceeding border crossing prosecution",
+        "International extradition battle fugitive surrender agreement cross-border suspect transfer",
+        "Serial killer investigation behavioral profiling breakthrough multi-victim case resolution",
+        "Cold case breakthrough using genealogy database decades-old murder case resolution",
+        "Forensic science advance in criminal case DNA technology evidence analysis method",
+        "Witness protection program development testimony security measure informant relocation",
+        "Probation parole system reform proposal recidivism reduction program reentry initiative",
+        "Hate crime prosecution bias-motivated attack charges enhanced sentencing targeted violence",
+        "Trade secret theft indictment corporate espionage prosecution intellectual property crime",
+        "Regulatory enforcement action by SEC FTC DOJ against corporate legal violation"
+    ]
+}

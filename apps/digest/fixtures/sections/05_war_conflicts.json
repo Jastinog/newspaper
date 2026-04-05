@@ -1,0 +1,42 @@
+{
+    "slug": "war-conflicts",
+    "order": 5,
+    "description": "Wars, military operations, armed conflicts, defense spending, security threats",
+    "translations": {
+        "en": "War & Conflicts",
+        "ru": "Война • Конфликты",
+        "uk": "Війна • Конфлікти"
+    },
+    "embeddings": [
+        "Active frontline combat operations and territorial advances in ongoing wars between nations",
+        "Ceasefire negotiations and diplomatic talks to halt armed hostilities between warring parties",
+        "Major arms deals and weapons export contracts between countries for fighter jets and tanks",
+        "Nuclear weapons proliferation concerns and uranium enrichment program violations by states",
+        "United Nations peacekeeping mission deployments and blue helmet operations in conflict zones",
+        "Military coup attempt or successful overthrow of government by armed forces in a country",
+        "National defense budget increases and military spending allocations approved by parliament",
+        "Combat drone strikes and unmanned aerial vehicle attacks on enemy positions and convoys",
+        "Naval warship confrontations and maritime military standoffs in disputed sea territories",
+        "Wagner Group and private military contractor operations deployed in foreign conflict zones",
+        "War crimes tribunal proceedings and international criminal court indictments for atrocities committed",
+        "NATO joint military exercises and allied forces training drills near contested border regions",
+        "Guerrilla insurgency attacks and rebel group ambushes against government military forces in rural areas",
+        "Humanitarian aid corridor establishment and civilian evacuation routes through active combat zones",
+        "Ballistic missile defense system deployment and anti-missile shield installation at military bases",
+        "State-sponsored cyber attacks targeting enemy military infrastructure and classified defense networks",
+        "Military intelligence agency reports on enemy troop movements and reconnaissance surveillance operations",
+        "Frontline battlefield dispatches reporting soldier casualties and ground combat conditions in war zones",
+        "Prisoner of war exchange deals and hostage release negotiations between opposing military forces",
+        "International arms embargo imposed on country involved in armed conflict or human rights violations",
+        "Military casualty reports and official death toll updates from ongoing armed conflict operations",
+        "Special forces commando raids and covert operations behind enemy lines targeting high-value targets",
+        "Air force bombing campaign strikes on enemy ammunition depots and military command centers",
+        "Siege and military blockade of city cutting off civilian food water and medical supply routes",
+        "Wartime military conscription and national mobilization orders calling reserve troops to active duty",
+        "Defense contractor billion-dollar weapons manufacturing deals for missiles and armored vehicle production",
+        "Hypersonic weapons testing and next-generation military technology development for battlefield superiority",
+        "Peace treaty signing ceremony and formal end of armed hostilities between warring nations",
+        "Territorial dispute escalation with military buildup and border skirmishes between neighboring countries",
+        "Chemical weapons attack allegations and international investigation into banned munitions use in warfare"
+    ]
+}

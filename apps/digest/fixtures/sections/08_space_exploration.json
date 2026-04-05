@@ -1,0 +1,42 @@
+{
+    "slug": "space-exploration",
+    "order": 8,
+    "description": "Space exploration, rocket launches, satellites, astronomy, Mars missions, space agencies",
+    "translations": {
+        "en": "Space & Exploration",
+        "ru": "Космос • Исследования",
+        "uk": "Космос • Дослідження"
+    },
+    "embeddings": [
+        "SpaceX Starship launch attempt or Falcon rocket booster landing and reusability milestone achievement",
+        "NASA deep space mission update including planetary flyby data collection and scientific instrument results",
+        "European Space Agency satellite launch or interplanetary probe deployment for solar system exploration program",
+        "Mars rover drilling sample collection or helicopter flight discovering evidence of ancient water or microbial life",
+        "Artemis Moon landing mission progress and lunar surface base construction plans for permanent human presence",
+        "Commercial satellite constellation launch deploying dozens of spacecraft into low Earth orbit for communications",
+        "Starlink satellite internet service expansion reaching new countries and rural broadband coverage milestone achieved",
+        "International Space Station crew rotation docking and onboard scientific experiment results in microgravity laboratory",
+        "Space debris collision risk alert and orbital cleanup mission testing removal technology on defunct satellites",
+        "Blue Origin or Virgin Galactic suborbital space tourism flight carrying civilian passengers to edge of space",
+        "Astronomers discover New distant galaxy or cosmic structure using ground-based observatory telescope observations and analysis",
+        "James Webb Space Telescope infrared image revealing early universe galaxy formation and stellar nursery details",
+        "Newly confirmed exoplanet in habitable zone of nearby star system with potential atmospheric biosignature detection",
+        "Planetary defense asteroid deflection test mission or near-Earth object close approach trajectory monitoring alert",
+        "Next-generation rocket engine test firing achieving record thrust or fuel efficiency for future launch vehicles",
+        "Severe solar storm geomagnetic event disrupting satellite communications and power grids with aurora visibility worldwide",
+        "Commercial space startup securing funding for orbital manufacturing or in-space satellite servicing venture launch",
+        "Asteroid or lunar mining feasibility study results estimating rare mineral extraction potential for future missions",
+        "Hubble Space Telescope observation capturing unprecedented detail of nebula supernova remnant or galaxy collision",
+        "China Tiangong space station module launch and taikonaut crew conducting extravehicular spacewalk activities in orbit",
+        "Indian ISRO rocket launch successfully delivering satellite payload and expanding national space program capabilities globally",
+        "Russian Roscosmos mission update including Soyuz launch or international cooperation agreement for space station operations",
+        "New international space law treaty proposal regulating resource extraction and territorial claims on celestial bodies",
+        "Astronaut long-duration mission health study results revealing space radiation and bone density loss countermeasures",
+        "Spacecraft autonomous docking maneuver or orbital rendezvous demonstration advancing in-space assembly technology capabilities",
+        "Voyager or New Horizons deep space probe transmitting data from outer solar system or interstellar space boundary",
+        "LIGO gravitational wave observatory detecting new black hole or neutron star merger event signal from deep space",
+        "Radio telescope array detecting mysterious fast radio burst signal or advancing search for extraterrestrial intelligence",
+        "Satellite Earth observation imagery revealing deforestation ice sheet loss or urban expansion patterns from orbit",
+        "Space launch contract competition between rocket companies bidding for government military or scientific payload delivery missions"
+    ]
+}

@@ -1,0 +1,42 @@
+{
+    "slug": "world-politics",
+    "order": 2,
+    "description": "International relations, diplomacy, geopolitics, summits, treaties, sanctions, elections",
+    "translations": {
+        "en": "World Politics",
+        "ru": "Мировая политика",
+        "uk": "Світова політика"
+    },
+    "embeddings": [
+        "United Nations General Assembly Security Council resolution vote on international crisis",
+        "NATO alliance military commitment defense spending member state security decision",
+        "G7 G20 summit joint statement leaders agreeing on global policy coordination",
+        "United States foreign policy diplomatic shift toward ally or adversary nation",
+        "European Union parliament election new legislation political bloc formation Brussels",
+        "Bilateral summit between heads of state signing cooperation agreement or pact",
+        "Economic sanctions imposed on country targeting officials entities or sectors",
+        "Diplomatic crisis embassy expulsion ambassador recalled tensions escalate between nations",
+        "National election results presidential parliamentary vote winner opposition concession dispute",
+        "Political corruption scandal minister official investigation resignation criminal charges filed",
+        "Arms control treaty nuclear disarmament agreement missile defense negotiations between powers",
+        "Intelligence espionage scandal spy ring uncovered foreign agent arrested in allied country",
+        "Middle East peace negotiations ceasefire talks Israeli Palestinian diplomatic developments",
+        "Asia Pacific territorial dispute South China Sea Taiwan Strait military tensions",
+        "African Union political mediation coup military takeover power transition in nation",
+        "Latin America political crisis presidential impeachment mass protests government instability",
+        "Coalition government formation parliament negotiations power sharing agreement after election",
+        "Refugee migration policy border crisis asylum seeker diplomatic negotiations between countries",
+        "Trade war tariff retaliation diplomatic negotiations between major economic powers",
+        "Brexit aftermath EU expansion accession candidate country joining the European Union",
+        "BRICS summit new member admission geopolitical bloc expanding influence challenging West",
+        "Nuclear negotiations Iran North Korea nonproliferation talks enrichment program inspections",
+        "Embassy consulate incident diplomatic compound attacked or closed during political crisis",
+        "Mass political protest movement demanding government reform democratic freedoms civil rights",
+        "Constitutional amendment referendum changing system of government or presidential term limits",
+        "Parliamentary vote of confidence prime minister government survives or falls from power",
+        "State visit official ceremony bilateral meeting between president and foreign leader",
+        "Political assassination attempt on leader or candidate destabilizing national security",
+        "International Criminal Court war crimes indictment arrest warrant for political leader",
+        "Territorial sovereignty dispute border conflict ceasefire violation between neighboring countries"
+    ]
+}

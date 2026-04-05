@@ -1,0 +1,42 @@
+{
+    "slug": "science",
+    "order": 7,
+    "description": "Scientific research, physics, biology, chemistry, archaeology, discoveries, Nobel prizes",
+    "translations": {
+        "en": "Science",
+        "ru": "Наука",
+        "uk": "Наука"
+    },
+    "embeddings": [
+        "Breakthrough discovery in theoretical or experimental physics revealing new fundamental forces or particles",
+        "Quantum computing milestone achieving error correction or computational supremacy on complex real-world problems",
+        "CRISPR gene editing experiment successfully modifying DNA sequences to eliminate inherited genetic disorders in organisms",
+        "New species discovery or evolutionary biology finding rewriting understanding of animal and plant development",
+        "Novel materials science breakthrough creating super-strong or self-healing synthetic compounds for industrial applications",
+        "Deep ocean exploration expedition discovering unknown creatures and hydrothermal vent ecosystems on seafloor",
+        "Major archaeological excavation uncovering ancient civilization ruins or prehistoric human settlement artifacts and tools",
+        "Neuroscience research mapping brain neural pathways and revealing mechanisms behind memory formation and consciousness",
+        "Nobel Prize in Physics Chemistry or related science awarded for groundbreaking research contribution to field",
+        "Earthquake geology study or volcanic activity research advancing tectonic plate movement prediction capabilities significantly",
+        "Nuclear fusion energy experiment achieving sustained plasma ignition and net positive energy output milestone",
+        "Synthetic biology lab creating artificial organisms or engineering microbes to produce biofuels and medicines",
+        "Nanotechnology research developing molecule-scale machines for targeted material assembly and environmental cleanup applications",
+        "Pure mathematics proof solving long-standing unsolved conjecture with implications across multiple scientific disciplines",
+        "CERN particle accelerator experiment detecting anomalous subatomic particle behavior challenging the Standard Model predictions",
+        "Conservation biology study documenting endangered species population recovery or critical habitat restoration success",
+        "Scientific ethics debate over controversial research methods or dual-use technology with potential misuse risks",
+        "Paleontology fossil discovery of previously unknown dinosaur species reshaping understanding of prehistoric ecosystems and extinction",
+        "Climate science study publishing new data on carbon cycle feedback loops and atmospheric temperature modeling",
+        "Ecology field research revealing collapse or recovery of biodiversity in critical rainforest or coral ecosystems",
+        "Animal cognition study demonstrating unexpected problem-solving intelligence or social behavior in wild species",
+        "Forensic science technique advancement improving criminal evidence analysis through new DNA or trace methods",
+        "Major science education reform initiative or international program expanding research access in developing countries",
+        "Government research funding agency announcing billion-dollar grant allocations for national science priority programs",
+        "Lab-grown diamond or crystal material with novel electromagnetic properties created for semiconductor and laser applications",
+        "Photonics and optical computing research achieving ultrafast light-based data processing and communication breakthroughs",
+        "Underwater acoustics research improving sonar technology or revealing ocean sound pollution impact on marine life",
+        "Nuclear physics experiment producing new isotopes or achieving breakthroughs in radioactive decay understanding and measurement",
+        "High-profile scientific paper retraction due to fabricated data or research misconduct investigation at major university",
+        "Peer review system reform debate after controversy over flawed studies published in top-tier scientific journals"
+    ]
+}

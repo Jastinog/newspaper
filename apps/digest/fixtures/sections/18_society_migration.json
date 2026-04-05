@@ -1,0 +1,42 @@
+{
+    "slug": "society-migration",
+    "order": 18,
+    "description": "Social movements, migration, demographics, education, human rights, labor rights",
+    "translations": {
+        "en": "Society & Migration",
+        "ru": "Общество • Миграция",
+        "uk": "Суспільство • Міграція"
+    },
+    "embeddings": [
+        "Government immigration policy overhaul visa rule changes work permit restrictions or border enforcement crackdown",
+        "Refugee crisis mass displacement asylum seeker surge at border or humanitarian camp overcrowding emergency",
+        "Mass protest demonstration social movement rally in major city demanding political or institutional reform",
+        "Education policy reform school funding dispute university tuition change or academic freedom restriction controversy",
+        "National census population data release demographic shift trend or fertility rate decline statistical report",
+        "Gender equality legislation pay gap report women's rights milestone or workplace discrimination lawsuit ruling",
+        "LGBTQ+ rights law marriage equality transgender policy debate or pride event ban and community pushback",
+        "Housing affordability crisis rent surge eviction moratorium homelessness increase or shelter capacity emergency",
+        "Major religious holiday observance interfaith dialogue event or church-state separation policy debate controversy",
+        "Human rights violation report political prisoner detention forced labor allegation or sanctions imposed response",
+        "Migrant worker labor exploitation diaspora community advocacy or remittance flow economic impact country study",
+        "Indigenous land rights dispute territorial recognition sacred site protection or sovereignty movement legal case",
+        "Disability rights accessibility law enforcement ADA compliance failure or inclusive design mandate policy update",
+        "Child welfare crisis foster care system failure child labor report or international adoption regulation change",
+        "Food insecurity hunger crisis famine warning humanitarian aid delivery failure or school meal program expansion",
+        "Labor union strike action worker walkout collective bargaining agreement or organizing drive victory at employer",
+        "Racial justice legislation anti-discrimination enforcement hate crime statistics report or reparations policy debate",
+        "Digital divide rural broadband expansion internet access inequality report or government connectivity subsidy program",
+        "Aging population pension system reform elder care facility crisis or retirement age increase policy announcement",
+        "Press freedom journalist imprisonment media outlet shutdown censorship law or reporter safety threat incident",
+        "Megacity urbanization challenge infrastructure strain slum upgrading project or urban planning policy initiative",
+        "Immigrant cultural integration challenge language barrier social cohesion study or assimilation policy debate controversy",
+        "Student campus protest university occupation activist demand academic institution response or police intervention event",
+        "Wealth inequality gap widening social mobility decline report or billionaire tax proposal public policy debate",
+        "Birth rate decline government incentive program pronatalist policy announcement or childcare subsidy expansion initiative",
+        "Endangered minority language preservation effort revitalization program or linguistic heritage documentation project funding",
+        "NGO humanitarian organization funding crisis volunteer program or civil society crackdown in authoritarian country",
+        "Social media platform impact on youth mental health study screen time policy or online safety regulation",
+        "Universal basic income pilot program results guaranteed income experiment evaluation or welfare reform policy proposal",
+        "Gig economy worker classification ruling freelancer rights lawsuit or platform labor regulation enforcement decision"
+    ]
+}

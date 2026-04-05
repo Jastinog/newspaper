@@ -1,0 +1,42 @@
+{
+    "slug": "ai-ml",
+    "order": 0,
+    "description": "Artificial intelligence, machine learning, neural networks, LLMs, AI regulation and ethics",
+    "translations": {
+        "en": "AI & Machine Learning",
+        "ru": "AI • Машинное обучение",
+        "uk": "AI • Машинне навчання"
+    },
+    "embeddings": [
+        "New large language model release from OpenAI GPT or Anthropic Claude with benchmark results",
+        "Google DeepMind Gemini model update capabilities and multimodal performance evaluation",
+        "Machine learning research paper breakthrough published at NeurIPS ICML or ICLR conference",
+        "Government AI regulation bill passed restricting artificial intelligence deployment and usage",
+        "AI safety alignment research existential risk mitigation strategies and guardrails development",
+        "Generative AI image synthesis Stable Diffusion Midjourney DALL-E new features released",
+        "AI video generation tool Sora Runway Pika producing realistic synthetic footage",
+        "AI music composition tool generating songs and audio tracks from text prompts",
+        "Artificial intelligence diagnostic tool approved for clinical use in healthcare hospitals",
+        "AI coding assistant Copilot Cursor Codeium improving developer productivity and code generation",
+        "Autonomous AI agent framework executing multi-step tasks with tool use and planning",
+        "Computer vision object detection model achieving new accuracy record on benchmark dataset",
+        "Natural language processing advancement in translation summarization or sentiment analysis",
+        "AI chip hardware accelerator TPU H100 Gaudi performance specs and supply shortage",
+        "Humanoid robot powered by AI learning to walk manipulate objects in real world",
+        "AI startup raises venture capital funding round for foundation model development",
+        "Open source AI model weights released rivaling proprietary commercial model performance",
+        "AI benchmark leaderboard MMLU HumanEval scores comparing frontier model capabilities",
+        "Deepfake detection technology combating synthetic media and AI-generated misinformation",
+        "AI automation replacing white-collar jobs displacing workers in specific industries",
+        "AI training data copyright lawsuit over scraping books articles and images",
+        "Multimodal AI model processing images text audio and video inputs simultaneously",
+        "AI tutoring system personalized education adaptive learning platform for students",
+        "Retrieval augmented generation RAG system improving LLM factual accuracy with knowledge bases",
+        "AI model fine-tuning technique LoRA RLHF improving task-specific performance efficiently",
+        "Speech recognition and voice cloning AI generating realistic synthetic human speech",
+        "AI drug discovery protein folding prediction accelerating pharmaceutical research development",
+        "European Union AI Act enforcement compliance requirements for high-risk AI systems",
+        "AI hallucination problem factual accuracy evaluation and mitigation techniques for LLMs",
+        "Small language model on-device AI running locally on smartphones and edge hardware"
+    ]
+}

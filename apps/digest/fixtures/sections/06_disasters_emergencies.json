@@ -1,0 +1,42 @@
+{
+    "slug": "disasters-emergencies",
+    "order": 6,
+    "description": "Man-made disasters, industrial accidents, transportation crashes, infrastructure failures, emergency response",
+    "translations": {
+        "en": "Disasters & Emergencies",
+        "ru": "Катастрофы • ЧП",
+        "uk": "Катастрофи • НС"
+    },
+    "embeddings": [
+        "Commercial airplane crash or emergency landing with passenger casualties and aviation safety investigation",
+        "Factory explosion and industrial plant blast causing worker deaths and surrounding area evacuation",
+        "Toxic chemical spill from industrial facility contaminating nearby river and residential water supply",
+        "Freight or passenger train derailment with hazardous material cargo release and track destruction",
+        "Cargo ship sinking or ferry capsizing at sea with crew and passenger rescue operations underway",
+        "Multi-story building structural collapse trapping residents under rubble and triggering search rescue teams",
+        "Highway bridge collapse during traffic with vehicles plunging into river below causing mass casualties",
+        "Underground mine collapse trapping miners with emergency drilling rescue operation to reach survivors",
+        "Nuclear power plant incident with reactor coolant leak and emergency radiation containment measures activated",
+        "Mass casualty event from structural failure at crowded venue requiring emergency triage and hospital surge",
+        "Oil tanker spill releasing millions of gallons of crude oil into ocean devastating marine ecosystem",
+        "Widespread electrical power grid failure causing prolonged blackout across major metropolitan area and hospitals",
+        "Dam breach flooding downstream towns with wall of water forcing emergency mass civilian evacuations",
+        "Natural gas pipeline explosion creating massive fireball destroying homes and forcing neighborhood evacuation orders",
+        "Construction crane collapse at high-rise building site crushing vehicles and pedestrians on street below",
+        "Road tunnel collapse trapping vehicles and drivers inside with rescue crews working through debris",
+        "Amusement park ride mechanical failure causing passenger injuries and emergency park shutdown and investigation",
+        "Crowd crush and fatal stampede at stadium entrance during concert or religious gathering event",
+        "Uncontrolled space debris reentry with large satellite fragments falling over populated area on ground",
+        "Massive warehouse fire with toxic smoke plume forcing evacuation and air quality emergency in city",
+        "Elevator freefall or escalator malfunction at shopping mall injuring multiple people and trapping passengers",
+        "Tower crane toppling onto adjacent building during high winds at construction site causing structural damage",
+        "Oil refinery explosion and fire at petrochemical processing plant with worker casualties and toxic emissions",
+        "Military or research submarine emergency with crew trapped underwater and international deep-sea rescue launched",
+        "Aerial cable car system failure stranding passengers at high altitude requiring helicopter rescue operation",
+        "Fireworks storage facility explosion leveling surrounding buildings with massive blast radius and shockwave damage",
+        "Sewer gas buildup explosion destroying city street and damaging underground utility infrastructure below sidewalks",
+        "Controlled building demolition gone wrong with debris striking adjacent structures and injuring bystanders nearby",
+        "Hazardous material transport truck accident releasing dangerous chemicals requiring highway closure and decontamination teams",
+        "Emergency rescue operation extracting survivors from collapsed parking garage or flooded underground structure"
+    ]
+}

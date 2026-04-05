@@ -1,0 +1,42 @@
+{
+    "slug": "energy-climate",
+    "order": 12,
+    "description": "Energy policy, renewable energy, climate change, environmental regulation, fossil fuels",
+    "translations": {
+        "en": "Energy & Climate",
+        "ru": "Энергетика • Климат",
+        "uk": "Енергетика • Клімат"
+    },
+    "embeddings": [
+        "COP climate summit negotiation national emission reduction pledge Paris Agreement progress",
+        "Large-scale solar farm installation wind power capacity addition renewable energy auction result",
+        "Oil gas industry earnings drilling permit pipeline approval fossil fuel investment decision",
+        "Nuclear reactor construction project SMR deployment plan atomic energy policy debate",
+        "Carbon capture storage facility project direct air capture technology green hydrogen production",
+        "EPA emissions regulation industrial pollution standard environmental compliance enforcement action",
+        "Energy supply security concern geopolitical competition over resources strategic petroleum reserve",
+        "Amazon deforestation rate biodiversity loss report endangered species habitat destruction",
+        "Green bond issuance ESG fund performance carbon credit market price climate finance commitment",
+        "Water scarcity crisis drought emergency declaration freshwater resource management policy",
+        "Sustainable farming practice adoption regenerative agriculture research agricultural emission reduction",
+        "Arctic sea ice extent measurement Antarctic ice shelf collapse polar climate research expedition",
+        "Offshore wind farm permitting tidal energy pilot project marine renewable energy installation",
+        "Plastic pollution cleanup initiative chemical recycling technology single-use plastic ban policy",
+        "Methane leak detection oil well livestock emission reduction strategy fugitive gas regulation",
+        "Grid-scale battery storage deployment lithium iron phosphate technology energy storage cost trend",
+        "Climate change lawsuit against fossil fuel company liability ruling environmental damage claim",
+        "Coal power plant retirement schedule mining region transition plan phase-out legislation",
+        "Natural gas pipeline dispute LNG export terminal approval global gas market price fluctuation",
+        "Renewable energy subsidy program production tax credit clean energy incentive policy change",
+        "Cap-and-trade program update EU emissions trading scheme price carbon border adjustment mechanism",
+        "Urban air quality monitoring data smog regulation enforcement particulate matter health study",
+        "Coral reef bleaching event ocean acidification research marine ecosystem degradation study",
+        "Energy poverty statistic rural electrification program developing world energy access initiative",
+        "Power plant construction approval fossil fuel facility decommissioning site remediation project",
+        "Smart grid modernization investment demand response program electricity distribution upgrade",
+        "Geothermal energy project development enhanced geothermal system volcanic heat utilization",
+        "Biofuel production mandate ethanol blending requirement biomass energy plant operation",
+        "Environmental impact assessment dispute habitat conservation plan land use permitting conflict",
+        "Climate refugee displacement pattern sea level rise adaptation project climate migration policy"
+    ]
+}

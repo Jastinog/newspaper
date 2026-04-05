@@ -1,0 +1,42 @@
+{
+    "slug": "tech-gadgets",
+    "order": 1,
+    "description": "Big tech companies, consumer electronics, smartphones, telecom, social media, cloud computing",
+    "translations": {
+        "en": "Tech & Gadgets",
+        "ru": "Технологии • Гаджеты",
+        "uk": "Технології • Гаджети"
+    },
+    "embeddings": [
+        "Apple iPhone new model release features pricing and availability announcement details",
+        "Google Pixel smartphone or Android operating system major version update launched",
+        "Microsoft Windows update Surface device release or Office productivity suite changes",
+        "Meta Facebook Instagram platform policy change user engagement or content moderation",
+        "Amazon retail logistics Prime membership changes and e-commerce marketplace strategy",
+        "Samsung Galaxy flagship smartphone tablet or foldable device unveiled at launch event",
+        "New laptop or desktop PC released with specs performance review and pricing",
+        "Smart home device speaker thermostat security camera product launch and integration",
+        "Smartwatch fitness tracker wearable health monitoring device new model released",
+        "VR AR headset Meta Quest Apple Vision Pro mixed reality product update",
+        "5G 6G cellular network rollout telecom carrier infrastructure expansion and coverage",
+        "Social media platform TikTok YouTube Snapchat new feature or policy update",
+        "Netflix Disney Plus streaming service subscriber numbers content strategy changes",
+        "Cloud computing AWS Azure Google Cloud infrastructure pricing or service launch",
+        "Semiconductor chip shortage TSMC Intel Samsung foundry manufacturing capacity update",
+        "Tech antitrust lawsuit government breaking up or fining major technology company",
+        "Consumer electronics product review comparison test teardown and recommendation roundup",
+        "PlayStation Xbox Nintendo gaming console hardware release or major firmware update",
+        "GPU graphics card Nvidia AMD new model release for gaming and workstation",
+        "CES MWC tech conference major product announcements and industry trend highlights",
+        "Internet broadband fiber optic Starlink satellite connectivity expansion and speeds",
+        "Apple Google app store policy change developer fee dispute and sideloading rules",
+        "Tech company mass layoffs hiring freeze workforce restructuring and severance packages",
+        "Digital advertising market Google Meta ad revenue programmatic targeting privacy changes",
+        "Enterprise SaaS software Salesforce ServiceNow product update or acquisition deal",
+        "Smartphone market share sales data quarterly shipments by manufacturer and region",
+        "Wi-Fi Bluetooth connectivity standard upgrade new protocol speeds and device support",
+        "Electric scooter drone consumer robotics gadget product launch and availability",
+        "Browser wars Chrome Safari Firefox Edge market share features and performance",
+        "Data center expansion hyperscaler building new facilities for cloud computing demand"
+    ]
+}

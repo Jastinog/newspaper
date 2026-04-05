@@ -1,0 +1,42 @@
+{
+    "slug": "entertainment-culture",
+    "order": 16,
+    "description": "Movies, music, TV shows, celebrities, art, books, theater, fashion, streaming",
+    "translations": {
+        "en": "Entertainment & Culture",
+        "ru": "Развлечения • Культура",
+        "uk": "Розваги • Культура"
+    },
+    "embeddings": [
+        "Blockbuster movie opening weekend box office results ticket sales records and audience reception numbers",
+        "Music album release chart debut Billboard Hot 100 ranking and streaming platform first-week play counts",
+        "Television series premiere season renewal cancellation announcement or network streaming platform pickup deal",
+        "Celebrity scandal arrest controversy public statement or high-profile divorce and relationship news coverage",
+        "Major art exhibition opening museum retrospective gallery show or contemporary artist installation debut event",
+        "Bestselling book release literary prize shortlist Booker Pulitzer National Book Award winner announcement",
+        "Broadway theater production opening night reviews Tony Award nominations or West End show transfer news",
+        "Oscar Grammy Emmy Golden Globe award ceremony winners speeches surprises and red carpet fashion moments",
+        "Streaming platform subscriber numbers content spending deal or exclusive movie series acquisition announcement",
+        "K-pop group album comeback concert tour announcement BTS Blackpink member solo debut or fan event",
+        "Podcast industry deal exclusive licensing agreement celebrity host launch or true crime series phenomenon",
+        "Fashion week runway collection luxury brand designer appointment or major fashion house creative director change",
+        "Stand-up comedy special Netflix release comedian arena tour dates or comedy festival headliner announcement",
+        "Documentary film release investigation revealing new evidence or true crime series sparking public debate",
+        "Music festival lineup announcement Coachella Glastonbury headliner reveal or concert tour sellout ticket prices",
+        "Anime series new season premiere manga chapter milestone or Japanese animation studio production announcement",
+        "Social media influencer brand deal controversy creator platform dispute or viral content cultural impact moment",
+        "UNESCO world heritage site designation cultural landmark restoration or historic preservation campaign effort",
+        "Cannes Venice Sundance film festival premiere selection award winner and critical reception of debut films",
+        "Record label merger music rights catalog acquisition artist royalty dispute or songwriter copyright lawsuit",
+        "Celebrity death tribute obituary legacy remembrance or memorial service for beloved cultural figure icon",
+        "Reality TV show casting premiere ratings controversy or competition series finale outcome and audience reaction",
+        "Ballet dance company premiere choreographer new work or performing arts venue opening season announcement",
+        "Photography exhibition auction record art fair preview or visual arts biennial pavilion selection and reviews",
+        "Architecture award winning building design unveiling or landmark skyscraper completion and public space opening",
+        "Late night television host monologue viral moment guest interview clip or talk show format change announcement",
+        "Audiobook sales growth publishing industry merger book adaptation rights deal or author advance record contract",
+        "Cultural controversy artwork removal public backlash or cancel culture debate over artist creator statements",
+        "Art auction record sale Christie's Sotheby's rare painting sculpture lot or private collection going to market",
+        "Film franchise sequel reboot prequel announcement casting reveal or beloved series continuation greenlight news"
+    ]
+}

@@ -1,0 +1,42 @@
+{
+    "slug": "dev-opensource",
+    "order": 17,
+    "description": "Software development, open source projects, programming languages, developer tools, DevOps",
+    "translations": {
+        "en": "Dev & Open Source",
+        "ru": "Разработка • Open Source",
+        "uk": "Розробка • Open Source"
+    },
+    "embeddings": [
+        "Major open source project stable version release with breaking changes migration guide and new features",
+        "Programming language annual update new syntax features performance improvements and deprecation removals announced",
+        "Developer IDE code editor extension marketplace update or JetBrains VS Code new tooling release",
+        "GitHub trending repository reaching mass star count or community-driven open source project milestone event",
+        "Linux kernel patch release new driver subsystem merge or distribution major version upgrade announcement",
+        "Web framework major release React Next.js Vue Svelte Angular new features and migration path guide",
+        "DevOps CI/CD pipeline tooling release GitHub Actions GitLab CI workflow improvements or new platform launch",
+        "API design best practices debate RESTful microservices architecture pattern or gRPC adoption case study",
+        "Developer conference keynote announcement KubeCon PyCon RustConf talk schedule or hackathon competition results",
+        "Database engine release PostgreSQL MySQL SQLite new version features performance benchmarks and comparisons",
+        "Rust language ecosystem crate release systems programming safety improvement or adoption by major tech company",
+        "JavaScript TypeScript runtime update Deno Bun Node.js new version compatibility changes and benchmarks",
+        "Python package release PyPI ecosystem update CPython performance improvement or typing system enhancement news",
+        "Kubernetes release container orchestration feature Helm chart operator or Docker platform update announcement",
+        "WebAssembly specification update WASI runtime release or edge computing serverless function platform advance",
+        "Critical dependency vulnerability CVE disclosure supply chain attack or compromised package registry incident",
+        "AI coding assistant tool update Copilot Cursor Cody new model integration or code completion benchmark result",
+        "Mobile development SDK release iOS Swift Android Kotlin framework update or cross-platform tooling announcement",
+        "Open source license change controversy relicensing debate or project governance fork community split decision",
+        "Observability monitoring tool release OpenTelemetry Grafana Prometheus new feature or APM platform update news",
+        "Git version control feature update protocol improvement or distributed workflow tooling enhancement release",
+        "Package manager update npm cargo pip Homebrew registry policy change or dependency resolution improvement",
+        "Static analysis linter code quality tool release security scanner or automated code review platform launch",
+        "GraphQL specification update federation tooling or REST API design standard evolution and adoption debate",
+        "Serverless platform feature release AWS Lambda Cloudflare Workers cold start improvement or pricing change",
+        "Compiler toolchain LLVM GCC Clang release optimization improvement or new target architecture backend support",
+        "Testing framework release end-to-end integration unit test tooling Playwright Vitest or coverage platform update",
+        "Developer experience productivity study remote work tooling or engineering team workflow process improvement report",
+        "Technical blog post tutorial going viral on Hacker News sparking industry discussion or paradigm shift debate",
+        "Annual developer survey results Stack Overflow JetBrains language popularity framework adoption trend statistics"
+    ]
+}

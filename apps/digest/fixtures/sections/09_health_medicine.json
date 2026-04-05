@@ -1,0 +1,42 @@
+{
+    "slug": "health-medicine",
+    "order": 9,
+    "description": "Medical breakthroughs, epidemics, public health, pharmaceuticals, mental health, healthcare policy",
+    "translations": {
+        "en": "Health & Medicine",
+        "ru": "Здоровье • Медицина",
+        "uk": "Здоров'я • Медицина"
+    },
+    "embeddings": [
+        "FDA or EMA approval of new pharmaceutical drug treatment for previously untreatable chronic disease condition",
+        "Infectious disease outbreak declared public health emergency by WHO with rapid case spread across countries",
+        "mRNA or protein-based vaccine clinical trial results showing strong efficacy against emerging viral pathogen strain",
+        "Mental health crisis study revealing rising depression anxiety and suicide rates among adolescents and young adults",
+        "Cancer immunotherapy or targeted oncology treatment breakthrough shrinking tumors in late-stage patient clinical trials",
+        "Pharmaceutical company drug pricing controversy and government regulation efforts to cap prescription medication costs",
+        "Contaminated food or water supply causing mass illness outbreak with public health authorities issuing urgent recall",
+        "Large-scale nutrition research study linking specific dietary patterns to reduced heart disease and diabetes risk",
+        "First successful pig-to-human organ xenotransplant or lab-grown organ implant extending patient survival significantly",
+        "Healthcare reform legislation debate over universal coverage insurance mandates and hospital funding in parliament",
+        "Superbug antibiotic-resistant bacterial infection spreading in hospitals prompting urgent new antimicrobial development efforts",
+        "Rare genetic disease treatment breakthrough using experimental orphan drug giving hope to affected patient families",
+        "Telemedicine platform expansion and remote patient monitoring technology adoption transforming rural healthcare delivery access",
+        "Anti-aging longevity research breakthrough identifying cellular senescence reversal mechanism that extends healthy lifespan in mammals",
+        "Biotech company stock surge after announcing promising clinical data for blockbuster gene therapy or biologic drug",
+        "Opioid addiction crisis update including fentanyl overdose death statistics and government-funded treatment program expansion",
+        "World Health Organization global campaign to eradicate malaria tuberculosis or neglected tropical disease in developing nations",
+        "Reproductive health policy change affecting abortion access contraception availability or IVF fertility treatment regulations",
+        "Smartwatch and wearable health device study detecting early atrial fibrillation or blood glucose abnormalities in users",
+        "Artificial intelligence diagnostic tool outperforming radiologists in detecting early breast or lung cancer on medical imaging",
+        "Major clinical trial halted or results published showing unexpected side effects or efficacy of experimental treatment",
+        "Disease surveillance system detecting unusual cluster of respiratory or hemorrhagic fever cases signaling potential new epidemic",
+        "Hospital emergency room overcrowding and nursing staff shortage crisis threatening patient care quality across healthcare systems",
+        "Gene therapy injection restoring vision hearing or mobility in patients with inherited genetic disorder in clinical trial",
+        "Autoimmune disease research breakthrough identifying new trigger mechanism for lupus rheumatoid arthritis or multiple sclerosis",
+        "Dental health innovation including cavity-healing treatment or gum disease therapy reducing need for invasive procedures",
+        "Ophthalmology breakthrough restoring eyesight through retinal implant or corneal regeneration technique in blind patients",
+        "Stem cell therapy clinical trial regenerating damaged heart tissue or spinal cord nerves in paralyzed patients",
+        "Surgical robot or minimally invasive medical device innovation reducing patient recovery time and complication rates significantly",
+        "Government public health regulation banning flavored tobacco products or imposing sugar tax to reduce chronic disease rates"
+    ]
+}

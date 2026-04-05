@@ -1,0 +1,42 @@
+{
+    "slug": "weather-natural-disasters",
+    "order": 19,
+    "description": "Weather events, natural disasters, earthquakes, hurricanes, floods, wildfires, extreme weather",
+    "translations": {
+        "en": "Weather & Natural Disasters",
+        "ru": "Погода • Стихийные бедствия",
+        "uk": "Погода • Стихійні лиха"
+    },
+    "embeddings": [
+        "Major earthquake strikes populated region causing building collapse casualties and emergency rescue operations underway",
+        "Powerful hurricane typhoon cyclone making landfall with destructive winds storm surge and mass evacuation orders",
+        "Large wildfire burning out of control destroying homes forcing evacuations and firefighter containment efforts ongoing",
+        "Severe river flooding inundating towns displacing residents and overwhelming levee infrastructure after prolonged rainfall",
+        "Volcanic eruption spewing ash lava flow threatening nearby communities triggering aviation alert and evacuation zone",
+        "Deadly tornado outbreak multiple twisters touching down in populated area destroying buildings and causing fatalities",
+        "Record-breaking heat wave extreme temperatures causing heat-related deaths power grid strain and drought worsening",
+        "Severe winter blizzard ice storm dumping heavy snow paralyzing transportation and causing widespread power outages",
+        "Prolonged drought conditions depleting reservoir levels threatening water supply and devastating agricultural crop yields",
+        "Deadly landslide mudslide burying homes after heavy rainfall saturating hillside soil in mountainous terrain region",
+        "Avalanche striking ski resort backcountry area burying people triggering search and rescue mountain operation response",
+        "Destructive hailstorm pelting region with large hailstones damaging vehicles crops and property causing insurance claims",
+        "Massive dust storm sandstorm engulfing city reducing visibility to zero grounding flights and causing respiratory alerts",
+        "Monsoon season heavy rainfall triggering widespread flooding displacing millions and disrupting infrastructure across region",
+        "Coastal erosion accelerating sea level rise threatening beachfront communities and forcing managed retreat planning discussions",
+        "National weather service issuing severe storm warning tornado watch or hurricane advisory for threatened coastal region",
+        "El Nino La Nina climate pattern shift forecast affecting global weather disrupting agriculture and altering precipitation",
+        "Storm surge coastal flooding inundating low-lying areas during tropical storm with seawater damaging homes and infrastructure",
+        "Fatal lightning strike incident during outdoor event or deadly thunderstorm causing power surges and fire ignitions",
+        "Dense fog causing massive highway pileup chain collision or airport flight delays and cancellations across region",
+        "Crop damage agricultural losses from unexpected frost hail drought or flooding devastating farmer harvest season yields",
+        "Mandatory evacuation order issued for wildfire hurricane flood zone with emergency shelters opening for displaced residents",
+        "City shattering all-time temperature record hottest or coldest day ever recorded as extreme weather pattern persists",
+        "Polar vortex Arctic blast plunging temperatures far below normal freezing pipes bursting water mains and school closures",
+        "Tropical storm forming in Atlantic Pacific basin tracking forecast models predicting intensification and potential landfall path",
+        "Wildfire smoke plume drifting hundreds of miles degrading air quality triggering health warnings in distant downwind cities",
+        "River cresting at historic flood stage submerging neighborhoods breaching floodwalls and prompting emergency sandbagging operations",
+        "Unusual seasonal weather anomaly unseasonal warmth early snowfall or shifted precipitation pattern puzzling meteorologists nationwide",
+        "Weather radar satellite imagery revealing storm system development rotation or atmospheric river moisture plume approaching coastline",
+        "Emergency preparedness shelter-in-place advisory stocking supplies ahead of approaching severe weather system threatening populated area"
+    ]
+}

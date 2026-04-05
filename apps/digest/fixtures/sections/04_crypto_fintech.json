@@ -1,0 +1,42 @@
+{
+    "slug": "crypto-fintech",
+    "order": 4,
+    "description": "Cryptocurrency, blockchain, DeFi, digital payments, fintech startups, CBDCs",
+    "translations": {
+        "en": "Crypto & Fintech",
+        "ru": "Крипто • Финтех",
+        "uk": "Крипто • Фінтех"
+    },
+    "embeddings": [
+        "Bitcoin price surges drops halving event mining reward reduction market impact",
+        "Ethereum smart contract upgrade network hard fork gas fees staking yield changes",
+        "SEC crypto regulation enforcement action lawsuit against exchange or token issuer",
+        "DeFi protocol exploit liquidity pool yield farming total value locked milestone",
+        "NFT digital collectible marketplace sales volume tokenization of real world art assets",
+        "Stablecoin USDT USDC peg stability reserves audit or new issuance controversy",
+        "Central bank digital currency CBDC pilot launch cross-border payment testing by government",
+        "Crypto exchange Binance Coinbase Kraken trading volume listing delisting regulatory compliance",
+        "Enterprise blockchain adoption supply chain finance settlement using distributed ledger technology",
+        "Fintech neobank digital banking startup funding round valuation product launch expansion",
+        "Web3 DAO decentralized autonomous organization governance vote token holder community decision",
+        "Cryptocurrency mining energy consumption proof of work environmental sustainability debate",
+        "Cross-border remittance payment rails faster cheaper international money transfer service launched",
+        "Crypto whale large holder wallet moving billions on-chain sparking market speculation",
+        "Solana Cardano Avalanche alternative layer one blockchain network upgrade adoption growth",
+        "Real world asset tokenization securities bonds real estate on blockchain platform",
+        "Crypto exchange hack DeFi exploit stolen funds bridge vulnerability security breach",
+        "Buy now pay later BNPL embedded finance installment lending service growth regulation",
+        "Meme coin Dogecoin Shiba Inu Pepe viral speculative token price pump community",
+        "Bitcoin Ethereum spot ETF approval inflows institutional investor crypto fund adoption",
+        "Digital identity decentralized ID verifiable credentials blockchain wallet authentication system",
+        "Stripe Square Block payment processor merchant acquiring transaction volume fintech earnings",
+        "Open banking API regulation PSD2 third-party data access financial services innovation",
+        "Regulatory technology compliance automation KYC AML fraud detection platform for finance",
+        "Cryptocurrency tax reporting policy capital gains rules government targeting digital assets",
+        "Decentralized physical infrastructure DePIN token-incentivized real world network hardware deployment",
+        "Crypto lending borrowing platform interest rates collateral liquidation risk management",
+        "Crypto derivatives futures options perpetual swap trading volume open interest exchange data",
+        "New token airdrop launch initial DEX offering community distribution claim event",
+        "Mobile money M-Pesa digital wallet financial inclusion unbanked emerging market payments"
+    ]
+}

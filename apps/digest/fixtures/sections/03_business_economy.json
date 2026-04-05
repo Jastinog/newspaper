@@ -1,0 +1,42 @@
+{
+    "slug": "business-economy",
+    "order": 3,
+    "description": "Global economy, stock markets, central banks, trade, inflation, corporations, employment",
+    "translations": {
+        "en": "Business & Economy",
+        "ru": "Бизнес • Экономика",
+        "uk": "Бізнес • Економіка"
+    },
+    "embeddings": [
+        "Stock market rally crash S&P 500 Dow Jones Nasdaq index major daily movement",
+        "Federal Reserve ECB Bank of Japan interest rate decision monetary policy announcement",
+        "Inflation consumer price index CPI data rising falling exceeding economist forecasts",
+        "International trade deal tariff imposed on imports between countries disrupting commerce",
+        "Major corporate merger acquisition billion dollar deal announced pending regulatory approval",
+        "Quarterly corporate earnings report revenue profit beating or missing Wall Street expectations",
+        "Crude oil natural gas commodity price surge drop OPEC production cut decision",
+        "Monthly jobs report unemployment rate nonfarm payrolls labor market data released",
+        "GDP growth rate quarterly economic output data recession contraction expansion indicator",
+        "Commercial residential real estate market housing prices mortgage rates affordability crisis",
+        "Government sovereign debt bond yield Treasury auction credit rating downgrade upgrade",
+        "Retail sales consumer spending holiday shopping data showing economic strength or weakness",
+        "Private equity firm hedge fund major investment buyout deal portfolio strategy shift",
+        "Company IPO stock market debut valuation pricing shares begin trading on exchange",
+        "Dollar euro yen currency exchange rate major forex movement central bank intervention",
+        "Corporate bankruptcy Chapter 11 restructuring major company filing for creditor protection",
+        "Banking sector stress regional bank failure deposit outflows capital adequacy concerns",
+        "Insurance industry catastrophe losses premium increases underwriting profitability claims data",
+        "Global supply chain disruption shipping delays port congestion affecting product availability",
+        "CEO executive compensation pay ratio wealth inequality shareholder activist campaign",
+        "Manufacturing PMI factory output industrial production data indicating economic trend",
+        "Pension fund portfolio performance retirement savings shortfall investment strategy allocation",
+        "Credit rating agency Moody's S&P Fitch sovereign or corporate rating change impact",
+        "Small business lending survey confidence index entrepreneurship conditions and challenges",
+        "Global economic forecast IMF World Bank projecting growth slowdown or recovery outlook",
+        "Labor union strike workers demanding higher wages negotiations with employer industry",
+        "Agricultural commodity wheat corn soybean price harvest forecast crop yield report",
+        "Container shipping freight rates logistics carrier pricing affecting global trade costs",
+        "Corporate tax policy reform government revenue collection rate change multinational loopholes",
+        "Consumer confidence sentiment survey index measuring household economic outlook and spending"
+    ]
+}
