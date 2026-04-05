@@ -23,11 +23,9 @@ class SiteConsumer(AsyncWebsocketConsumer):
     Protocol (dot-namespaced)
     --------
     Client -> Server:
-        {"action": "analytics.init",       "client_id": "uuid", "referrer": "..."}
-        {"action": "analytics.page_view",  "path": "/...", "referrer": "..."}
-        {"action": "analytics.activity",   "type": "scroll|click", "path": "/...", "meta": {...}}
-        {"action": "analytics.heartbeat",  "active_time": 120, "has_interaction": true}
-        {"action": "research.generate",    "item_id": 123}
+        {"action": "analytics.init",  "client_id": "uuid", "path": "/...", "referrer": "..."}
+        {"action": "analytics.ping",  "scrolls": 5, "pages": ["/..."], "active_time": 120}
+        {"action": "research.generate", "item_id": 123}
 
     Server -> Client:
         {"type": "analytics.session",      "session_id": "uuid"}
@@ -41,9 +39,7 @@ class SiteConsumer(AsyncWebsocketConsumer):
     ACTIONS = {
         # Analytics
         "analytics.init": "_on_analytics_init",
-        "analytics.page_view": "_on_analytics_page_view",
-        "analytics.activity": "_on_analytics_activity",
-        "analytics.heartbeat": "_on_analytics_heartbeat",
+        "analytics.ping": "_on_analytics_ping",
         # Research
         "research.generate": "_on_research_generate",
     }
@@ -51,6 +47,7 @@ class SiteConsumer(AsyncWebsocketConsumer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.analytics = None
+        self._last_session_id = None
 
     # ── Lifecycle ───────────────────────────────────
 
@@ -90,40 +87,30 @@ class SiteConsumer(AsyncWebsocketConsumer):
         client, session = await database_sync_to_async(self.analytics.open)(
             raw_client_id=data.get("client_id", ""),
             referrer=data.get("referrer", ""),
+            path=data.get("path", ""),
         )
-        # Record the initial page view atomically with session creation
-        path = data.get("path", "")
-        if path:
-            await database_sync_to_async(self.analytics.page_view)(
-                path=path,
-                referrer=data.get("referrer", ""),
-            )
+        self._last_session_id = str(session.session_id)
         await self.send(json.dumps({
             "type": "analytics.session",
-            "session_id": str(session.session_id),
+            "session_id": self._last_session_id,
         }))
 
-    async def _on_analytics_page_view(self, data):
-        await database_sync_to_async(self.analytics.page_view)(
-            path=data.get("path", ""),
-            referrer=data.get("referrer", ""),
-        )
-
-    async def _on_analytics_activity(self, data):
-        meta = data.get("meta") or {}
-        if not isinstance(meta, dict):
-            meta = {}
-        await database_sync_to_async(self.analytics.activity)(
-            activity_type=data.get("type", ""),
-            path=data.get("path", ""),
-            meta=meta,
-        )
-
-    async def _on_analytics_heartbeat(self, data):
-        await database_sync_to_async(self.analytics.heartbeat)(
+    async def _on_analytics_ping(self, data):
+        pages = data.get("pages", [])
+        if not isinstance(pages, list):
+            pages = []
+        result = await database_sync_to_async(self.analytics.ping)(
+            scrolls=int(data.get("scrolls", 0)),
+            pages=pages,
             active_time=int(data.get("active_time", 0)),
-            has_interaction=bool(data.get("has_interaction", False)),
         )
+        # If a new session was created (5-min inactivity gap), notify client
+        if result and str(result.session_id) != self._last_session_id:
+            self._last_session_id = str(result.session_id)
+            await self.send(json.dumps({
+                "type": "analytics.session",
+                "session_id": self._last_session_id,
+            }))
 
     # ── Research actions ───────────────────────────
 

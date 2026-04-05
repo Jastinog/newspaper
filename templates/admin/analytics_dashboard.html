@@ -1,699 +1,231 @@
 {% extends "unfold/layouts/base_simple.html" %}
 {% load i18n unfold static %}
 
-{% block title %}Analytics Dashboard{% endblock %}
-{% block content_title %}Analytics Dashboard{% endblock %}
+{% block title %}Analytics{% endblock %}
+{% block content_title %}Analytics{% endblock %}
 
 {% block content %}
+<div class="space-y-4">
 
-{# --- Tab navigation + auto-refresh --- #}
-<div x-data="{ tab: 'overview' }" class="space-y-6">
-
-{# Tab bar #}
-<div class="flex items-center justify-between mb-4">
-    <nav class="bg-base-100 flex flex-row font-medium gap-1 p-1 rounded-default text-important dark:bg-white/[.06] *:flex *:flex-row *:gap-1 *:font-medium *:whitespace-nowrap *:items-center *:px-2.5 *:py-[5px] *:rounded-default *:cursor-pointer *:hover:bg-base-700/[.06] *:dark:hover:bg-white/[.06] [&>.active]:bg-white [&>.active]:shadow-xs [&>.active]:dark:bg-base-700 [&>.active]:hover:bg-white [&>.active]:dark:hover:bg-base-700">
-        <a x-on:click="tab='overview'" x-bind:class="{'active': tab=='overview'}">Overview</a>
-        <a x-on:click="tab='visitors'" x-bind:class="{'active': tab=='visitors'}">Visitors</a>
-        <a x-on:click="tab='content'" x-bind:class="{'active': tab=='content'}">Content & Geo</a>
-        <a x-on:click="tab='tech'" x-bind:class="{'active': tab=='tech'}">Tech & Bots</a>
-    </nav>
+{# Date picker + status #}
+<div class="flex items-center justify-between">
+    <input type="date" id="timeline-date"
+           class="bg-base-100 dark:bg-white/[.06] border border-base-200 dark:border-white/10 rounded-default px-3 py-1.5 text-sm text-important"
+           value="">
     <div class="flex items-center gap-2">
         <span id="ad-status" class="text-xs text-gray-400"></span>
         <span id="ad-dot" class="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
     </div>
 </div>
 
-{# ================================================================ #}
-{# TAB 1: Overview                                                  #}
-{# ================================================================ #}
-<div x-show="tab=='overview'" x-cloak>
-
-{# --- KPI Cards row 1 --- #}
-<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-    {% component "unfold/components/card.html" with title="Human Views Today" %}
-        <span id="kpi-human-views" class="text-3xl font-bold text-green-600 dark:text-green-400">{{ today_human_views }}</span>
-        <div class="text-xs mt-1 {% if views_change >= 0 %}text-green-600 dark:text-green-400{% else %}text-red-500{% endif %}">
-            <span id="kpi-views-change">{% if views_change >= 0 %}+{% endif %}{{ views_change }}</span> vs yesterday
-        </div>
-    {% endcomponent %}
-
-    {% component "unfold/components/card.html" with title="Unique Visitors Today" %}
-        <span id="kpi-visitors" class="text-3xl font-bold text-blue-600 dark:text-blue-400">{{ today_visitors }}</span>
-        <div class="text-xs mt-1 {% if visitors_change >= 0 %}text-green-600 dark:text-green-400{% else %}text-red-500{% endif %}">
-            <span id="kpi-visitors-change">{% if visitors_change >= 0 %}+{% endif %}{{ visitors_change }}</span> vs yesterday
-        </div>
-    {% endcomponent %}
-
-    {% component "unfold/components/card.html" with title="Sessions Today" %}
-        <span id="kpi-sessions" class="text-3xl font-bold text-indigo-600 dark:text-indigo-400">{{ today_session_count }}</span>
-        <div class="text-xs text-gray-500 mt-1">avg <span id="kpi-avg-pages">{{ avg_pages }}</span> pages</div>
-    {% endcomponent %}
-
-    {% component "unfold/components/card.html" with title="Avg Duration" %}
-        <span id="kpi-avg-duration" class="text-3xl font-bold text-purple-600 dark:text-purple-400">{{ avg_duration }}</span>
-        <div class="text-xs text-gray-500 mt-1"><span id="kpi-active-now">{{ active_now }}</span> active now</div>
-    {% endcomponent %}
+{# Timeline chart #}
+<div class="bg-white dark:bg-base-700 rounded-default shadow-xs p-4" style="min-height:300px;">
+    <canvas id="timeline-chart"></canvas>
 </div>
 
-{# --- KPI Cards row 2 --- #}
-<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-    {% component "unfold/components/card.html" with title="Bounce Rate" %}
-        <span id="kpi-bounce" class="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{{ bounce_rate }}%</span>
-        <div class="text-xs text-gray-500 mt-1">single-page sessions</div>
-    {% endcomponent %}
-
-    {% component "unfold/components/card.html" with title="New / Returning" %}
-        <span class="text-2xl font-bold">
-            <span id="kpi-new" class="text-green-600 dark:text-green-400">{{ new_visitors }}</span>
-            <span class="text-gray-400">/</span>
-            <span id="kpi-returning" class="text-blue-600 dark:text-blue-400">{{ returning_visitors }}</span>
-        </span>
-        <div class="text-xs text-gray-500 mt-1">visitors today</div>
-    {% endcomponent %}
-
-    {% component "unfold/components/card.html" with title="7-Day Human Views" %}
-        <span class="text-2xl font-bold text-green-600 dark:text-green-400">{{ week_human_views }}</span>
-    {% endcomponent %}
-
-    {% component "unfold/components/card.html" with title="30-Day Bot / Human" %}
-        <span class="text-sm font-medium text-gray-600 dark:text-gray-400">
-            <span class="text-green-600 dark:text-green-400">{{ human_requests_30d }}</span> /
-            <span class="text-red-500">{{ bot_requests_30d }}</span>
-        </span>
-    {% endcomponent %}
 </div>
 
-{# --- Real-time charts --- #}
-<h2 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">Real-time</h2>
-
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
-    {% component "unfold/components/card.html" with title="Today Hourly: Humans vs Bots" %}
-        <div id="wrap-hourly">
-            {% component "unfold/components/chart/bar.html" with data=hourly_chart height=240 %}{% endcomponent %}
-        </div>
-    {% endcomponent %}
-
-    {% component "unfold/components/card.html" with title="Page Views / min (Humans, last 60 min)" %}
-        <div id="wrap-realtime">
-            {% component "unfold/components/chart/bar.html" with data=realtime_chart height=240 %}{% endcomponent %}
-        </div>
-    {% endcomponent %}
-</div>
-
-{# --- Daily charts --- #}
-<h2 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">Daily (last 30 days)</h2>
-
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
-    {% component "unfold/components/card.html" with title="Page Views" %}
-        <div id="wrap-views">
-            {% component "unfold/components/chart/line.html" with data=views_chart height=280 %}{% endcomponent %}
-        </div>
-    {% endcomponent %}
-
-    {% component "unfold/components/card.html" with title="Unique Visitors" %}
-        <div id="wrap-visitors">
-            {% component "unfold/components/chart/line.html" with data=visitors_chart height=280 %}{% endcomponent %}
-        </div>
-    {% endcomponent %}
-</div>
-
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
-    {% component "unfold/components/card.html" with title="Sessions" %}
-        <div id="wrap-sessions">
-            {% component "unfold/components/chart/bar.html" with data=sessions_chart height=280 %}{% endcomponent %}
-        </div>
-    {% endcomponent %}
-
-    {% component "unfold/components/card.html" with title="Avg Session Duration" %}
-        <div id="wrap-avg-duration">
-            {% component "unfold/components/chart/line.html" with data=avg_duration_chart height=280 %}{% endcomponent %}
-        </div>
-    {% endcomponent %}
-</div>
-
-{# --- Live sessions --- #}
-{% component "unfold/components/card.html" with title="Live Sessions (last 15 min)" %}
-    <div style="max-height: 320px; overflow-y: auto;">
-    <table class="w-full text-sm">
-        <thead>
-            <tr class="border-b border-gray-200 dark:border-gray-700">
-                <th class="text-left py-2 font-medium"></th>
-                <th class="text-left py-2 font-medium">City</th>
-                <th class="text-left py-2 font-medium">Browser</th>
-                <th class="text-right py-2 font-medium">Pages</th>
-                <th class="text-right py-2 font-medium">Time</th>
-                <th class="text-right py-2 font-medium">Started</th>
-            </tr>
-        </thead>
-        <tbody id="table-live">
-            {% for s in live_sessions %}
-            <tr class="border-b border-gray-100 dark:border-gray-800">
-                <td class="py-1">{{ s.country }}</td>
-                <td class="py-1 text-xs">{{ s.city }}</td>
-                <td class="py-1 text-xs">{{ s.browser }} / {{ s.os }}</td>
-                <td class="text-right py-1">{{ s.pages }}</td>
-                <td class="text-right py-1 text-xs">{{ s.time }}</td>
-                <td class="text-right py-1 text-xs text-gray-500">{{ s.started }}</td>
-            </tr>
-            {% empty %}
-            <tr><td colspan="6" class="py-4 text-center text-gray-400">No active sessions</td></tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    </div>
-{% endcomponent %}
-
-</div>{# /overview #}
-
-
-{# ================================================================ #}
-{# TAB 2: Visitors                                                  #}
-{# ================================================================ #}
-<div x-show="tab=='visitors'" x-cloak>
-
-<div x-data="visitorsPanel()" x-init="load()">
-    <div class="flex items-center justify-between mb-4">
-        <h2 class="text-lg font-semibold text-gray-700 dark:text-gray-300">All Visitors (last 30 days)</h2>
-        <div x-show="loading" class="text-xs text-gray-400">Loading...</div>
-    </div>
-
-    <template x-if="!loading && clients.length === 0">
-        <div class="text-center text-gray-400 py-12">No visitor data</div>
-    </template>
-
-    <div class="space-y-2">
-        <template x-for="client in clients" :key="client.id">
-            <div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-                {# Client header — click to expand #}
-                <button x-on:click="client._open = !client._open"
-                        class="w-full flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors text-left">
-                    <div class="flex items-center gap-3 min-w-0">
-                        <span class="text-lg" x-text="client.country"></span>
-                        <span class="font-medium text-sm truncate" x-text="(client.city || client.country_name || 'Unknown')"></span>
-                        <span class="text-xs text-gray-400" x-text="client.browser + ' / ' + client.os"></span>
-                        <span class="text-xs px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-500" x-text="client.device"></span>
-                    </div>
-                    <div class="flex items-center gap-4 text-xs text-gray-500 shrink-0 ml-4">
-                        <span><span class="font-semibold text-indigo-500" x-text="client.session_count"></span> sess</span>
-                        <span><span class="font-semibold text-green-500" x-text="client.total_pages"></span> pages</span>
-                        <span x-text="client.total_time"></span>
-                        <span class="text-gray-400" x-text="client.last_seen"></span>
-                        <svg class="w-4 h-4 transition-transform" :class="client._open && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                        </svg>
-                    </div>
-                </button>
-
-                {# Sessions list #}
-                <div x-show="client._open" x-transition.duration.200ms class="border-t border-gray-100 dark:border-gray-700">
-                    <template x-for="sess in client.sessions" :key="sess.id">
-                        <div class="border-b border-gray-50 dark:border-gray-700 last:border-b-0">
-                            {# Session header #}
-                            <button x-on:click="sess._open = !sess._open"
-                                    class="w-full flex items-center justify-between px-6 py-2 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors text-left">
-                                <div class="flex items-center gap-3 text-sm">
-                                    <span class="font-mono text-xs text-gray-500" x-text="sess.started"></span>
-                                    <span class="font-medium" x-text="sess.duration"></span>
-                                    <span class="text-gray-400" x-text="sess.pages + ' pages'"></span>
-                                    <template x-if="sess.referrer">
-                                        <span class="text-xs text-blue-500" x-text="'via ' + sess.referrer"></span>
-                                    </template>
-                                </div>
-                                <svg class="w-3.5 h-3.5 text-gray-400 transition-transform" :class="sess._open && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                </svg>
-                            </button>
-
-                            {# Activity timeline #}
-                            <div x-show="sess._open" x-transition.duration.200ms class="bg-gray-50 dark:bg-gray-900 px-6 py-2">
-                                <template x-for="(act, i) in sess.activities" :key="i">
-                                    <div class="flex items-center gap-3 py-1 text-xs border-l-2 pl-3 ml-2"
-                                         :class="act.type === 'page_view' ? 'border-green-400' : act.type === 'click' ? 'border-blue-400' : 'border-yellow-400'">
-                                        <span class="font-mono text-gray-400 w-16 shrink-0" x-text="act.time"></span>
-                                        <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase"
-                                              :class="act.type === 'page_view' ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' : act.type === 'click' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'"
-                                              x-text="act.type === 'page_view' ? 'VIEW' : act.type.toUpperCase()"></span>
-                                        <span class="font-mono truncate text-gray-600 dark:text-gray-300" x-text="act.path"></span>
-                                    </div>
-                                </template>
-                                <template x-if="sess.activities.length === 0">
-                                    <div class="text-gray-400 text-xs py-2">No activities recorded</div>
-                                </template>
-                            </div>
-                        </div>
-                    </template>
-                </div>
-            </div>
-        </template>
-    </div>
-</div>
-
-</div>{# /visitors #}
-
-
-{# ================================================================ #}
-{# TAB 3: Content & Geo                                             #}
-{# ================================================================ #}
-<div x-show="tab=='content'" x-cloak>
-
-<h2 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">Pages & Referrers</h2>
-
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
-    {% component "unfold/components/card.html" with title="Top Pages (7 days)" %}
-        <table class="w-full text-sm">
-            <thead>
-                <tr class="border-b border-gray-200 dark:border-gray-700">
-                    <th class="text-left py-2 font-medium">Page</th>
-                    <th class="text-right py-2 font-medium">Views</th>
-                </tr>
-            </thead>
-            <tbody id="table-pages">
-                {% for row in top_pages %}
-                <tr class="border-b border-gray-100 dark:border-gray-800">
-                    <td class="py-2 truncate max-w-xs text-xs font-mono">{{ row.path }}</td>
-                    <td class="text-right py-2">{{ row.views }}</td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="2" class="py-4 text-center text-gray-400">No data</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    {% endcomponent %}
-
-    {% component "unfold/components/card.html" with title="Top Referrers (30 days)" %}
-        <table class="w-full text-sm">
-            <thead>
-                <tr class="border-b border-gray-200 dark:border-gray-700">
-                    <th class="text-left py-2 font-medium">Domain</th>
-                    <th class="text-right py-2 font-medium">Sessions</th>
-                </tr>
-            </thead>
-            <tbody id="table-referrers">
-                {% for row in top_referrers %}
-                <tr class="border-b border-gray-100 dark:border-gray-800">
-                    <td class="py-2 truncate max-w-xs">{{ row.referrer_domain }}</td>
-                    <td class="text-right py-2">{{ row.sessions }}</td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="2" class="py-4 text-center text-gray-400">No referrers</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    {% endcomponent %}
-</div>
-
-{# --- Entry pages --- #}
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
-    {% component "unfold/components/card.html" with title="Entry Pages (7 days)" %}
-        <table class="w-full text-sm">
-            <thead>
-                <tr class="border-b border-gray-200 dark:border-gray-700">
-                    <th class="text-left py-2 font-medium">First Page in Session</th>
-                    <th class="text-right py-2 font-medium">Sessions</th>
-                </tr>
-            </thead>
-            <tbody id="table-entry-pages">
-                {% for row in entry_pages %}
-                <tr class="border-b border-gray-100 dark:border-gray-800">
-                    <td class="py-2 truncate max-w-xs text-xs font-mono">{{ row.path }}</td>
-                    <td class="text-right py-2">{{ row.entries }}</td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="2" class="py-4 text-center text-gray-400">No data</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    {% endcomponent %}
-
-    <div></div>
-</div>
-
-{# --- Geography --- #}
-<h2 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">Geography (30 days)</h2>
-
-<div class="mb-8">
-    {% component "unfold/components/card.html" with title="Session Geography Graph" %}
-        <div style="position: relative;">
-            <button id="session-graph-fullscreen" type="button"
-                    style="position:absolute;top:8px;right:8px;z-index:10;background:none;border:1px solid rgba(156,163,175,0.4);border-radius:6px;padding:4px 8px;cursor:pointer;color:#9ca3af;font-size:13px;"
-                    title="Fullscreen">&#x26F6;</button>
-            <div id="session-graph-container" style="width:100%;height:480px;border-radius:8px;"></div>
-            <div id="session-graph-loading" style="text-align:center;padding:40px;color:#9ca3af;">Loading graph...</div>
-        </div>
-        <div style="display:flex;gap:16px;justify-content:center;padding:8px 0 4px;font-size:12px;color:#9ca3af;">
-            <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:rgba(99,102,241,0.85);margin-right:4px;vertical-align:middle;"></span>Country</span>
-            <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:rgba(34,197,94,0.8);margin-right:4px;vertical-align:middle;"></span>City</span>
-            <span><span style="display:inline-block;width:7px;height:7px;border-radius:1px;background:rgba(234,179,8,0.7);margin-right:4px;vertical-align:middle;"></span>Session</span>
-        </div>
-    {% endcomponent %}
-</div>
-
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
-    {% component "unfold/components/card.html" with title="Top Countries" %}
-        <table class="w-full text-sm">
-            <thead>
-                <tr class="border-b border-gray-200 dark:border-gray-700">
-                    <th class="text-left py-2 font-medium">Country</th>
-                    <th class="text-right py-2 font-medium">Visitors</th>
-                    <th class="text-right py-2 font-medium">Sessions</th>
-                </tr>
-            </thead>
-            <tbody id="table-countries">
-                {% for row in top_countries %}
-                <tr class="border-b border-gray-100 dark:border-gray-800">
-                    <td class="py-2">{{ row.flag }} {{ row.client__country_name }}</td>
-                    <td class="text-right py-2">{{ row.visitors }}</td>
-                    <td class="text-right py-2">{{ row.sessions }}</td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="3" class="py-4 text-center text-gray-400">No data</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    {% endcomponent %}
-
-    {% component "unfold/components/card.html" with title="Top Cities" %}
-        <table class="w-full text-sm">
-            <thead>
-                <tr class="border-b border-gray-200 dark:border-gray-700">
-                    <th class="text-left py-2 font-medium">City</th>
-                    <th class="text-right py-2 font-medium">Visitors</th>
-                    <th class="text-right py-2 font-medium">Sessions</th>
-                </tr>
-            </thead>
-            <tbody id="table-cities">
-                {% for row in top_cities %}
-                <tr class="border-b border-gray-100 dark:border-gray-800">
-                    <td class="py-2">{{ row.flag }} {{ row.client__city }}</td>
-                    <td class="text-right py-2">{{ row.visitors }}</td>
-                    <td class="text-right py-2">{{ row.sessions }}</td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="3" class="py-4 text-center text-gray-400">No data</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    {% endcomponent %}
-</div>
-
-</div>{# /content #}
-
-
-{# ================================================================ #}
-{# TAB 4: Tech & Bots                                               #}
-{# ================================================================ #}
-<div x-show="tab=='tech'" x-cloak>
-
-<h2 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">Devices & Browsers (30 days)</h2>
-
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
-    {% component "unfold/components/card.html" with title="Device Type" %}
-        <div id="wrap-device">
-            {% component "unfold/components/chart/bar.html" with data=device_chart height=200 %}{% endcomponent %}
-        </div>
-    {% endcomponent %}
-
-    {% component "unfold/components/card.html" with title="Browser" %}
-        <div id="wrap-browser">
-            {% component "unfold/components/chart/bar.html" with data=browser_chart height=200 %}{% endcomponent %}
-        </div>
-    {% endcomponent %}
-
-    {% component "unfold/components/card.html" with title="OS" %}
-        <div id="wrap-os">
-            {% component "unfold/components/chart/bar.html" with data=os_chart height=200 %}{% endcomponent %}
-        </div>
-    {% endcomponent %}
-</div>
-
-<h2 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">Bot Analytics (30 days)</h2>
-
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
-    {% component "unfold/components/card.html" with title="Top Bots" %}
-        <table class="w-full text-sm">
-            <thead>
-                <tr class="border-b border-gray-200 dark:border-gray-700">
-                    <th class="text-left py-2 font-medium">Bot</th>
-                    <th class="text-right py-2 font-medium">Clients</th>
-                </tr>
-            </thead>
-            <tbody id="table-bots">
-                {% for row in top_bots %}
-                <tr class="border-b border-gray-100 dark:border-gray-800">
-                    <td class="py-2">{{ row.bot_name }}</td>
-                    <td class="text-right py-2">{{ row.count }}</td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="2" class="py-4 text-center text-gray-400">No bots</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    {% endcomponent %}
-
-    {% component "unfold/components/card.html" with title="Bot Views Today" %}
-        <span id="kpi-bot-views" class="text-3xl font-bold text-gray-500 dark:text-gray-400">{{ today_bot_views }}</span>
-        <div class="text-xs text-gray-500 mt-2">7-day visitors: {{ week_visitors }}</div>
-    {% endcomponent %}
-</div>
-
-</div>{# /tech #}
-
-</div>{# /x-data tabs wrapper #}
-
-{# ================================================================ #}
-{# External scripts                                                  #}
-{# ================================================================ #}
-
-{# --- Session Geography Graph (ForceGraph) --- #}
-<script src="https://cdn.jsdelivr.net/npm/force-graph/dist/force-graph.min.js"></script>
-<script src="{% static 'analytics/js/session-graph.js' %}"></script>
-<style>
-.sg-overlay {
-    position: fixed; inset: 0; z-index: 9999;
-    background: rgba(0,0,0,0.8);
-    display: flex; flex-direction: column;
-    opacity: 0; transition: opacity .2s;
-}
-.sg-overlay.sg-ready { opacity: 1; }
-.sg-fs-header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 12px 20px; color: #e5e7eb;
-}
-.sg-fs-title { font-size: 16px; font-weight: 600; }
-.sg-fs-close {
-    font-size: 28px; background: none; border: none; color: #9ca3af;
-    cursor: pointer; line-height: 1;
-}
-.sg-fs-close:hover { color: #fff; }
-.sg-fs-box { flex: 1; overflow: hidden; }
-</style>
-
-{# --- Visitors panel script --- #}
-<script>
-function visitorsPanel() {
-    return {
-        clients: [],
-        loading: false,
-        async load() {
-            this.loading = true;
-            try {
-                var resp = await fetch("{% url 'analytics_visitors_api' %}");
-                var data = await resp.json();
-                this.clients = data.clients.map(function(c) {
-                    c._open = false;
-                    c.sessions = c.sessions.map(function(s) {
-                        s._open = false;
-                        return s;
-                    });
-                    return c;
-                });
-            } catch(e) {
-                console.error("Failed to load visitors:", e);
-            }
-            this.loading = false;
-        }
-    };
-}
-</script>
-
-{# --- Auto-refresh script --- #}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <script>
 (function() {
-    var API_URL = "{% url 'analytics_dashboard_api' %}";
-    var INTERVAL = 30000;
+    'use strict';
 
-    var CHART_MAP = {
-        "wrap-hourly": "hourly_chart",
-        "wrap-realtime": "realtime_chart",
-        "wrap-views": "views_chart",
-        "wrap-visitors": "visitors_chart",
-        "wrap-sessions": "sessions_chart",
-        "wrap-avg-duration": "avg_duration_chart",
-        "wrap-device": "device_chart",
-        "wrap-browser": "browser_chart",
-        "wrap-os": "os_chart",
+    var API_URL = '{% url "analytics_timeline_api" %}';
+    var REFRESH_INTERVAL = 30000;
+    var chart = null;
+    var refreshTimer = null;
+
+    // ── Color palette for sessions ─────────────────
+    var PALETTE = [
+        { bg: 'rgba(99, 102, 241, 0.7)',  border: 'rgb(99, 102, 241)' },
+        { bg: 'rgba(34, 197, 94, 0.7)',   border: 'rgb(34, 197, 94)' },
+        { bg: 'rgba(234, 179, 8, 0.7)',   border: 'rgb(234, 179, 8)' },
+        { bg: 'rgba(236, 72, 153, 0.7)',  border: 'rgb(236, 72, 153)' },
+        { bg: 'rgba(6, 182, 212, 0.7)',   border: 'rgb(6, 182, 212)' },
+        { bg: 'rgba(168, 85, 247, 0.7)',  border: 'rgb(168, 85, 247)' },
+        { bg: 'rgba(251, 146, 60, 0.7)',  border: 'rgb(251, 146, 60)' },
+        { bg: 'rgba(59, 130, 246, 0.7)',  border: 'rgb(59, 130, 246)' },
+    ];
+
+    // ── Date picker ────────────────────────────────
+    var dateInput = document.getElementById('timeline-date');
+    dateInput.addEventListener('change', function() { fetchAndRender(); });
+
+    // ── Build datasets from API data ───────────────
+    function buildDatasets(clients) {
+        var maxSessions = 0;
+        clients.forEach(function(c) {
+            if (c.sessions.length > maxSessions) maxSessions = c.sessions.length;
+        });
+
+        var datasets = [];
+        for (var si = 0; si < maxSessions; si++) {
+            var barData = [];
+            var bgColors = [];
+            var borderColors = [];
+            var sessionMeta = [];
+
+            clients.forEach(function(c, ci) {
+                var s = c.sessions[si];
+                if (s) {
+                    barData.push([s.start, s.end]);
+                    var color = PALETTE[ci % PALETTE.length];
+                    bgColors.push(color.bg);
+                    borderColors.push(color.border);
+                    sessionMeta.push(s);
+                } else {
+                    barData.push(null);
+                    bgColors.push('transparent');
+                    borderColors.push('transparent');
+                    sessionMeta.push(null);
+                }
+            });
+
+            datasets.push({
+                data: barData,
+                backgroundColor: bgColors,
+                borderColor: borderColors,
+                borderWidth: 1,
+                borderSkipped: false,
+                barPercentage: 0.6,
+                categoryPercentage: 0.8,
+                _sessionMeta: sessionMeta,
+            });
+        }
+        return datasets;
+    }
+
+    // ── Chart config (created once) ────────────────
+    var chartConfig = {
+        type: 'bar',
+        data: { labels: [], datasets: [] },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 300 },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        title: function(items) {
+                            return items.length ? items[0].label : '';
+                        },
+                        label: function(item) {
+                            var meta = item.dataset._sessionMeta
+                                ? item.dataset._sessionMeta[item.dataIndex]
+                                : null;
+                            if (!meta) return '';
+
+                            var lines = [];
+                            lines.push(formatTime(meta.start) + ' — ' + formatTime(meta.end));
+                            lines.push('Duration: ' + meta.duration);
+                            lines.push('SPM: ' + meta.spm + ' | Scrolls: ' + meta.scrolls);
+
+                            if (meta.pages && meta.pages.length) {
+                                lines.push('Pages:');
+                                meta.pages.forEach(function(p) {
+                                    var path = typeof p === 'object' ? p.path : p;
+                                    var ts = typeof p === 'object' ? p.ts : '';
+                                    lines.push('  ' + (ts ? ts + ' ' : '') + path);
+                                });
+                            }
+                            return lines;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    min: 0, max: 24,
+                    ticks: {
+                        stepSize: 1,
+                        callback: function(val) { return val + ':00'; }
+                    },
+                    grid: { color: 'rgba(156, 163, 175, 0.15)' }
+                },
+                y: {
+                    ticks: { font: { size: 11 } },
+                    grid: { display: false }
+                }
+            }
+        }
     };
 
-    function getChart(wrapperId) {
-        var canvas = document.querySelector("#" + wrapperId + " canvas");
-        return canvas ? Chart.getChart(canvas) : null;
+    function formatTime(h) {
+        var hours = Math.floor(h);
+        var minutes = Math.round((h - hours) * 60);
+        return String(hours).padStart(2, '0') + ':' + String(minutes).padStart(2, '0');
     }
 
-    function updateChart(wrapperId, jsonStr) {
-        var chart = getChart(wrapperId);
-        if (!chart) return;
-        var newData = JSON.parse(jsonStr);
-        chart.data.labels = newData.labels;
-        newData.datasets.forEach(function(ds, i) {
-            if (chart.data.datasets[i]) {
-                chart.data.datasets[i].data = ds.data;
-            }
-        });
-        chart.update("none");
-    }
+    // ── Update chart with new data ─────────────────
+    function updateChart(data) {
+        var clients = data.clients || [];
+        var labels = clients.map(function(c) { return c.label; });
+        var datasets = buildDatasets(clients);
 
-    function updateKPI(id, value) {
-        var el = document.getElementById(id);
-        if (el) el.textContent = value;
-    }
+        var canvas = document.getElementById('timeline-chart');
+        var rowHeight = 36;
+        canvas.parentElement.style.minHeight = Math.max(200, clients.length * rowHeight + 60) + 'px';
 
-    function clearTbody(containerId) {
-        var el = document.getElementById(containerId);
-        if (!el) return null;
-        while (el.firstChild) el.removeChild(el.firstChild);
-        return el;
-    }
-
-    function makeCell(text, className) {
-        var td = document.createElement("td");
-        td.className = className;
-        td.textContent = text;
-        return td;
-    }
-
-    function makeEmptyRow(colspan, message) {
-        var tr = document.createElement("tr");
-        var td = document.createElement("td");
-        td.setAttribute("colspan", colspan);
-        td.className = "py-4 text-center text-gray-400";
-        td.textContent = message;
-        tr.appendChild(td);
-        return tr;
-    }
-
-    function updateTable(tbodyId, rows, cellDefs, emptyMsg) {
-        var tbody = clearTbody(tbodyId);
-        if (!tbody) return;
-        if (!rows || !rows.length) {
-            tbody.appendChild(makeEmptyRow(cellDefs.length, emptyMsg));
-            return;
+        if (!chart) {
+            chart = new Chart(canvas.getContext('2d'), chartConfig);
         }
-        rows.forEach(function(r) {
-            var tr = document.createElement("tr");
-            tr.className = "border-b border-gray-100 dark:border-gray-800";
-            cellDefs.forEach(function(def) {
-                tr.appendChild(makeCell(def.value(r), def.cls));
+
+        chart.data.labels = labels;
+        chart.data.datasets = datasets;
+        chart.update();
+    }
+
+    // ── Fetch and render ───────────────────────────
+    function fetchAndRender() {
+        var url = API_URL + '?date=' + dateInput.value;
+        var dot = document.getElementById('ad-dot');
+        var status = document.getElementById('ad-status');
+
+        fetch(url, { credentials: 'same-origin' })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                // Use server date on first load
+                if (!dateInput.value && data.date) {
+                    dateInput.value = data.date;
+                }
+                updateChart(data);
+                dot.style.backgroundColor = '#22c55e';
+                var count = (data.clients || []).length;
+                status.textContent = count + ' client' + (count !== 1 ? 's' : '');
+            })
+            .catch(function() {
+                dot.style.backgroundColor = '#ef4444';
+                status.textContent = 'Error';
             });
-            tbody.appendChild(tr);
-        });
     }
 
-    function updateStatus(ok) {
-        var st = document.getElementById("ad-status");
-        var dot = document.getElementById("ad-dot");
-        if (st) st.textContent = ok
-            ? "Updated " + new Date().toLocaleTimeString()
-            : "Update failed";
-        if (dot) {
-            dot.className = ok
-                ? "inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse"
-                : "inline-block w-2 h-2 rounded-full bg-red-500";
+    // ── Auto-refresh with visibility awareness ─────
+    function startRefresh() {
+        stopRefresh();
+        refreshTimer = setInterval(fetchAndRender, REFRESH_INTERVAL);
+    }
+
+    function stopRefresh() {
+        if (refreshTimer) {
+            clearInterval(refreshTimer);
+            refreshTimer = null;
         }
     }
 
-    async function refresh() {
-        try {
-            var resp = await fetch(API_URL);
-            if (!resp.ok) { updateStatus(false); return; }
-            var data = await resp.json();
-
-            // KPIs
-            updateKPI("kpi-human-views", data.today_human_views);
-            updateKPI("kpi-bot-views", data.today_bot_views);
-            updateKPI("kpi-visitors", data.today_visitors);
-            updateKPI("kpi-sessions", data.today_session_count);
-            updateKPI("kpi-avg-duration", data.avg_duration);
-            updateKPI("kpi-avg-pages", data.avg_pages);
-            updateKPI("kpi-active-now", data.active_now);
-            updateKPI("kpi-bounce", data.bounce_rate + "%");
-            updateKPI("kpi-new", data.new_visitors);
-            updateKPI("kpi-returning", data.returning_visitors);
-
-            var vcEl = document.getElementById("kpi-views-change");
-            if (vcEl) {
-                var vc = data.views_change;
-                vcEl.textContent = (vc >= 0 ? "+" : "") + vc;
-                vcEl.parentElement.className = "text-xs mt-1 " + (vc >= 0
-                    ? "text-green-600 dark:text-green-400"
-                    : "text-red-500");
-            }
-
-            // Charts
-            for (var wrapId in CHART_MAP) {
-                updateChart(wrapId, data[CHART_MAP[wrapId]]);
-            }
-
-            // Tables
-            updateTable("table-countries", data.top_countries, [
-                {value: function(r) { return r.flag + " " + r.client__country_name; }, cls: "py-2"},
-                {value: function(r) { return r.visitors; }, cls: "text-right py-2"},
-                {value: function(r) { return r.sessions; }, cls: "text-right py-2"},
-            ], "No data");
-
-            updateTable("table-cities", data.top_cities, [
-                {value: function(r) { return r.flag + " " + r.client__city; }, cls: "py-2"},
-                {value: function(r) { return r.visitors; }, cls: "text-right py-2"},
-                {value: function(r) { return r.sessions; }, cls: "text-right py-2"},
-            ], "No data");
-
-            updateTable("table-pages", data.top_pages, [
-                {value: function(r) { return r.path; }, cls: "py-2 truncate max-w-xs text-xs font-mono"},
-                {value: function(r) { return r.views; }, cls: "text-right py-2"},
-            ], "No data");
-
-            updateTable("table-referrers", data.top_referrers, [
-                {value: function(r) { return r.referrer_domain; }, cls: "py-2 truncate max-w-xs"},
-                {value: function(r) { return r.sessions; }, cls: "text-right py-2"},
-            ], "No referrers");
-
-            updateTable("table-entry-pages", data.entry_pages, [
-                {value: function(r) { return r.path; }, cls: "py-2 truncate max-w-xs text-xs font-mono"},
-                {value: function(r) { return r.entries; }, cls: "text-right py-2"},
-            ], "No data");
-
-            updateTable("table-bots", data.top_bots, [
-                {value: function(r) { return r.bot_name; }, cls: "py-2"},
-                {value: function(r) { return r.count; }, cls: "text-right py-2"},
-            ], "No bots");
-
-            updateTable("table-live", data.live_sessions, [
-                {value: function(r) { return r.country; }, cls: "py-1"},
-                {value: function(r) { return r.city; }, cls: "py-1 text-xs"},
-                {value: function(r) { return r.browser + " / " + r.os; }, cls: "py-1 text-xs"},
-                {value: function(r) { return r.pages; }, cls: "text-right py-1"},
-                {value: function(r) { return r.time; }, cls: "text-right py-1 text-xs"},
-                {value: function(r) { return r.started; }, cls: "text-right py-1 text-xs text-gray-500"},
-            ], "No active sessions");
-
-            updateStatus(true);
-        } catch(e) {
-            console.error("Analytics dashboard refresh error:", e);
-            updateStatus(false);
+    document.addEventListener('visibilitychange', function() {
+        if (document.hidden) {
+            stopRefresh();
+        } else {
+            fetchAndRender();
+            startRefresh();
         }
-    }
+    });
 
-    setInterval(refresh, INTERVAL);
+    // ── Initial load ───────────────────────────────
+    fetchAndRender();
+    startRefresh();
 })();
 </script>
-
 {% endblock %}

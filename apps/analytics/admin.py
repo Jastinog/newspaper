@@ -66,10 +66,10 @@ class SessionAdmin(ReadOnlyAdmin):
         "session_id", "type_icon", "source_display", "client",
         "country_display", "city_display",
         "page_count", "active_time_display",
-        "has_interaction", "verdict_display", "started_at", "ended_at",
+        "spm", "total_scrolls", "started_at", "ended_at",
     )
     list_filter = (
-        "is_human", "has_interaction", "source",
+        "source",
         "client__country", "client__city",
     )
     search_fields = ("session_id", "client__country_name", "client__city")
@@ -77,35 +77,22 @@ class SessionAdmin(ReadOnlyAdmin):
     list_select_related = ("client",)
     readonly_fields = (
         "session_id", "client", "source", "started_at", "ended_at", "page_count",
-        "active_time", "has_interaction", "referrer", "referrer_domain", "is_human",
+        "active_time", "total_scrolls", "spm", "pages", "last_ping_at",
+        "referrer", "referrer_domain",
     )
 
-    @admin.display(description="Type", ordering="is_human")
+    @admin.display(description="Type")
     def type_icon(self, obj):
-        if obj.is_human:
-            return mark_safe('<span title="Confirmed human" style="font-size:1.3em">👤</span>')
         if obj.client.is_bot:
             return format_html(
                 '<span title="Bot: {}" style="font-size:1.3em">🤖</span>',
                 obj.client.bot_name or "Unknown bot",
             )
-        return mark_safe('<span title="Unconfirmed" style="font-size:1.3em;opacity:0.4">👤</span>')
+        return mark_safe('<span title="Human" style="font-size:1.3em">👤</span>')
 
     @admin.display(description="Source", ordering="source")
     def source_display(self, obj):
         return _format_source(obj.source)
-
-    @admin.display(description="Verdict")
-    def verdict_display(self, obj):
-        if obj.is_human:
-            return mark_safe('<span style="color:#2d6a4f;font-weight:600">✓ Human</span>')
-        if obj.client.is_bot:
-            name = obj.client.bot_name or "Bot"
-            return format_html(
-                '<span style="color:#c1121f;font-weight:600">🤖 {}</span>',
-                name,
-            )
-        return mark_safe('<span style="opacity:0.5">?</span>')
 
     @admin.display(description="Country", ordering="client__country")
     def country_display(self, obj):

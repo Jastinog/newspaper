@@ -1,19 +1,18 @@
 import uuid
 from urllib.parse import urlparse
 
-from django.db.models import F
 from django.urls import Resolver404, resolve
 from django.utils import timezone
 
-from .models import Activity, Client, Session
+from .models import Client, Session
 from .utils import hash_with_salt, parse_ua, resolve_geo
 
-MAX_META_KEYS = 10
-MAX_META_VALUE_LEN = 500
+INACTIVITY_TIMEOUT = 300  # 5 minutes
+MAX_STORED_PAGES = 200
 
 
 def resolve_path(path: str):
-    """Resolve Django URL name and extract article/category FK."""
+    """Resolve Django URL name and extract article/category FK (used by BotTrackingMiddleware)."""
     view_name = ""
     article = None
     category = None
@@ -60,10 +59,8 @@ class SessionService:
 
     Usage (from WS consumer):
         service = SessionService(scope)
-        client, session = service.open(client_id, referrer)
-        service.page_view("/some/path/", referrer="...")
-        service.activity("scroll", "/some/path/", meta={"depth": 75})
-        service.heartbeat(active_time=120, has_interaction=True)
+        client, session = service.open(client_id, referrer, path)
+        session = service.ping(scrolls=5, pages=["/article/1"], active_time=30)
         service.close()
     """
 
@@ -77,8 +74,6 @@ class SessionService:
         self._ua_string = self._extract_ua()
         self._ua_info = parse_ua(self._ua_string)
         self._geo = resolve_geo(self._raw_ip)
-
-    # ── Properties ──────────────────────────────────
 
     @property
     def client(self):
@@ -94,7 +89,7 @@ class SessionService:
 
     # ── Lifecycle ───────────────────────────────────
 
-    def open(self, raw_client_id: str, referrer: str = "") -> tuple[Client, Session]:
+    def open(self, raw_client_id: str, referrer: str = "", path: str = "") -> tuple[Client, Session]:
         """Create or update client, start a new session."""
         try:
             client_id = uuid.UUID(raw_client_id)
@@ -117,10 +112,18 @@ class SessionService:
             except Exception:
                 pass
 
+        now = timezone.now()
+        pages = []
+        if path:
+            pages.append({"path": path[:2000], "ts": now.strftime("%H:%M:%S")})
+
         self._session = Session.objects.create(
             client=self._client,
             referrer=referrer[:2000],
             referrer_domain=referrer_domain,
+            last_ping_at=now,
+            page_count=len(pages),
+            pages=pages,
         )
 
         return self._client, self._session
@@ -133,73 +136,71 @@ class SessionService:
             )
             self._session = None
 
-    # ── Tracking ────────────────────────────────────
+    # ── Ping ────────────────────────────────────────
 
-    def page_view(self, path: str, referrer: str = ""):
-        """Record a page view activity."""
+    def ping(self, scrolls: int, pages: list[str], active_time: int) -> Session | None:
+        """Process a 30-second ping with buffered activity.
+
+        If the session has been inactive for > 5 minutes, closes the old one
+        and opens a new session. Returns the current session.
+        """
         if not self._session:
-            return
+            return None
 
-        view_name, article, category = resolve_path(path)
+        now = timezone.now()
 
-        Activity.objects.create(
-            session=self._session,
-            type=Activity.ActivityType.PAGE_VIEW,
-            path=path[:2000],
-            view_name=view_name[:100],
-            article=article,
-            category=category,
-            meta={"referrer": referrer} if referrer else {},
-        )
+        # Check 5-min inactivity -> new session
+        if self._session.last_ping_at:
+            gap = (now - self._session.last_ping_at).total_seconds()
+            if gap > INACTIVITY_TIMEOUT:
+                self.close()
+                self.open(
+                    raw_client_id=str(self._client.client_id),
+                    referrer="",
+                )
+
+        # Collect new data
+        new_scrolls = max(0, int(scrolls))
+        new_pages = [
+            {"path": p[:2000], "ts": now.strftime("%H:%M:%S")}
+            for p in pages
+            if isinstance(p, str) and p
+        ]
+
+        # Fast path: no activity — just touch last_ping_at
+        if not new_scrolls and not new_pages:
+            Session.objects.filter(pk=self._session.pk).update(last_ping_at=now)
+            self._session.last_ping_at = now
+            return self._session
+
+        # Append pages (capped to avoid unbounded growth)
+        session_pages = (self._session.pages or []) + new_pages
+        if len(session_pages) > MAX_STORED_PAGES:
+            session_pages = session_pages[-MAX_STORED_PAGES:]
+
+        # Update scroll stats
+        new_total = (self._session.total_scrolls or 0) + new_scrolls
+        active_time = min(int(active_time), 86400)
+        duration_min = max(1, active_time / 60)
+        spm = round(new_total / duration_min, 1)
+
         Session.objects.filter(pk=self._session.pk).update(
-            page_count=F("page_count") + 1,
+            last_ping_at=now,
+            active_time=active_time,
+            total_scrolls=new_total,
+            spm=spm,
+            page_count=len(session_pages),
+            pages=session_pages,
         )
 
-    _INTERACTION_TYPES = {
-        Activity.ActivityType.SCROLL,
-        Activity.ActivityType.CLICK,
-    }
+        # Update in-memory state
+        self._session.last_ping_at = now
+        self._session.total_scrolls = new_total
+        self._session.pages = session_pages
 
-    def activity(self, activity_type: str, path: str, meta=None):
-        """Record a user interaction (scroll, click)."""
-        if not self._session:
-            return
-        if activity_type not in self._INTERACTION_TYPES:
-            return
-
-        Activity.objects.create(
-            session=self._session,
-            type=activity_type,
-            path=path[:2000],
-            meta=self._sanitize_meta(meta),
-        )
-
-        self._mark_human()
-
-    def heartbeat(self, active_time: int, has_interaction: bool):
-        """Update session with latest active time."""
-        if not self._session:
-            return
-
-        active_time = min(active_time, 86400)
-        updates = {"active_time": active_time}
-
-        if has_interaction:
-            self._mark_human()
-
-        Session.objects.filter(pk=self._session.pk).update(**updates)
+        return self._session
 
     # ── Private helpers ─────────────────────────────
-
-    def _mark_human(self):
-        """Mark session as confirmed human (idempotent)."""
-        if self._session and not self._session.has_interaction:
-            Session.objects.filter(pk=self._session.pk).update(
-                has_interaction=True,
-                is_human=True,
-            )
-            self._session.has_interaction = True
-            self._session.is_human = True
 
     def _extract_ip(self) -> str:
         headers = dict(self._scope.get("headers", []))
@@ -216,16 +217,3 @@ class SessionService:
             if header_name == b"user-agent":
                 return header_value.decode()[:500]
         return ""
-
-    @staticmethod
-    def _sanitize_meta(meta):
-        """Limit meta dict size to prevent storage abuse."""
-        if not meta or not isinstance(meta, dict):
-            return {}
-        sanitized = {}
-        for key in list(meta)[:MAX_META_KEYS]:
-            val = meta[key]
-            if isinstance(val, str):
-                val = val[:MAX_META_VALUE_LEN]
-            sanitized[str(key)[:100]] = val
-        return sanitized

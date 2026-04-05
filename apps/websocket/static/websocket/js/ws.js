@@ -2,7 +2,7 @@
  * Unified WebSocket client.
  *
  * Single connection to /ws/ handles:
- *   - Analytics tracking (sessions, page views, scroll, clicks, heartbeat)
+ *   - Analytics tracking (ping every 30s with scroll count + visited pages)
  *   - Deep dive generation progress
  *   - Any future real-time features
  *
@@ -10,15 +10,14 @@
  *   WS.on(type, handler)   — listen for server messages by type
  *   WS.send(action, data)  — send action to server
  *   WS.isConnected()       — check connection state
+ *   WS.getLanguage()       — get current language
  */
 (function () {
     'use strict';
 
     // ── Config ─────────────────────────────────────
     var STORAGE_KEY = 'newspaper_client_id';
-    var HEARTBEAT_INTERVAL = 30000;
-    var SCROLL_THROTTLE = 2000;
-    var CLICK_THROTTLE = 500;
+    var PING_INTERVAL = 30000;
 
     // ── WS State ───────────────────────────────────
     var handlers = {};
@@ -29,15 +28,13 @@
 
     // ── Analytics State ────────────────────────────
     var clientId = null;
-    var heartbeatTimer = null;
+    var pingTimer = null;
     var activeTime = 0;
     var lastActiveTimestamp = null;
     var isPageVisible = true;
-    var hasInteraction = false;
+    var scrollCount = 0;
+    var pageBuffer = [];
     var currentPath = location.pathname;
-    var maxScrollDepth = 0;
-    var lastScrollSend = 0;
-    var lastClickSend = 0;
 
     // ── Client ID ──────────────────────────────────
     function getClientId() {
@@ -71,16 +68,22 @@
             currentDelay = reconnectDelay;
             dispatch('ws.open', {});
 
-            // Analytics: identify client (includes first page view)
+            // Reset analytics state for new server-side session
+            activeTime = 0;
+            lastActiveTimestamp = null;
+            scrollCount = 0;
+            pageBuffer = [];
+
+            // Identify client and record initial page
             send('analytics.init', {
                 client_id: clientId,
                 path: location.pathname,
                 referrer: document.referrer || ''
             });
             currentPath = location.pathname;
-            maxScrollDepth = 0;
 
-            startHeartbeat();
+            startActive();
+            startPing();
         };
 
         ws.onmessage = function (evt) {
@@ -92,7 +95,7 @@
         ws.onclose = function () {
             ws = null;
             dispatch('ws.close', {});
-            stopHeartbeat();
+            stopPing();
             setTimeout(connect, currentDelay);
             currentDelay = Math.min(currentDelay * 1.5, maxReconnectDelay);
         };
@@ -141,124 +144,89 @@
         }
     }
 
-    // ── Heartbeat ──────────────────────────────────
-    function startHeartbeat() {
-        stopHeartbeat();
-        heartbeatTimer = setInterval(flushHeartbeat, HEARTBEAT_INTERVAL);
-    }
-
-    function stopHeartbeat() {
-        if (heartbeatTimer) {
-            clearInterval(heartbeatTimer);
-            heartbeatTimer = null;
-        }
-    }
-
-    function flushHeartbeat() {
+    function getActiveTime() {
         if (lastActiveTimestamp) {
-            activeTime += Math.round((Date.now() - lastActiveTimestamp) / 1000);
-            lastActiveTimestamp = isPageVisible ? Date.now() : null;
+            return activeTime + Math.round((Date.now() - lastActiveTimestamp) / 1000);
         }
-        send('analytics.heartbeat', {
-            active_time: activeTime,
-            has_interaction: hasInteraction
+        return activeTime;
+    }
+
+    // ── Ping (every 30s) ──────────────────────────
+    function startPing() {
+        stopPing();
+        pingTimer = setInterval(sendPing, PING_INTERVAL);
+    }
+
+    function stopPing() {
+        if (pingTimer) {
+            clearInterval(pingTimer);
+            pingTimer = null;
+        }
+    }
+
+    function sendPing() {
+        var sent = send('analytics.ping', {
+            scrolls: scrollCount,
+            pages: pageBuffer,
+            active_time: getActiveTime()
         });
+        if (sent) {
+            scrollCount = 0;
+            pageBuffer = [];
+        }
     }
 
-    // ── Interaction tracking ───────────────────────
-    function onInteraction() {
-        if (!hasInteraction) hasInteraction = true;
-        startActive();
-    }
-
+    // ── Scroll counting ───────────────────────────
     function onScroll() {
-        onInteraction();
-        var now = Date.now();
-        if (now - lastScrollSend < SCROLL_THROTTLE) return;
-        lastScrollSend = now;
+        scrollCount++;
+        if (!lastActiveTimestamp) startActive();
+    }
 
-        var docHeight = Math.max(
-            document.body.scrollHeight,
-            document.documentElement.scrollHeight
-        );
-        var viewportHeight = window.innerHeight;
-        var scrollTop = window.scrollY || document.documentElement.scrollTop;
-        var depth = docHeight > viewportHeight
-            ? Math.round(((scrollTop + viewportHeight) / docHeight) * 100)
-            : 100;
-
-        if (depth > maxScrollDepth) {
-            maxScrollDepth = depth;
-            send('analytics.activity', {
-                type: 'scroll',
-                path: currentPath,
-                meta: { depth: depth }
-            });
+    // ── Page navigation ───────────────────────────
+    function trackPageChange(newPath) {
+        if (newPath !== currentPath) {
+            pageBuffer.push(newPath);
+            currentPath = newPath;
+            scrollCount = 0;
         }
     }
 
-    function onClick(e) {
-        onInteraction();
-        var now = Date.now();
-        if (now - lastClickSend < CLICK_THROTTLE) return;
-        lastClickSend = now;
-        var target = e.target;
-        var tag = target.tagName || '';
-        var info = { tag: tag.toLowerCase() };
-        if (target.href) info.href = target.href.substring(0, 200);
-        if (target.id) info.id = target.id;
-        send('analytics.activity', {
-            type: 'click',
-            path: currentPath,
-            meta: info
-        });
+    function onPopState() {
+        trackPageChange(location.pathname);
     }
 
+    // ── Visibility ────────────────────────────────
     function onVisibilityChange() {
         if (document.hidden) {
             isPageVisible = false;
             pauseActive();
+            // Send final ping before going idle
+            sendPing();
+            stopPing();
         } else {
             isPageVisible = true;
             startActive();
+            // Resume pinging — send immediately to check 5-min gap server-side
+            sendPing();
+            startPing();
         }
     }
 
     function onBeforeUnload() {
-        flushHeartbeat();
-    }
-
-    function onPopState() {
-        if (location.pathname !== currentPath) {
-            send('analytics.page_view', {
-                path: location.pathname,
-                referrer: document.referrer || ''
-            });
-            currentPath = location.pathname;
-            maxScrollDepth = 0;
-        }
+        sendPing();
     }
 
     // ── Init ───────────────────────────────────────
     clientId = getClientId();
 
     document.addEventListener('scroll', onScroll, { passive: true });
-    document.addEventListener('click', onClick, { passive: true });
-    document.addEventListener('touchstart', onInteraction, { passive: true });
-    document.addEventListener('mousemove', onInteraction, { passive: true, once: true });
-    document.addEventListener('keydown', onInteraction, { passive: true, once: true });
     document.addEventListener('visibilitychange', onVisibilityChange);
     window.addEventListener('beforeunload', onBeforeUnload);
     window.addEventListener('popstate', onPopState);
 
-    // HTMX pushes URL on partial navigation — track as page view
+    // HTMX pushes URL on partial navigation — track as page change
     document.addEventListener('htmx:pushedIntoHistory', function (evt) {
-        var newPath = evt.detail.path;
-        if (newPath !== currentPath) {
-            send('analytics.page_view', { path: newPath, referrer: '' });
-            currentPath = newPath;
-            maxScrollDepth = 0;
-        }
+        trackPageChange(evt.detail.path);
     });
 
     startActive();

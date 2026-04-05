@@ -56,24 +56,23 @@ class Session(models.Model):
     started_at = models.DateTimeField(auto_now_add=True)
     ended_at = models.DateTimeField(null=True, blank=True)
 
-    # Aggregated stats (updated on disconnect / heartbeat)
+    # Aggregated stats (updated on each ping)
     page_count = models.PositiveIntegerField(default=0)
     active_time = models.PositiveIntegerField(default=0, help_text="Seconds of active time")
-    has_interaction = models.BooleanField(default=False)
+    total_scrolls = models.PositiveIntegerField(default=0)
+    spm = models.FloatField(default=0, help_text="Scrolls per minute")
+    pages = models.JSONField(default=list, blank=True, help_text='[{"path": "/...", "ts": "HH:MM:SS"}]')
+    last_ping_at = models.DateTimeField(null=True, blank=True)
 
     # Referrer of the first page
     referrer = models.URLField(max_length=2000, blank=True, default="")
     referrer_domain = models.CharField(max_length=253, blank=True, default="")
-
-    # Human verdict: WS connected (JS ran) + had real interaction
-    is_human = models.BooleanField(default=False)
 
     class Meta:
         ordering = ["-started_at"]
         indexes = [
             models.Index(fields=["-started_at"]),
             models.Index(fields=["client", "-started_at"]),
-            models.Index(fields=["is_human", "-started_at"]),
         ]
 
     def __str__(self):
