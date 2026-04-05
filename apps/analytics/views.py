@@ -19,25 +19,25 @@ def analytics_dashboard(request):
 def _browser_short(browser: str) -> str:
     b = (browser or "").lower()
     if "chrome" in b and "edg" not in b:
-        return "Chr"
+        return "C"
     if "safari" in b:
-        return "Saf"
+        return "S"
     if "firefox" in b:
-        return "Fir"
+        return "F"
     if "edg" in b:
-        return "Edg"
+        return "E"
     if "opera" in b or "opr" in b:
-        return "Opr"
+        return "O"
     if "samsung" in b:
-        return "Sam"
-    return " ? "
+        return "S"
+    return "?"
 
 
-_DEVICE_SHORT = {"mobile": "Mob", "tablet": "Tab", "desktop": "Dsk"}
+_DEVICE_SHORT = {"mobile": "M", "tablet": "T", "desktop": "D"}
 
 
 def _device_short(device_type: str) -> str:
-    return _DEVICE_SHORT.get((device_type or "").lower(), " ? ")
+    return _DEVICE_SHORT.get((device_type or "").lower(), "?")
 
 
 @staff_member_required
