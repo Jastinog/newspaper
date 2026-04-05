@@ -68,11 +68,10 @@
             currentDelay = reconnectDelay;
             dispatch('ws.open', {});
 
-            // Reset analytics state for new server-side session
-            activeTime = 0;
-            lastActiveTimestamp = null;
+            // Reset buffers (active_time will be set from server response)
             scrollCount = 0;
             pageBuffer = [];
+            lastActiveTimestamp = null;
 
             // Identify client and record initial page
             send('analytics.init', {
@@ -82,7 +81,6 @@
             });
             currentPath = location.pathname;
 
-            startActive();
             startPing();
         };
 
@@ -229,7 +227,12 @@
         trackPageChange(evt.detail.path);
     });
 
-    startActive();
+    // Restore active_time from server on session init (handles resumed sessions)
+    on('analytics.session', function(msg) {
+        activeTime = msg.active_time || 0;
+        startActive();
+    });
+
     connect();
 
     window.WS = { on: on, send: send, isConnected: isConnected, getLanguage: getLanguage };

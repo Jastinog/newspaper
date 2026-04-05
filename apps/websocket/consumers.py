@@ -93,6 +93,7 @@ class SiteConsumer(AsyncWebsocketConsumer):
         await self.send(json.dumps({
             "type": "analytics.session",
             "session_id": self._last_session_id,
+            "active_time": session.active_time,
         }))
 
     async def _on_analytics_ping(self, data):

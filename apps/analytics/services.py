@@ -1,4 +1,5 @@
 import uuid
+from datetime import timedelta
 from urllib.parse import urlparse
 
 from django.urls import Resolver404, resolve
@@ -90,7 +91,7 @@ class SessionService:
     # ── Lifecycle ───────────────────────────────────
 
     def open(self, raw_client_id: str, referrer: str = "", path: str = "") -> tuple[Client, Session]:
-        """Create or update client, start a new session."""
+        """Resume an active session or create a new one."""
         try:
             client_id = uuid.UUID(raw_client_id)
         except (ValueError, AttributeError, TypeError):
@@ -105,6 +106,37 @@ class SessionService:
             ),
         )
 
+        now = timezone.now()
+        cutoff = now - timedelta(seconds=INACTIVITY_TIMEOUT)
+
+        # Try to resume a recent session for this client
+        recent = (
+            Session.objects.filter(
+                client=self._client,
+                source=Session.Source.WEBSOCKET,
+                ended_at__isnull=True,
+                last_ping_at__gte=cutoff,
+            )
+            .order_by("-last_ping_at")
+            .first()
+        )
+
+        if recent:
+            self._session = recent
+            # Append the new page to the existing session
+            if path:
+                pages = self._session.pages or []
+                pages.append({"path": path[:2000], "ts": now.strftime("%H:%M:%S")})
+                Session.objects.filter(pk=self._session.pk).update(
+                    last_ping_at=now,
+                    page_count=len(pages),
+                    pages=pages,
+                )
+                self._session.pages = pages
+                self._session.last_ping_at = now
+            return self._client, self._session
+
+        # No active session — create a new one
         referrer_domain = ""
         if referrer:
             try:
@@ -112,7 +144,6 @@ class SessionService:
             except Exception:
                 pass
 
-        now = timezone.now()
         pages = []
         if path:
             pages.append({"path": path[:2000], "ts": now.strftime("%H:%M:%S")})
