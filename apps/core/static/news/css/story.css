@@ -199,6 +199,37 @@
 .lean-badge.lean-center_right { background: #ef6c00; }
 .lean-badge.lean-right { background: #c62828; }
 
+/* More from section */
+.story-more-section {
+    max-width: 680px;
+    margin: 2.5rem auto 0;
+    padding-top: 1.5rem;
+    border-top: 2px solid var(--border);
+}
+
+.story-more-section h2 {
+    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--fg-muted);
+    margin-bottom: 0.8rem;
+}
+
+.story-more-grid {
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.2rem;
+}
+
+.story-more-grid .digest-item-card {
+    border-bottom: none;
+    padding-bottom: 0;
+    margin-bottom: 0;
+}
+
 /* Responsive */
 @media (max-width: 480px) {
     .story-hero {
@@ -210,5 +241,8 @@
     }
     .story-research-link {
         margin: 1rem auto;
+    }
+    .story-more-grid {
+        grid-template-columns: 1fr;
     }
 }

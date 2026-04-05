@@ -59,6 +59,17 @@
     </div>
     {% endif %}
 
+    {% if section_items %}
+    <div class="story-more-section">
+        <h2>{% trans "More from" %} {{ section_name }}</h2>
+        <ul class="story-more-grid">
+            {% for item in section_items %}
+            <li class="digest-item-card">{% include "news/_digest_item.html" %}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
     <div class="article-actions">
         <a href="{% url 'index' %}">&larr; {% trans "Back to digest" %}</a>
     </div>

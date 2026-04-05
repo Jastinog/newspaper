@@ -297,6 +297,24 @@ def story_detail(request, item_id):
         for article in item.articles.all()
     ]
 
+    # Other items from the same section
+    section_items = []
+    if item.section and item.digest:
+        siblings = (
+            DigestItem.objects
+            .filter(digest=item.digest, section=item.section)
+            .exclude(pk=item.pk)
+            .select_related("section", "image")
+            .prefetch_related(
+                "translations", "translations__language",
+                "articles__feed", "articles__images",
+            )
+        )
+        for si in siblings:
+            si.loc_topic = si.get_topic(current_lang)
+            si.loc_summary = si.get_summary(current_lang)
+        section_items = [si for si in siblings if si.loc_topic and si.loc_summary]
+
     seo = {
         "title": f"{topic} — {SITE_NAME}",
         "description": _og_description(summary) or topic,
@@ -313,6 +331,7 @@ def story_detail(request, item_id):
         "summary": summary,
         "section_name": section_name,
         "source_articles": source_articles,
+        "section_items": section_items,
         "has_research": bool(item._researches),
         "seo": seo,
     })
