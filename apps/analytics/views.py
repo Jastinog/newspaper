@@ -16,6 +16,30 @@ def analytics_dashboard(request):
     return render(request, "admin/analytics_dashboard.html", context)
 
 
+def _browser_short(browser: str) -> str:
+    b = (browser or "").lower()
+    if "chrome" in b and "edg" not in b:
+        return "Chr"
+    if "safari" in b:
+        return "Saf"
+    if "firefox" in b:
+        return "Fir"
+    if "edg" in b:
+        return "Edg"
+    if "opera" in b or "opr" in b:
+        return "Opr"
+    if "samsung" in b:
+        return "Sam"
+    return " ? "
+
+
+_DEVICE_SHORT = {"mobile": "Mob", "tablet": "Tab", "desktop": "Dsk"}
+
+
+def _device_short(device_type: str) -> str:
+    return _DEVICE_SHORT.get((device_type or "").lower(), " ? ")
+
+
 @staff_member_required
 def analytics_timeline_api(request):
     """Return rolling 24-hour timeline: sessions from now-24h to now."""
@@ -38,11 +62,13 @@ def analytics_timeline_api(request):
         c = s.client
         if c.pk not in clients_map:
             flag = country_flag(c.country)
-            city = (c.city or "")[:6].ljust(6)
-            label = f"{flag} {city}" if flag else city
+            city = (c.city or "Unknown")[:8].ljust(8)
+            br = _browser_short(c.browser)
+            dev = _device_short(c.device_type)
+            label = f"{flag} {city} {br} {dev}" if flag else f"   {city} {br} {dev}"
             clients_map[c.pk] = {
                 "id": c.pk,
-                "label": label.strip() or f"Client {c.pk}",
+                "label": label,
                 "sessions": [],
             }
 
