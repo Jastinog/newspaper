@@ -100,15 +100,35 @@
         return datasets;
     }
 
+    // ── Row highlight on hover ──────────────────────
+    var rowHighlight = {
+        id: 'rowHighlight',
+        beforeDatasetsDraw: function(chart) {
+            var active = chart.getActiveElements();
+            if (!active.length) return;
+            var ctx = chart.ctx;
+            var yScale = chart.scales.y;
+            var idx = active[0].index;
+            var y = yScale.getPixelForValue(idx);
+            var h = yScale.getPixelForValue(1) - yScale.getPixelForValue(0);
+            ctx.save();
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
+            ctx.fillRect(chart.chartArea.left, y - h / 2, chart.chartArea.right - chart.chartArea.left, h);
+            ctx.restore();
+        }
+    };
+
     // ── Chart config (dark theme) ──────────────────
     var chartConfig = {
         type: 'bar',
         data: { labels: [], datasets: [] },
+        plugins: [rowHighlight],
         options: {
             indexAxis: 'y',
             responsive: true,
             maintainAspectRatio: false,
             animation: { duration: 300 },
+            interaction: { mode: 'index', axis: 'y', intersect: false },
             plugins: {
                 legend: { display: false },
                 tooltip: {
