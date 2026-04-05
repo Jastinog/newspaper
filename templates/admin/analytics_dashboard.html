@@ -48,9 +48,9 @@
     // ── Build datasets from API data ───────────────
     // Two layers: gray (idle/wall time) behind, colored (active) on top.
     var IDLE_BG = 'rgba(108, 112, 134, 0.18)';
-    var IDLE_BORDER = 'rgba(108, 112, 134, 0.3)';
 
-    var BAR_STYLE = { borderWidth: 1, borderSkipped: false, barPercentage: 0.6, categoryPercentage: 0.8 };
+
+    var BAR_STYLE = { borderWidth: 0, borderSkipped: false, barPercentage: 0.9, categoryPercentage: 0.9 };
 
     function buildDatasets(clients) {
         var maxSessions = Math.max.apply(null, clients.map(function(c) { return c.sessions.length; }).concat(0));
@@ -64,7 +64,6 @@
                     return s ? [s.start, s.end] : null;
                 }),
                 backgroundColor: IDLE_BG,
-                borderColor: IDLE_BORDER,
             }, BAR_STYLE));
         }
 
@@ -192,8 +191,8 @@
         var datasets = buildDatasets(clients);
 
         var canvas = document.getElementById('timeline-chart');
-        var rowHeight = 36;
-        canvas.parentElement.style.minHeight = Math.max(200, clients.length * rowHeight + 60) + 'px';
+        var rowHeight = 24;
+        canvas.parentElement.style.minHeight = Math.max(80, clients.length * rowHeight + 50) + 'px';
 
         if (!chart) {
             chart = new Chart(canvas.getContext('2d'), chartConfig);
