@@ -143,40 +143,7 @@
             interaction: { mode: 'index', axis: 'y', intersect: false },
             plugins: {
                 legend: { display: false },
-                tooltip: {
-                    backgroundColor: 'rgba(30, 30, 46, 0.95)',
-                    titleColor: '#cdd6f4',
-                    bodyColor: '#a6adc8',
-                    borderColor: 'rgba(255,255,255,0.1)',
-                    borderWidth: 1,
-                    padding: 10,
-                    filter: function(item) {
-                        return !!item.dataset._sessionMeta;
-                    },
-                    callbacks: {
-                        title: function(items) {
-                            return items.length ? items[0].label : '';
-                        },
-                        label: function(item) {
-                            var meta = item.dataset._sessionMeta[item.dataIndex];
-                            if (!meta) return '';
-
-                            var lines = [];
-                            lines.push('Duration: ' + meta.duration);
-                            lines.push('SPM: ' + meta.spm + ' | Scrolls: ' + meta.scrolls);
-
-                            if (meta.pages && meta.pages.length) {
-                                lines.push('Pages:');
-                                meta.pages.forEach(function(p) {
-                                    var path = typeof p === 'object' ? p.path : p;
-                                    var ts = typeof p === 'object' ? p.ts : '';
-                                    lines.push('  ' + (ts ? ts + ' ' : '') + path);
-                                });
-                            }
-                            return lines;
-                        }
-                    }
-                }
+                tooltip: { enabled: false }
             },
             scales: {
                 x: {
@@ -349,26 +316,7 @@
             interaction: { mode: 'nearest', axis: 'y', intersect: false },
             plugins: {
                 legend: { display: false },
-                tooltip: {
-                    backgroundColor: 'rgba(30, 30, 46, 0.95)',
-                    titleColor: '#cdd6f4',
-                    bodyColor: '#a6adc8',
-                    borderColor: 'rgba(255,255,255,0.1)',
-                    borderWidth: 1,
-                    padding: 10,
-                    callbacks: {
-                        title: function(items) {
-                            if (!items.length) return '';
-                            var meta = items[0].dataset._botMeta;
-                            return meta ? meta.name : '';
-                        },
-                        label: function(item) {
-                            var meta = item.dataset._botMeta;
-                            return meta ? meta.count + ' requests' : '';
-                        },
-                        afterLabel: function() { return ''; }
-                    }
-                }
+                tooltip: { enabled: false }
             },
             scales: {
                 x: {
