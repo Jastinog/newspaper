@@ -6,7 +6,7 @@
 (function () {
     'use strict';
 
-    var INTERVAL = 10000;
+    var INTERVAL = 20000;
     var STREAMS = 3;
     var timers = [];
 
