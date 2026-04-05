@@ -54,7 +54,7 @@ class ItemGenerator:
             f"Articles:\n\n{self._build_article_list(articles)}"
         )
 
-        content, usage = self.client.chat(
+        chat_kwargs = dict(
             system=system,
             user=user,
             model=cfg.chat_model,
@@ -63,12 +63,24 @@ class ItemGenerator:
             response_format={"type": "json_object"},
         )
 
-        fixed = fix_truncated_json(content)
-        try:
-            data = json.loads(fixed)
-        except json.JSONDecodeError as e:
+        data = None
+        last_error = None
+        for attempt in range(2):
+            content, usage = self.client.chat(**chat_kwargs)
+            fixed = fix_truncated_json(content)
+            try:
+                data = json.loads(fixed)
+                break
+            except json.JSONDecodeError as e:
+                last_error = e
+                logger.warning(
+                    "JSON parse failed for '%s' (attempt %d): %s",
+                    story.get("label"), attempt + 1, e,
+                )
+
+        if data is None:
             raise OpenAIError(
-                f"Failed to parse item for '{story.get('label')}': {e}\n"
+                f"Failed to parse item for '{story.get('label')}' after 2 attempts: {last_error}\n"
                 f"Response (first 300 chars): {fixed[:300]}"
             )
 
