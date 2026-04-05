@@ -41,9 +41,7 @@
     'use strict';
 
     var API_URL = '{% url "analytics_timeline_api" %}';
-    var REFRESH_INTERVAL = 30000;
     var chart = null;
-    var refreshTimer = null;
 
     // ── Dark color palette ─────────────────────────
     var PALETTE = [
@@ -223,31 +221,8 @@
             });
     }
 
-    // ── Auto-refresh with visibility awareness ─────
-    function startRefresh() {
-        stopRefresh();
-        refreshTimer = setInterval(fetchAndRender, REFRESH_INTERVAL);
-    }
-
-    function stopRefresh() {
-        if (refreshTimer) {
-            clearInterval(refreshTimer);
-            refreshTimer = null;
-        }
-    }
-
-    document.addEventListener('visibilitychange', function() {
-        if (document.hidden) {
-            stopRefresh();
-        } else {
-            fetchAndRender();
-            startRefresh();
-        }
-    });
-
     // ── Initial load ───────────────────────────────
     fetchAndRender();
-    startRefresh();
 })();
 
 // ── Bot Timeline Chart ─────────────────────────
@@ -255,9 +230,7 @@
     'use strict';
 
     var BOT_API_URL = '{% url "analytics_bots_timeline_api" %}';
-    var REFRESH_INTERVAL = 30000;
     var botChart = null;
-    var botRefreshTimer = null;
 
     var BOT_COLORS = [
         'rgb(248, 113, 113)',  // red
@@ -418,29 +391,7 @@
             });
     }
 
-    function startBotRefresh() {
-        stopBotRefresh();
-        botRefreshTimer = setInterval(fetchBots, REFRESH_INTERVAL);
-    }
-
-    function stopBotRefresh() {
-        if (botRefreshTimer) {
-            clearInterval(botRefreshTimer);
-            botRefreshTimer = null;
-        }
-    }
-
-    document.addEventListener('visibilitychange', function() {
-        if (document.hidden) {
-            stopBotRefresh();
-        } else {
-            fetchBots();
-            startBotRefresh();
-        }
-    });
-
     fetchBots();
-    startBotRefresh();
 })();
 </script>
 {% endblock %}
