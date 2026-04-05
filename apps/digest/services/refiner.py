@@ -38,9 +38,10 @@ class StoryRefiner:
         # Track similarity scores: article_id -> best score
         article_scores = {}
 
-        # Original articles from analyzer get perfect relevance score
+        # Original articles from analyzer get perfect relevance score (skip already used)
         for aid in story.get("article_ids", []):
-            article_scores[aid] = 1.0
+            if aid not in used_ids:
+                article_scores[aid] = 1.0
 
         # Embed search queries and find additional articles with scores
         queries = story.get("search_queries", [])
