@@ -174,10 +174,14 @@
         }
     }
 
-    // ── Scroll counting ───────────────────────────
+    // ── Scroll counting (throttled: max 1 per 300ms) ──
+    var scrollThrottled = false;
     function onScroll() {
-        scrollCount++;
         if (!lastActiveTimestamp) startActive();
+        if (scrollThrottled) return;
+        scrollThrottled = true;
+        scrollCount++;
+        setTimeout(function () { scrollThrottled = false; }, 300);
     }
 
     // ── Page navigation ───────────────────────────
