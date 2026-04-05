@@ -292,53 +292,33 @@
     var botChart = null;
     var botRefreshTimer = null;
 
-    var BOT_PALETTE = [
-        { bg: 'rgba(248, 113, 113, 0.7)', border: 'rgb(248, 113, 113)' },  // red
-        { bg: 'rgba(251, 191, 36, 0.7)',  border: 'rgb(251, 191, 36)' },   // amber
-        { bg: 'rgba(52, 211, 153, 0.7)',  border: 'rgb(52, 211, 153)' },   // emerald
-        { bg: 'rgba(96, 165, 250, 0.7)',  border: 'rgb(96, 165, 250)' },   // blue
-        { bg: 'rgba(192, 132, 252, 0.7)', border: 'rgb(192, 132, 252)' },  // purple
-        { bg: 'rgba(251, 146, 60, 0.7)',  border: 'rgb(251, 146, 60)' },   // orange
-        { bg: 'rgba(34, 211, 238, 0.7)',  border: 'rgb(34, 211, 238)' },   // cyan
-        { bg: 'rgba(244, 114, 182, 0.7)', border: 'rgb(244, 114, 182)' },  // pink
+    var BOT_COLORS = [
+        'rgb(248, 113, 113)',  // red
+        'rgb(251, 191, 36)',   // amber
+        'rgb(52, 211, 153)',   // emerald
+        'rgb(96, 165, 250)',   // blue
+        'rgb(192, 132, 252)',  // purple
+        'rgb(251, 146, 60)',   // orange
+        'rgb(34, 211, 238)',   // cyan
+        'rgb(244, 114, 182)',  // pink
     ];
 
-    // Each bot's hits become thin bars (tick marks) on the timeline
-    var TICK_WIDTH = 0.04;  // hours
-
+    // One scatter dataset per bot — each hit is a point {x: hour, y: botIndex}
     function buildBotDatasets(bots) {
-        // Find the max number of hits across all bots to know how many dataset layers we need
-        var maxHits = Math.max.apply(null, bots.map(function(b) { return b.hits.length; }).concat(0));
-        var datasets = [];
-
-        for (var hi = 0; hi < maxHits; hi++) {
-            var barData = [];
-            var bgColors = [];
-
-            bots.forEach(function(b, bi) {
-                if (hi < b.hits.length) {
-                    var h = b.hits[hi];
-                    barData.push([h, h + TICK_WIDTH]);
-                    bgColors.push(BOT_PALETTE[bi % BOT_PALETTE.length].bg);
-                } else {
-                    barData.push(null);
-                    bgColors.push('transparent');
-                }
-            });
-
-            datasets.push({
-                data: barData,
-                backgroundColor: bgColors,
-                borderWidth: 0,
-                borderSkipped: false,
-                barPercentage: 0.85,
-                categoryPercentage: 0.85,
-            });
-        }
-        return datasets;
+        return bots.map(function(bot, bi) {
+            return {
+                data: bot.hits.map(function(h) { return { x: h, y: bi }; }),
+                backgroundColor: BOT_COLORS[bi % BOT_COLORS.length],
+                pointStyle: 'line',
+                pointRadius: 4,
+                pointBorderWidth: 1.5,
+                pointBorderColor: BOT_COLORS[bi % BOT_COLORS.length],
+                _botMeta: bot,
+            };
+        });
     }
 
-    // Row highlight on hover
+    // Row highlight plugin
     var botRowHighlight = {
         id: 'botRowHighlight',
         beforeDatasetsDraw: function(chart) {
@@ -346,28 +326,27 @@
             if (!active.length) return;
             var ctx = chart.ctx;
             var yScale = chart.scales.y;
-            var idx = active[0].index;
-            var y = yScale.getPixelForValue(idx);
-            var h = yScale.getPixelForValue(1) - yScale.getPixelForValue(0);
+            var yVal = active[0].element.y;
+            var step = bots_count > 1 ? (yScale.getPixelForValue(1) - yScale.getPixelForValue(0)) : 30;
             ctx.save();
             ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
-            ctx.fillRect(chart.chartArea.left, y - h / 2, chart.chartArea.right - chart.chartArea.left, h);
+            ctx.fillRect(chart.chartArea.left, yVal - step / 2, chart.chartArea.right - chart.chartArea.left, step);
             ctx.restore();
         }
     };
 
     var botHourLabels = [];
+    var bots_count = 0;
 
     var botChartConfig = {
-        type: 'bar',
-        data: { labels: [], datasets: [] },
+        type: 'scatter',
+        data: { datasets: [] },
         plugins: [botRowHighlight],
         options: {
-            indexAxis: 'y',
             responsive: true,
             maintainAspectRatio: false,
             animation: { duration: 300 },
-            interaction: { mode: 'index', axis: 'y', intersect: false },
+            interaction: { mode: 'nearest', axis: 'y', intersect: false },
             plugins: {
                 legend: { display: false },
                 tooltip: {
@@ -379,31 +358,15 @@
                     padding: 10,
                     callbacks: {
                         title: function(items) {
-                            return items.length ? items[0].label : '';
+                            if (!items.length) return '';
+                            var meta = items[0].dataset._botMeta;
+                            return meta ? meta.name : '';
                         },
-                        label: function() { return ''; },
-                        afterBody: function(items) {
-                            if (!items.length || !botChartConfig._botsMeta) return '';
-                            var idx = items[0].dataIndex;
-                            var bot = botChartConfig._botsMeta[idx];
-                            if (!bot) return '';
-                            var lines = [bot.count + ' requests'];
-                            // Show top paths
-                            var pathCounts = {};
-                            (bot.paths || []).forEach(function(p) {
-                                pathCounts[p] = (pathCounts[p] || 0) + 1;
-                            });
-                            var sorted = Object.keys(pathCounts).sort(function(a, b) {
-                                return pathCounts[b] - pathCounts[a];
-                            }).slice(0, 8);
-                            if (sorted.length) {
-                                lines.push('Top paths:');
-                                sorted.forEach(function(p) {
-                                    lines.push('  ' + pathCounts[p] + 'x ' + p);
-                                });
-                            }
-                            return lines;
-                        }
+                        label: function(item) {
+                            var meta = item.dataset._botMeta;
+                            return meta ? meta.count + ' requests' : '';
+                        },
+                        afterLabel: function() { return ''; }
                     }
                 }
             },
@@ -423,40 +386,67 @@
                     border: { color: 'rgba(108, 112, 134, 0.2)' }
                 },
                 y: {
-                    stacked: true,
+                    reverse: true,
+                    min: -0.5,
                     ticks: {
+                        stepSize: 1,
                         color: '#a6adc8',
                         font: { size: 12, family: 'monospace' },
+                        callback: function() { return ''; }
                     },
                     grid: { display: false },
-                    border: { display: false }
+                    border: { display: false },
+                    afterFit: function(scale) { scale.width = 0; }
                 }
             }
         }
     };
 
+    // Custom plugin to draw bot labels on the Y axis
+    var botLabelsPlugin = {
+        id: 'botLabels',
+        _labels: [],
+        afterDraw: function(chart) {
+            if (!this._labels.length) return;
+            var ctx = chart.ctx;
+            var yScale = chart.scales.y;
+            ctx.save();
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            ctx.font = '12px monospace';
+            this._labels.forEach(function(lbl, i) {
+                var y = yScale.getPixelForValue(i);
+                ctx.fillStyle = BOT_COLORS[i % BOT_COLORS.length];
+                ctx.fillText(lbl, chart.chartArea.left + 6, y);
+            });
+            ctx.restore();
+        }
+    };
+    botChartConfig.plugins.push(botLabelsPlugin);
+
     function updateBotChart(data) {
         var bots = data.bots || [];
-        var labels = bots.map(function(b) {
-            var count = String(b.count);
-            // Right-pad count for alignment
-            return count.padStart(4, ' ') + '  ' + b.name;
-        });
-        var datasets = buildBotDatasets(bots);
+        bots_count = bots.length;
 
-        botChartConfig._botsMeta = bots;
+        botLabelsPlugin._labels = bots.map(function(b) {
+            return String(b.count).padStart(5, ' ') + '  ' + b.name;
+        });
+
+        var datasets = buildBotDatasets(bots);
         botHourLabels = data.hour_labels || [];
 
         var canvas = document.getElementById('bot-timeline-chart');
         var rowHeight = 24;
         canvas.parentElement.style.minHeight = Math.max(80, bots.length * rowHeight + 50) + 'px';
 
+        botChartConfig.options.scales.y.max = Math.max(bots.length - 0.5, 0.5);
+
         if (!botChart) {
             botChart = new Chart(canvas.getContext('2d'), botChartConfig);
         }
 
-        botChart.data.labels = labels;
         botChart.data.datasets = datasets;
+        botChart.options.scales.y.max = Math.max(bots.length - 0.5, 0.5);
         botChart.update();
     }
 
