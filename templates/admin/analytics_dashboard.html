@@ -160,13 +160,38 @@
                     ticks: {
                         color: '#a6adc8',
                         font: { size: 12, family: 'monospace' },
+                        callback: function() { return ''; }
                     },
                     grid: { display: false },
-                    border: { display: false }
+                    border: { display: false },
+                    afterFit: function(scale) { scale.width = 0; }
                 }
             }
         }
     };
+
+    // Custom plugin to draw client labels on the chart
+    var clientLabelsPlugin = {
+        id: 'clientLabels',
+        _labels: [],
+        _colors: [],
+        afterDraw: function(chart) {
+            if (!this._labels.length) return;
+            var ctx = chart.ctx;
+            var yScale = chart.scales.y;
+            ctx.save();
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            ctx.font = '12px monospace';
+            this._labels.forEach(function(lbl, i) {
+                var y = yScale.getPixelForValue(i);
+                ctx.fillStyle = clientLabelsPlugin._colors[i] || '#a6adc8';
+                ctx.fillText(lbl, chart.chartArea.left + 6, y);
+            });
+            ctx.restore();
+        }
+    };
+    chartConfig.plugins.push(clientLabelsPlugin);
 
     // ── Second X axis for hour labels ──────────────
     var hourLabels = [];
@@ -184,8 +209,13 @@
     // ── Update chart with new data ─────────────────
     function updateChart(data) {
         var clients = data.clients || [];
-        var labels = clients.map(function(c) { return c.label; });
+        var labels = clients.map(function() { return ''; });
         var datasets = buildDatasets(clients);
+
+        clientLabelsPlugin._labels = clients.map(function(c) { return c.label; });
+        clientLabelsPlugin._colors = clients.map(function(c, i) {
+            return PALETTE[i % PALETTE.length].border;
+        });
 
         var canvas = document.getElementById('timeline-chart');
         var rowHeight = 24;
