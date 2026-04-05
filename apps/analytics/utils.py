@@ -88,6 +88,7 @@ _BOT_SIGNATURE_DEFS = [
     ("img2dataset", "img2dataset"),
     ("Scrapy", "Scrapy"),
     # Social media / messaging
+    ("TikTokSpider", "TikTok"),
     ("facebookexternalhit", "Facebook"),
     ("FacebookBot", "FacebookBot"),
     ("Facebot", "Facebook"),
@@ -249,6 +250,10 @@ _BOT_SIGNATURE_DEFS = [
     ("Nimbostratus-Bot", "Nimbostratus"),
     ("webprosbot", "WebPros"),
     ("Cookiebot", "Cookiebot"),
+    ("CMS-Checker", "CMS Checker"),
+    ("CSSCheck", "CSSCheck"),
+    ("keys-so-bot", "Keys.so"),
+    ("visionheight", "VisionHeight"),
 ]
 
 BOT_SIGNATURES = [
