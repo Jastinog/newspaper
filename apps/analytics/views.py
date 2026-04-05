@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta
+from datetime import timedelta
 
 from django.contrib.admin import site as admin_site
 from django.contrib.admin.views.decorators import staff_member_required
@@ -18,27 +18,13 @@ def analytics_dashboard(request):
 
 @staff_member_required
 def analytics_timeline_api(request):
-    """Return 24-hour timeline data: clients with their sessions for a given date."""
-    # Parse date param (default: today)
-    date_str = request.GET.get("date")
-    if date_str:
-        try:
-            selected_date = date.fromisoformat(date_str)
-        except ValueError:
-            selected_date = timezone.localdate()
-    else:
-        selected_date = timezone.localdate()
+    """Return rolling 24-hour timeline: sessions from now-24h to now."""
+    now = timezone.now()
+    window_start = now - timedelta(hours=24)
 
-    # Build datetime range for the selected date (DST-safe)
-    tz = timezone.get_current_timezone()
-    day_start = timezone.make_aware(datetime.combine(selected_date, datetime.min.time()), tz)
-    day_end = day_start + timedelta(days=1)
-
-    # Fetch human WS sessions for the day
     sessions = list(
         Session.objects.filter(
-            started_at__gte=day_start,
-            started_at__lt=day_end,
+            started_at__gte=window_start,
             source=Session.Source.WEBSOCKET,
             client__is_bot=False,
         )
@@ -60,18 +46,19 @@ def analytics_timeline_api(request):
                 "sessions": [],
             }
 
-        # Convert times to fractional hours (0..24)
-        local_start = timezone.localtime(s.started_at)
-        start_h = local_start.hour + local_start.minute / 60 + local_start.second / 3600
+        # Convert to hours-ago from now (0 = 24h ago, 24 = now)
+        start_ago = (now - s.started_at).total_seconds() / 3600
+        start_h = 24 - min(24, start_ago)
 
         if s.ended_at:
-            local_end = timezone.localtime(s.ended_at)
+            end_ago = (now - s.ended_at).total_seconds() / 3600
         elif s.last_ping_at:
-            local_end = timezone.localtime(s.last_ping_at)
+            end_ago = (now - s.last_ping_at).total_seconds() / 3600
         else:
-            local_end = local_start
+            end_ago = start_ago
 
-        end_h = local_end.hour + local_end.minute / 60 + local_end.second / 3600
+        end_h = 24 - min(24, max(0, end_ago))
+
         # Ensure minimum visible width
         if end_h <= start_h:
             end_h = start_h + 0.05
@@ -85,7 +72,14 @@ def analytics_timeline_api(request):
             "scrolls": s.total_scrolls,
         })
 
+    # Build hour labels: from 24h ago to now
+    now_local = timezone.localtime(now)
+    labels = []
+    for i in range(25):
+        t = now_local - timedelta(hours=24 - i)
+        labels.append(t.strftime("%H:%M"))
+
     return JsonResponse({
-        "date": selected_date.isoformat(),
         "clients": list(clients_map.values()),
+        "hour_labels": labels,
     })
