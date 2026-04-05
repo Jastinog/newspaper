@@ -6,7 +6,7 @@
 (function () {
     'use strict';
 
-    var INTERVAL = 10000;
+    var INTERVAL = 13000; /* 10s stable + 3s crossfade */
     var STREAMS = 3;
     var timers = [];
 
