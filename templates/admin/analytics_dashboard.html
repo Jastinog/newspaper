@@ -46,13 +46,29 @@
     ];
 
     // ── Build datasets from API data ───────────────
-    function buildDatasets(clients) {
-        var maxSessions = 0;
-        clients.forEach(function(c) {
-            if (c.sessions.length > maxSessions) maxSessions = c.sessions.length;
-        });
+    // Two layers: gray (idle/wall time) behind, colored (active) on top.
+    var IDLE_BG = 'rgba(108, 112, 134, 0.18)';
+    var IDLE_BORDER = 'rgba(108, 112, 134, 0.3)';
 
+    var BAR_STYLE = { borderWidth: 1, borderSkipped: false, barPercentage: 0.6, categoryPercentage: 0.8 };
+
+    function buildDatasets(clients) {
+        var maxSessions = Math.max.apply(null, clients.map(function(c) { return c.sessions.length; }).concat(0));
         var datasets = [];
+
+        // Layer 1: gray idle bars (full wall time)
+        for (var si = 0; si < maxSessions; si++) {
+            datasets.push(Object.assign({
+                data: clients.map(function(c) {
+                    var s = c.sessions[si];
+                    return s ? [s.start, s.end] : null;
+                }),
+                backgroundColor: IDLE_BG,
+                borderColor: IDLE_BORDER,
+            }, BAR_STYLE));
+        }
+
+        // Layer 2: colored active bars
         for (var si = 0; si < maxSessions; si++) {
             var barData = [];
             var bgColors = [];
@@ -62,7 +78,7 @@
             clients.forEach(function(c, ci) {
                 var s = c.sessions[si];
                 if (s) {
-                    barData.push([s.start, s.end]);
+                    barData.push([s.start, s.active_end]);
                     var color = PALETTE[ci % PALETTE.length];
                     bgColors.push(color.bg);
                     borderColors.push(color.border);
@@ -75,16 +91,12 @@
                 }
             });
 
-            datasets.push({
+            datasets.push(Object.assign({
                 data: barData,
                 backgroundColor: bgColors,
                 borderColor: borderColors,
-                borderWidth: 1,
-                borderSkipped: false,
-                barPercentage: 0.6,
-                categoryPercentage: 0.8,
                 _sessionMeta: sessionMeta,
-            });
+            }, BAR_STYLE));
         }
         return datasets;
     }
@@ -107,14 +119,15 @@
                     borderColor: 'rgba(255,255,255,0.1)',
                     borderWidth: 1,
                     padding: 10,
+                    filter: function(item) {
+                        return !!item.dataset._sessionMeta;
+                    },
                     callbacks: {
                         title: function(items) {
                             return items.length ? items[0].label : '';
                         },
                         label: function(item) {
-                            var meta = item.dataset._sessionMeta
-                                ? item.dataset._sessionMeta[item.dataIndex]
-                                : null;
+                            var meta = item.dataset._sessionMeta[item.dataIndex];
                             if (!meta) return '';
 
                             var lines = [];
@@ -137,6 +150,7 @@
             scales: {
                 x: {
                     min: 0, max: 24,
+                    stacked: true,
                     ticks: {
                         stepSize: 1,
                         color: '#6c7086',
@@ -147,6 +161,7 @@
                     border: { color: 'rgba(108, 112, 134, 0.2)' }
                 },
                 y: {
+                    stacked: true,
                     ticks: {
                         color: '#a6adc8',
                         font: { size: 12, family: 'monospace' },

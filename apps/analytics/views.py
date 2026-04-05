@@ -50,13 +50,19 @@ def analytics_timeline_api(request):
         start_ago = (now - s.started_at).total_seconds() / 3600
         start_h = 24 - min(24, start_ago)
 
-        # Use active_time for bar width (not wall time)
+        # Wall time end (full connection span)
+        wall_end = s.ended_at or s.last_ping_at or s.started_at
+        end_ago = (now - wall_end).total_seconds() / 3600
+        end_h = max(24 - min(24, max(0, end_ago)), start_h + 0.05)
+
+        # Active time end
         active_hours = max(s.active_time, 0) / 3600
-        end_h = start_h + max(active_hours, 0.05)
+        active_end_h = start_h + max(active_hours, 0.05)
 
         clients_map[c.pk]["sessions"].append({
             "start": round(start_h, 3),
             "end": round(end_h, 3),
+            "active_end": round(min(active_end_h, end_h), 3),
             "duration": format_duration(s.active_time),
             "spm": s.spm,
             "pages": s.pages or [],
