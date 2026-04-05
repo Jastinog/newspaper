@@ -1,7 +1,12 @@
 {% load news_extras markdown_extras i18n static %}
 {% with img_url=item.best_image_url|default_if_none:"" %}
 <div class="item-hero-card">
+    {% if item.slide_images.1 %}
+    <div class="item-hero-card__blur active" style="background-image: url('{{ item.slide_images.0 }}')"></div>
+    <div class="item-hero-card__blur" style="background-image: url('{{ item.slide_images.0 }}')"></div>
+    {% else %}
     <div class="item-hero-card__blur" style="background-image: url('{% if img_url %}{{ img_url }}{% else %}{% static 'news/img/placeholder.webp' %}{% endif %}')"></div>
+    {% endif %}
     <div class="item-top-bar">
         {% sources_panel item %}
         {% include "news/_importance_bar.html" %}

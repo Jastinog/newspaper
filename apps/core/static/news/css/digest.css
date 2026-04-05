@@ -377,6 +377,16 @@ a.item-topic:hover {
     filter: blur(20px) saturate(1.1);
     z-index: 0;
 }
+.item-hero-card__blur.active {
+    z-index: 0;
+}
+.item-hero-card__blur + .item-hero-card__blur {
+    opacity: 0;
+    transition: opacity 3s ease;
+}
+.item-hero-card__blur + .item-hero-card__blur.active {
+    opacity: 1;
+}
 
 /* Sandwich bars: override absolute positioning to flow in document order */
 .item-hero-card .item-top-bar,

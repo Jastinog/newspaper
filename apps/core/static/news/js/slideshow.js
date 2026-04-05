@@ -22,10 +22,22 @@
         if (cur >= 0) imgs[cur].classList.remove('active');
         imgs[next].classList.add('active');
 
-        var blur = el.closest('.item-hero-card');
-        if (blur) {
-            blur = blur.querySelector('.item-hero-card__blur');
-            if (blur) blur.style.backgroundImage = "url('" + imgs[next].src + "')";
+        var card = el.closest('.item-hero-card');
+        if (card) {
+            var blurs = card.querySelectorAll('.item-hero-card__blur');
+            if (blurs.length === 2) {
+                var top = blurs[1];
+                var bot = blurs[0];
+                if (top.classList.contains('active')) {
+                    /* top is visible — set new image on bottom, fade top out */
+                    bot.style.backgroundImage = "url('" + imgs[next].src + "')";
+                    top.classList.remove('active');
+                } else {
+                    /* bottom is visible — set new image on top, fade top in */
+                    top.style.backgroundImage = "url('" + imgs[next].src + "')";
+                    top.classList.add('active');
+                }
+            }
         }
     }
 
