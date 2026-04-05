@@ -106,3 +106,57 @@ def analytics_timeline_api(request):
         "clients": list(clients_map.values()),
         "hour_labels": labels,
     })
+
+
+@staff_member_required
+def analytics_bots_timeline_api(request):
+    """Return rolling 24-hour timeline of bot requests grouped by bot name."""
+    now = timezone.now()
+    window_start = now - timedelta(hours=24)
+
+    sessions = list(
+        Session.objects.filter(
+            started_at__gte=window_start,
+            source=Session.Source.HTTP,
+            client__is_bot=True,
+        )
+        .select_related("client")
+        .order_by("started_at")
+    )
+
+    # Group by bot_name
+    bots_map = {}
+    for s in sessions:
+        name = s.client.bot_name or "Unknown"
+        if name not in bots_map:
+            bots_map[name] = {"name": name, "count": 0, "hits": [], "paths": []}
+
+        bots_map[name]["count"] += 1
+
+        start_ago = (now - s.started_at).total_seconds() / 3600
+        hit_h = round(24 - min(24, start_ago), 3)
+        bots_map[name]["hits"].append(hit_h)
+
+        # Keep up to 200 most recent paths for tooltip
+        pages = s.pages or []
+        if pages:
+            path = pages[-1].get("path", "") if isinstance(pages[-1], dict) else str(pages[-1])
+        else:
+            path = ""
+        if path and len(bots_map[name]["paths"]) < 200:
+            bots_map[name]["paths"].append(path)
+
+    # Sort by request count descending
+    bots_list = sorted(bots_map.values(), key=lambda b: b["count"], reverse=True)
+
+    # Build hour labels
+    now_local = timezone.localtime(now)
+    labels = []
+    for i in range(25):
+        t = now_local - timedelta(hours=24 - i)
+        labels.append(t.strftime("%H"))
+
+    return JsonResponse({
+        "bots": bots_list,
+        "hour_labels": labels,
+    })
