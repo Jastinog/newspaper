@@ -431,6 +431,27 @@ a.item-topic:hover {
     image-rendering: pixelated;
 }
 
+/* Image slideshow */
+.item-slideshow {
+    position: relative;
+    z-index: 1;
+    display: block;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+}
+.item-slideshow .item-hero-card__img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    aspect-ratio: auto;
+    opacity: 0;
+    transition: opacity 1.5s ease;
+}
+.item-slideshow .item-hero-card__img.active {
+    opacity: 1;
+}
+
 .empty {
     text-align: center;
     padding: 3rem;

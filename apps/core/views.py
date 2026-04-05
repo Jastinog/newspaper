@@ -96,6 +96,15 @@ def _build_digest_context(request, date=None, pinned_slugs=None):
             item.loc_topic = item.get_topic(current_lang)
             item.loc_summary = item.get_summary(current_lang)
             item.loc_section_name = item.section.get_name(current_lang) if item.section else ""
+            # Collect all unique image URLs from source articles for slideshow
+            seen = set()
+            urls = []
+            for article in item.articles.all():
+                for img in article.images.all():
+                    if img.image and img.image.url not in seen:
+                        seen.add(img.image.url)
+                        urls.append(img.image.url)
+            item.slide_images = urls
         items = [i for i in items if i.loc_topic and i.loc_summary]
 
         if section_id:
@@ -313,6 +322,14 @@ def story_detail(request, item_id):
         for si in siblings:
             si.loc_topic = si.get_topic(current_lang)
             si.loc_summary = si.get_summary(current_lang)
+            seen = set()
+            urls = []
+            for article in si.articles.all():
+                for img in article.images.all():
+                    if img.image and img.image.url not in seen:
+                        seen.add(img.image.url)
+                        urls.append(img.image.url)
+            si.slide_images = urls
         section_items = [si for si in siblings if si.loc_topic and si.loc_summary]
 
     seo = {
