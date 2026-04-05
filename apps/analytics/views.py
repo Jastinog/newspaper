@@ -38,30 +38,21 @@ def analytics_timeline_api(request):
         c = s.client
         if c.pk not in clients_map:
             flag = country_flag(c.country)
-            city = c.city or ""
-            label_parts = [p for p in [flag, city, c.browser, c.os] if p]
+            city = (c.city or "")[:6].ljust(6)
+            label = f"{flag} {city}" if flag else city
             clients_map[c.pk] = {
                 "id": c.pk,
-                "label": " / ".join(label_parts) or f"Client {c.pk}",
+                "label": label.strip() or f"Client {c.pk}",
                 "sessions": [],
             }
 
-        # Convert to hours-ago from now (0 = 24h ago, 24 = now)
+        # Convert to hours from left edge (0 = 24h ago, 24 = now)
         start_ago = (now - s.started_at).total_seconds() / 3600
         start_h = 24 - min(24, start_ago)
 
-        if s.ended_at:
-            end_ago = (now - s.ended_at).total_seconds() / 3600
-        elif s.last_ping_at:
-            end_ago = (now - s.last_ping_at).total_seconds() / 3600
-        else:
-            end_ago = start_ago
-
-        end_h = 24 - min(24, max(0, end_ago))
-
-        # Ensure minimum visible width
-        if end_h <= start_h:
-            end_h = start_h + 0.05
+        # Use active_time for bar width (not wall time)
+        active_hours = max(s.active_time, 0) / 3600
+        end_h = start_h + max(active_hours, 0.05)
 
         clients_map[c.pk]["sessions"].append({
             "start": round(start_h, 3),
@@ -77,7 +68,7 @@ def analytics_timeline_api(request):
     labels = []
     for i in range(25):
         t = now_local - timedelta(hours=24 - i)
-        labels.append(t.strftime("%H:%M"))
+        labels.append(t.strftime("%H"))
 
     return JsonResponse({
         "clients": list(clients_map.values()),
