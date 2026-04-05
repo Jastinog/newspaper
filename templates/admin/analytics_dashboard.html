@@ -276,10 +276,9 @@
             return {
                 data: bot.hits.map(function(h) { return { x: h, y: bi }; }),
                 backgroundColor: BOT_COLORS[bi % BOT_COLORS.length],
-                pointStyle: 'line',
-                pointRadius: 4,
-                pointBorderWidth: 1.5,
-                pointBorderColor: BOT_COLORS[bi % BOT_COLORS.length],
+                pointStyle: 'circle',
+                pointRadius: 2,
+                pointBorderWidth: 0,
                 _botMeta: bot,
             };
         });
