@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 class ItemTranslator:
-    """Translates digest items and headlines to target languages."""
+    """Translates digest items to target languages."""
 
     def __init__(self, client: OpenAIClient = None, config: DigestConfig = None):
         self.client = client or OpenAIClient()
@@ -120,27 +120,3 @@ class ItemTranslator:
 
         return result, usage
 
-    def translate_headline(self, headline: str, language_name: str) -> tuple[str, dict]:
-        """Translate a headline to the target language.
-
-        Returns:
-            (translated_headline, usage)
-        """
-        if not headline:
-            return "", {}
-
-        cfg = self.config
-        system = (
-            f"Translate the following news headline from English to {language_name}. "
-            "Maintain journalistic tone. Output ONLY the translated text, no JSON."
-        )
-
-        content, usage = self.client.chat(
-            system=system,
-            user=headline,
-            model=cfg.chat_model,
-            max_tokens=cfg.max_tokens_translation,
-            temperature=cfg.temperature,
-        )
-
-        return content.strip().strip('"'), usage

@@ -35,7 +35,7 @@ class DigestConfigAdmin(ModelAdmin):
                 "chat_model",
                 "temperature",
                 ("max_tokens_analysis", "max_tokens_generation"),
-                ("max_tokens_headline", "max_tokens_translation"),
+                "max_tokens_translation",
             ),
         }),
         ("Collection", {
@@ -69,7 +69,6 @@ class DigestConfigAdmin(ModelAdmin):
             "fields": (
                 "system_prompt_analysis",
                 "system_prompt_generation",
-                "system_prompt_headline",
                 "system_prompt_translation",
             ),
         }),

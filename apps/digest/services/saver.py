@@ -6,7 +6,7 @@ from django.utils import timezone
 from apps.core.models import Language
 from apps.feed.models import Article, ArticleImage
 from apps.digest.models import (
-    ArticleUse, Digest, DigestItem, DigestItemTranslation, DigestTranslation, ItemPipeline,
+    ArticleUse, Digest, DigestItem, DigestItemTranslation, ItemPipeline,
 )
 
 logger = logging.getLogger(__name__)
@@ -112,14 +112,8 @@ class DigestSaver:
         return None
 
     def save_translations(self, digest: Digest, language: Language,
-                          item_translations: list, headline: str):
+                          item_translations: list):
         """Save translations for an existing digest."""
-        if headline:
-            DigestTranslation.objects.update_or_create(
-                digest=digest, language=language,
-                defaults={"headline": headline},
-            )
-
         for item, translated in item_translations:
             DigestItemTranslation.objects.update_or_create(
                 item=item, language=language,

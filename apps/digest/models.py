@@ -36,12 +36,6 @@ DEFAULT_PROMPT_GENERATION = (
     '"importance": N}}'
 )
 
-DEFAULT_PROMPT_HEADLINE = (
-    "You are a news editor. Based on today's top stories, write a 2-3 sentence "
-    "headline summarizing the overall news picture.\n\n"
-    'Return JSON with a single key "headline".'
-)
-
 DEFAULT_PROMPT_TRANSLATION = (
     "You are a professional translator. Translate the following news item "
     "from English to {language}.\n"
@@ -82,9 +76,6 @@ class DigestConfig(models.Model):
     max_tokens_generation = models.PositiveIntegerField(
         default=2500, help_text="Max tokens for item generation response (includes all languages)",
     )
-    max_tokens_headline = models.PositiveIntegerField(
-        default=1000, help_text="Max tokens for headline generation response",
-    )
     max_tokens_translation = models.PositiveIntegerField(
         default=1000, help_text="Max tokens for translation response",
     )
@@ -94,7 +85,7 @@ class DigestConfig(models.Model):
         default=36, help_text="Collect articles published within this many hours",
     )
     articles_per_section = models.PositiveIntegerField(
-        default=25, help_text="Max articles to collect per section",
+        default=20, help_text="Max articles to collect per section",
     )
     similarity_threshold = models.FloatField(
         default=0.25,
@@ -120,10 +111,10 @@ class DigestConfig(models.Model):
 
     # ── Generation ────────────────────────────────────────────
     items_per_section_min = models.PositiveIntegerField(
-        default=15, help_text="Min stories the analyzer should identify per section",
+        default=10, help_text="Min stories the analyzer should identify per section",
     )
     items_per_section_max = models.PositiveIntegerField(
-        default=20, help_text="Max stories the analyzer should identify per section",
+        default=15, help_text="Max stories the analyzer should identify per section",
     )
     max_workers = models.PositiveIntegerField(
         default=5, help_text="Max parallel workers (for batch mode)",
@@ -137,10 +128,6 @@ class DigestConfig(models.Model):
     system_prompt_generation = models.TextField(
         default="",
         help_text="Prompt for generating topic/summary/importance from articles",
-    )
-    system_prompt_headline = models.TextField(
-        default="",
-        help_text="Prompt for generating the overall digest headline",
     )
     system_prompt_translation = models.TextField(
         default="",
@@ -241,15 +228,10 @@ class Digest(models.Model):
     def __str__(self):
         return f"Digest {self.date}"
 
-    def get_headline(self, language):
-        """Get headline for a Language instance or code string. Prefetch-safe."""
-        return get_translated_field(self.translations.all(), "headline", language)
-
 
 class DigestTranslation(models.Model):
     digest = models.ForeignKey(Digest, on_delete=models.CASCADE, related_name="translations")
     language = models.ForeignKey("core.Language", on_delete=models.CASCADE, related_name="digest_translations")
-    headline = models.TextField(blank=True, default="")
 
     class Meta:
         unique_together = [("digest", "language")]
