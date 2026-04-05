@@ -446,7 +446,7 @@ a.item-topic:hover {
     height: 100%;
     aspect-ratio: auto;
     opacity: 0;
-    transition: opacity 1.5s ease;
+    transition: opacity 3s ease;
 }
 .item-slideshow .item-hero-card__img.active {
     opacity: 1;
