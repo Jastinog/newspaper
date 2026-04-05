@@ -250,6 +250,7 @@ _BOT_SIGNATURE_DEFS = [
     ("Nimbostratus-Bot", "Nimbostratus"),
     ("webprosbot", "WebPros"),
     ("Cookiebot", "Cookiebot"),
+    ("360Spider", "360 Spider"),
     ("CMS-Checker", "CMS Checker"),
     ("CSSCheck", "CSSCheck"),
     ("keys-so-bot", "Keys.so"),
