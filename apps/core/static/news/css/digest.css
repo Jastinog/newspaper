@@ -377,16 +377,6 @@ a.item-topic:hover {
     filter: blur(20px) saturate(1.1);
     z-index: 0;
 }
-.item-hero-card__blur.active {
-    z-index: 0;
-}
-.item-hero-card__blur + .item-hero-card__blur {
-    opacity: 0;
-    transition: opacity 3s ease;
-}
-.item-hero-card__blur + .item-hero-card__blur.active {
-    opacity: 1;
-}
 
 /* Sandwich bars: override absolute positioning to flow in document order */
 .item-hero-card .item-top-bar,
@@ -439,27 +429,6 @@ a.item-topic:hover {
     object-fit: cover;
     display: block;
     image-rendering: pixelated;
-}
-
-/* Image slideshow */
-.item-slideshow {
-    position: relative;
-    z-index: 1;
-    display: block;
-    aspect-ratio: 16 / 9;
-    overflow: hidden;
-}
-.item-slideshow .item-hero-card__img {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    aspect-ratio: auto;
-    opacity: 0;
-    transition: opacity 3s ease;
-}
-.item-slideshow .item-hero-card__img.active {
-    opacity: 1;
 }
 
 .empty {
