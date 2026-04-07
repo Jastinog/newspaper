@@ -69,6 +69,7 @@ def analytics_timeline_api(request):
             clients_map[c.pk] = {
                 "id": c.pk,
                 "label": label,
+                "ip": c.ip or "",
                 "sessions": [],
             }
 
@@ -102,8 +103,11 @@ def analytics_timeline_api(request):
         t = now_local - timedelta(hours=24 - i)
         labels.append(t.strftime("%H"))
 
+    # Sort clients: group by IP so same-IP clients are adjacent
+    sorted_clients = sorted(clients_map.values(), key=lambda c: c["ip"])
+
     return JsonResponse({
-        "clients": list(clients_map.values()),
+        "clients": sorted_clients,
         "hour_labels": labels,
     })
 

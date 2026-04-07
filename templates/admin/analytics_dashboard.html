@@ -76,7 +76,20 @@
 
     var BAR_STYLE = { borderWidth: 0, borderSkipped: false, barPercentage: 0.9, categoryPercentage: 0.9 };
 
-    function buildDatasets(clients) {
+    // Build a map: IP -> palette color index (same IP = same color)
+    function buildIpColorMap(clients) {
+        var map = {};
+        var idx = 0;
+        clients.forEach(function(c) {
+            var key = c.ip || c.id;
+            if (!(key in map)) {
+                map[key] = idx++;
+            }
+        });
+        return map;
+    }
+
+    function buildDatasets(clients, ipColorMap) {
         var maxSessions = Math.max.apply(null, clients.map(function(c) { return c.sessions.length; }).concat(0));
         var datasets = [];
 
@@ -91,18 +104,19 @@
             }, BAR_STYLE));
         }
 
-        // Layer 2: colored active bars
+        // Layer 2: colored active bars — color by IP group
         for (var si = 0; si < maxSessions; si++) {
             var barData = [];
             var bgColors = [];
             var borderColors = [];
             var sessionMeta = [];
 
-            clients.forEach(function(c, ci) {
+            clients.forEach(function(c) {
                 var s = c.sessions[si];
                 if (s) {
                     barData.push([s.start, s.active_end]);
-                    var color = PALETTE[ci % PALETTE.length];
+                    var colorIdx = ipColorMap[c.ip || c.id] || 0;
+                    var color = PALETTE[colorIdx % PALETTE.length];
                     bgColors.push(color.bg);
                     borderColors.push(color.border);
                     sessionMeta.push(s);
@@ -231,12 +245,14 @@
     function updateChart(data) {
         var clients = data.clients || [];
         _timelineClients = clients;
+        var ipColorMap = buildIpColorMap(clients);
         var labels = clients.map(function() { return ''; });
-        var datasets = buildDatasets(clients);
+        var datasets = buildDatasets(clients, ipColorMap);
 
         clientLabelsPlugin._labels = clients.map(function(c) { return c.label; });
-        clientLabelsPlugin._colors = clients.map(function(c, i) {
-            return PALETTE[i % PALETTE.length].border;
+        clientLabelsPlugin._colors = clients.map(function(c) {
+            var colorIdx = ipColorMap[c.ip || c.id] || 0;
+            return PALETTE[colorIdx % PALETTE.length].border;
         });
 
         var canvas = document.getElementById('timeline-chart');

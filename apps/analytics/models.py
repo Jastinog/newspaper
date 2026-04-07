@@ -16,7 +16,8 @@ class Client(models.Model):
     os = models.CharField(max_length=50, blank=True, default="")
     user_agent = models.CharField(max_length=500, blank=True, default="")
 
-    # Privacy-safe identity
+    # Network identity
+    ip = models.GenericIPAddressField(null=True, blank=True, db_index=True)
     ip_hash = models.CharField(max_length=64, blank=True, default="")
 
     # Geo (updated each session)

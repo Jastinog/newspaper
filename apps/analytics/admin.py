@@ -31,7 +31,7 @@ class ClientAdmin(ReadOnlyAdmin):
     search_fields = ("client_id", "browser", "os", "bot_name")
     readonly_fields = (
         "client_id", "first_seen", "last_seen", "device_type", "browser", "os",
-        "user_agent", "ip_hash", "country", "country_name", "city", "is_bot", "bot_name",
+        "user_agent", "ip", "ip_hash", "country", "country_name", "city", "is_bot", "bot_name",
     )
 
     @admin.display(description="Type", ordering="is_bot")

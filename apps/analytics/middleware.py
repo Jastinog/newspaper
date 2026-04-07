@@ -87,7 +87,7 @@ class BotTrackingMiddleware:
 
             client, _ = Client.objects.update_or_create(
                 client_id=bot_client_id,
-                defaults=build_client_defaults(ua_info, ua_string, ip_hash, geo),
+                defaults=build_client_defaults(ua_info, ua_string, ip_hash, geo, ip=ip),
             )
 
             referrer_domain = ""
