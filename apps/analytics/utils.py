@@ -1,7 +1,5 @@
-import hashlib
 import logging
 import re
-from datetime import date
 from functools import lru_cache
 
 from django.conf import settings
@@ -291,11 +289,6 @@ def _get_geoip_reader():
             logger.warning("GeoIP database not available: %s", e)
     return _geoip_reader
 
-
-def hash_with_salt(value: str) -> str:
-    """Hash a value with daily-rotating salt for privacy."""
-    salt = f"{settings.SECRET_KEY}:{date.today().isoformat()}"
-    return hashlib.sha256(f"{salt}:{value}".encode()).hexdigest()
 
 
 def get_client_ip(request) -> str:

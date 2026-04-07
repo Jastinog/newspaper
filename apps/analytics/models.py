@@ -18,7 +18,6 @@ class Client(models.Model):
 
     # Network identity
     ip = models.GenericIPAddressField(null=True, blank=True, db_index=True)
-    ip_hash = models.CharField(max_length=64, blank=True, default="")
 
     # Geo (updated each session)
     country = models.CharField(max_length=2, blank=True, default="")

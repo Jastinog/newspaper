@@ -8,7 +8,7 @@ from django.utils import timezone
 
 from .models import Activity, Client, Session
 from .services import build_client_defaults, resolve_path
-from .utils import get_client_ip, hash_with_salt, parse_ua, resolve_geo
+from .utils import get_client_ip, parse_ua, resolve_geo
 
 logger = logging.getLogger(__name__)
 
@@ -78,16 +78,15 @@ class BotTrackingMiddleware:
     def _track(ip, ua_string, ua_info, path, referrer):
         """Persist bot tracking data in a background thread."""
         try:
-            ip_hash = hash_with_salt(ip) if ip else ""
             geo = resolve_geo(ip)
 
             bot_client_id = uuid.uuid5(
-                uuid.NAMESPACE_URL, f"bot:{ip_hash}:{ua_info.get('bot_name', '')}"
+                uuid.NAMESPACE_URL, f"bot:{ip}:{ua_info.get('bot_name', '')}"
             )
 
             client, _ = Client.objects.update_or_create(
                 client_id=bot_client_id,
-                defaults=build_client_defaults(ua_info, ua_string, ip_hash, geo, ip=ip),
+                defaults=build_client_defaults(ua_info, ua_string, geo, ip=ip),
             )
 
             referrer_domain = ""

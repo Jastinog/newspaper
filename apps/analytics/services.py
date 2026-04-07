@@ -6,7 +6,7 @@ from django.urls import Resolver404, resolve
 from django.utils import timezone
 
 from .models import Client, Session
-from .utils import hash_with_salt, parse_ua, resolve_geo
+from .utils import parse_ua, resolve_geo
 
 INACTIVITY_TIMEOUT = 300  # 5 minutes
 MAX_STORED_PAGES = 200
@@ -37,7 +37,7 @@ def resolve_path(path: str):
     return view_name, article, category
 
 
-def build_client_defaults(ua_info: dict, ua_string: str, ip_hash: str, geo: dict, ip: str = "") -> dict:
+def build_client_defaults(ua_info: dict, ua_string: str, geo: dict, ip: str = "") -> dict:
     """Build the defaults dict for Client.objects.update_or_create."""
     return {
         "device_type": ua_info.get("device_type", "")[:20],
@@ -45,7 +45,6 @@ def build_client_defaults(ua_info: dict, ua_string: str, ip_hash: str, geo: dict
         "os": ua_info.get("os", ""),
         "user_agent": ua_string,
         "ip": ip or None,
-        "ip_hash": ip_hash,
         "is_bot": ua_info.get("is_bot", False),
         "bot_name": ua_info.get("bot_name", "")[:100],
         "country": geo.get("country", ""),
@@ -98,12 +97,10 @@ class SessionService:
         except (ValueError, AttributeError, TypeError):
             client_id = uuid.uuid4()
 
-        ip_hash = hash_with_salt(self._raw_ip) if self._raw_ip else ""
-
         self._client, _ = Client.objects.update_or_create(
             client_id=client_id,
             defaults=build_client_defaults(
-                self._ua_info, self._ua_string, ip_hash, self._geo, ip=self._raw_ip
+                self._ua_info, self._ua_string, self._geo, ip=self._raw_ip
             ),
         )
 
