@@ -3,7 +3,7 @@
 <div class="item-hero-card">
     <div class="item-hero-card__blur" style="background-image: url('{% if img_url %}{{ img_url }}{% else %}{% static 'news/img/placeholder.webp' %}{% endif %}')"></div>
     <div class="item-top-bar">
-        {% sources_panel item %}
+        <span class="sources-wrap"><button class="sources-btn" type="button" data-sources-id="{{ item.id }}"><i class="far fa-newspaper"></i></button></span>
         {% include "news/_importance_bar.html" %}
     </div>
     <a href="{% url 'story_detail' item.id %}"><img class="item-hero-card__img" src="{% if img_url %}{{ img_url }}{% else %}{% static 'news/img/placeholder.webp' %}{% endif %}" alt="" loading="lazy"></a>

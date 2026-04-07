@@ -88,7 +88,6 @@ def _build_digest_context(request, date=None, pinned_slugs=None):
         items = list(digest.items.select_related("section", "image").prefetch_related(
             "translations", "translations__language",
             "section__translations", "section__translations__language",
-            "articles__feed", "articles__images",
         ).all())
 
         # Annotate items with localized text, skip empty items
