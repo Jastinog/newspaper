@@ -18,7 +18,7 @@
 
 {# Human timeline chart #}
 <div id="chart-wrap" class="rounded-default shadow-xs p-4" style="min-height:300px; background:#1e1e2e;">
-    <canvas id="timeline-chart"></canvas>
+    <canvas id="timeline-chart" style="cursor:pointer;"></canvas>
 </div>
 
 {# Bot timeline chart #}
@@ -35,6 +35,19 @@
 
 </div>
 
+{# Client history modal #}
+<div id="client-modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9998;" onclick="closeClientModal()"></div>
+<div id="client-modal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;width:560px;max-height:80vh;overflow-y:auto;background:#1e1e2e;border:1px solid rgba(108,112,134,.3);border-radius:12px;box-shadow:0 25px 60px rgba(0,0,0,.5);">
+    <div style="position:sticky;top:0;background:#1e1e2e;padding:20px 24px 12px;border-bottom:1px solid rgba(108,112,134,.15);z-index:1;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span id="cm-title" style="font-size:15px;font-weight:600;color:#cdd6f4;"></span>
+            <button onclick="closeClientModal()" style="background:none;border:none;color:#6c7086;font-size:20px;cursor:pointer;padding:0 4px;">&times;</button>
+        </div>
+        <div id="cm-meta" style="margin-top:8px;font-size:12px;color:#6c7086;display:flex;gap:16px;flex-wrap:wrap;"></div>
+    </div>
+    <div id="cm-timeline" style="padding:16px 24px 24px;"></div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <script>
 (function() {
@@ -42,6 +55,7 @@
 
     var API_URL = '{% url "analytics_timeline_api" %}';
     var chart = null;
+    var _timelineClients = [];  // store for click handler
 
     // ── Dark color palette ─────────────────────────
     var PALETTE = [
@@ -139,6 +153,13 @@
             maintainAspectRatio: false,
             animation: false,
             interaction: { mode: 'index', axis: 'y', intersect: false },
+            onClick: function(evt, elements) {
+                if (!elements.length) return;
+                var idx = elements[0].index;
+                if (idx >= 0 && idx < _timelineClients.length) {
+                    openClientHistory(_timelineClients[idx].id);
+                }
+            },
             plugins: {
                 legend: { display: false },
                 tooltip: { enabled: false }
@@ -209,6 +230,7 @@
     // ── Update chart with new data ─────────────────
     function updateChart(data) {
         var clients = data.clients || [];
+        _timelineClients = clients;
         var labels = clients.map(function() { return ''; });
         var datasets = buildDatasets(clients);
 
@@ -423,5 +445,120 @@
 
     fetchBots();
 })();
+
+// ── Client History Modal ──────────────────────
+var HISTORY_BASE = '{% url "client_history_api" client_pk=0 %}'.replace('/0/', '/{id}/');
+var _clientsData = [];
+
+function closeClientModal() {
+    document.getElementById('client-modal').style.display = 'none';
+    document.getElementById('client-modal-overlay').style.display = 'none';
+}
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeClientModal();
+});
+
+function _el(tag, style, text) {
+    var el = document.createElement(tag);
+    if (style) Object.assign(el.style, style);
+    if (text) el.textContent = text;
+    return el;
+}
+
+function openClientHistory(clientId) {
+    var overlay = document.getElementById('client-modal-overlay');
+    var modal = document.getElementById('client-modal');
+    var title = document.getElementById('cm-title');
+    var meta = document.getElementById('cm-meta');
+    var timeline = document.getElementById('cm-timeline');
+
+    title.textContent = 'Загрузка…';
+    while (meta.firstChild) meta.removeChild(meta.firstChild);
+    while (timeline.firstChild) timeline.removeChild(timeline.firstChild);
+    timeline.appendChild(_el('div', {textAlign:'center',color:'#6c7086',padding:'40px 0'}, 'Загрузка…'));
+    overlay.style.display = 'block';
+    modal.style.display = 'block';
+
+    var url = HISTORY_BASE.replace('{id}', clientId);
+    fetch(url, { credentials: 'same-origin' })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            var c = data.client;
+            var icon = c.is_bot ? '🤖' : '👤';
+            title.textContent = icon + ' ' + c.country + ', ' + c.city;
+
+            while (meta.firstChild) meta.removeChild(meta.firstChild);
+            [c.device_type, c.browser, c.os, 'С ' + c.first_seen].forEach(function(t) {
+                meta.appendChild(_el('span', {}, t));
+            });
+
+            renderTimeline(timeline, data.sessions);
+        })
+        .catch(function() {
+            while (timeline.firstChild) timeline.removeChild(timeline.firstChild);
+            timeline.appendChild(_el('div', {textAlign:'center',color:'#f38ba8',padding:'40px 0'}, 'Ошибка загрузки'));
+        });
+}
+
+function renderTimeline(container, sessions) {
+    while (container.firstChild) container.removeChild(container.firstChild);
+
+    if (!sessions.length) {
+        container.appendChild(_el('div', {textAlign:'center',color:'#6c7086',padding:'40px 0'}, 'Нет сессий'));
+        return;
+    }
+
+    var wrap = _el('div', {position:'relative',paddingLeft:'24px'});
+    // vertical line
+    var line = _el('div', {position:'absolute',left:'7px',top:'8px',bottom:'8px',width:'2px',background:'rgba(108,112,134,.25)'});
+    wrap.appendChild(line);
+
+    sessions.forEach(function(s) {
+        var sourceColor = s.source === 'http' ? '#e76f51' : '#2d6a4f';
+        var sourceLabel = s.source === 'http' ? 'HTTP' : 'WS';
+        var timeRange = s.started_at + (s.ended_at ? ' — ' + s.ended_at : '');
+
+        var card = _el('div', {position:'relative',marginBottom:'20px'});
+
+        // dot
+        var dot = _el('div', {position:'absolute',left:'-21px',top:'6px',width:'12px',height:'12px',borderRadius:'50%',background:sourceColor,border:'2px solid #1e1e2e'});
+        card.appendChild(dot);
+
+        // header row (time + source badge)
+        var header = _el('div', {display:'flex',alignItems:'center',gap:'8px',marginBottom:'4px'});
+        header.appendChild(_el('span', {fontSize:'13px',fontWeight:'600',color:'#cdd6f4'}, timeRange));
+        var badge = _el('span', {fontSize:'10px',fontWeight:'600',color:sourceColor,background:sourceColor+'22',padding:'1px 6px',borderRadius:'4px'}, sourceLabel);
+        header.appendChild(badge);
+        card.appendChild(header);
+
+        // stats row
+        var stats = _el('div', {fontSize:'12px',color:'#a6adc8',display:'flex',gap:'12px',marginBottom:'6px'});
+        stats.appendChild(_el('span', {}, '⏱ ' + s.active_time));
+        stats.appendChild(_el('span', {}, '📄 ' + s.page_count + ' стр.'));
+        stats.appendChild(_el('span', {}, '📜 ' + s.total_scrolls + ' скр.'));
+        if (s.referrer_domain) {
+            stats.appendChild(_el('span', {}, '↗ ' + s.referrer_domain));
+        }
+        card.appendChild(stats);
+
+        // pages list
+        if (s.pages && s.pages.length) {
+            var pagesDiv = _el('div', {marginTop:'4px'});
+            s.pages.forEach(function(p) {
+                var row = _el('div', {fontSize:'11px',color:'#6c7086',fontFamily:'monospace',padding:'1px 0'});
+                var ts = _el('span', {color:'#585b70',marginRight:'6px'}, p.ts || '');
+                row.appendChild(ts);
+                row.appendChild(document.createTextNode(p.path || ''));
+                pagesDiv.appendChild(row);
+            });
+            card.appendChild(pagesDiv);
+        }
+
+        wrap.appendChild(card);
+    });
+
+    container.appendChild(wrap);
+}
 </script>
 {% endblock %}

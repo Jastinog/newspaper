@@ -3,10 +3,10 @@ from datetime import timedelta
 from django.contrib.admin import site as admin_site
 from django.contrib.admin.views.decorators import staff_member_required
 from django.http import JsonResponse
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 
-from .models import Session
+from .models import Client, Session
 from .utils import country_flag, format_duration
 
 
@@ -146,4 +146,52 @@ def analytics_bots_timeline_api(request):
     return JsonResponse({
         "bots": bots_list,
         "hour_labels": labels,
+    })
+
+
+@staff_member_required
+def client_history_api(request, client_pk):
+    """Return full session history for a single client."""
+    client = get_object_or_404(Client, pk=client_pk)
+
+    sessions = (
+        client.sessions
+        .order_by("-started_at")
+        .values_list(
+            "started_at", "ended_at", "source", "active_time",
+            "page_count", "total_scrolls", "spm", "pages",
+            "referrer_domain",
+        )
+    )
+
+    history = []
+    for row in sessions:
+        (started_at, ended_at, source, active_time,
+         page_count, total_scrolls, spm, pages, referrer_domain) = row
+
+        history.append({
+            "started_at": timezone.localtime(started_at).strftime("%d.%m.%Y %H:%M"),
+            "ended_at": timezone.localtime(ended_at).strftime("%H:%M") if ended_at else None,
+            "source": source,
+            "active_time": format_duration(active_time),
+            "page_count": page_count,
+            "total_scrolls": total_scrolls,
+            "spm": spm,
+            "pages": pages or [],
+            "referrer_domain": referrer_domain or "",
+        })
+
+    flag = country_flag(client.country)
+    return JsonResponse({
+        "client": {
+            "device_type": client.device_type or "—",
+            "browser": client.browser or "—",
+            "os": client.os or "—",
+            "country": f"{flag} {client.country_name or client.country}" if flag else (client.country_name or "—"),
+            "city": client.city or "—",
+            "first_seen": timezone.localtime(client.first_seen).strftime("%d.%m.%Y %H:%M"),
+            "is_bot": client.is_bot,
+            "bot_name": client.bot_name or "",
+        },
+        "sessions": history,
     })
