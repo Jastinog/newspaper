@@ -130,29 +130,42 @@
     border-color: var(--fg);
 }
 
-/* === THEME TOGGLE === */
-.theme-toggle {
+/* === THEME PICKER === */
+.theme-picker {
     position: absolute;
     top: 50%;
     right: 0;
     transform: translateY(-50%);
+    display: flex;
+}
+.theme-picker button {
     background: none;
     border: 1px solid var(--border);
-    border-radius: 50%;
-    width: 2.5rem;
-    height: 2.5rem;
+    border-right: none;
+    padding: 0.3rem 0.5rem;
+    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    font-size: 0.6rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
     cursor: pointer;
-    font-size: 1.1rem;
-    line-height: 1;
     color: var(--fg-muted);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: color 0.2s, border-color 0.2s;
+    transition: color 0.2s, background 0.2s;
+    white-space: nowrap;
 }
-.theme-toggle:hover {
+.theme-picker button:first-of-type {
+    border-radius: 3px 0 0 3px;
+}
+.theme-picker button:last-of-type {
+    border-right: 1px solid var(--border);
+    border-radius: 0 3px 3px 0;
+}
+.theme-picker button:hover {
     color: var(--fg);
-    border-color: var(--fg-dim);
+}
+.theme-picker button.active {
+    background: var(--fg);
+    color: var(--bg);
+    border-color: var(--fg);
 }
 
 /* === FOOTER === */
@@ -183,12 +196,10 @@ footer {
         justify-content: center;
         margin-bottom: 0.5rem;
     }
-    .theme-toggle {
+    .theme-picker {
         position: static;
         transform: none;
-        width: 2rem;
-        height: 2rem;
-        font-size: 0.95rem;
+        justify-content: center;
         margin: 0.4rem auto 0;
     }
 }

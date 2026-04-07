@@ -1,6 +1,6 @@
 {% load i18n static %}
 <!DOCTYPE html>
-<html lang="{{ LANGUAGE_CODE }}" data-theme="light">
+<html lang="{{ LANGUAGE_CODE }}" data-theme="broadsheet" data-scheme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -48,7 +48,7 @@
     </style>
 
     <!-- Prevent FOUC: apply saved theme before any rendering -->
-    <script>(function(){var t=localStorage.getItem('newspaper-theme');if(t)document.documentElement.setAttribute('data-theme',t);})()</script>
+    <script>(function(){var M={light:'broadsheet',dark:'evening'},S={broadsheet:'light',gazette:'light',evening:'dark',midnight:'dark'},t=localStorage.getItem('newspaper-theme');if(M[t]){t=M[t];localStorage.setItem('newspaper-theme',t);}if(S[t]){document.documentElement.setAttribute('data-theme',t);document.documentElement.setAttribute('data-scheme',S[t]);}})()</script>
 
     <!-- Base styles -->
     <link rel="stylesheet" href="{% static 'news/css/fontawesome.min.css' %}">
@@ -90,9 +90,12 @@
                     <a href="{% url 'feeds_list' %}" class="{% if request.resolver_match.url_name == 'feeds_list' or request.resolver_match.url_name == 'feed_detail' %}active{% endif %}">{% trans "Sources" %}</a>
                     <a href="{% url 'search' %}" class="{% if request.resolver_match.url_name == 'search' %}active{% endif %}">{% trans "Search" %}</a>
                 </nav>
-                <button class="theme-toggle" onclick="toggleTheme()" title="{% trans "Toggle dark/light theme" %}" aria-label="{% trans "Toggle theme" %}">
-                    <span class="theme-icon"></span>
-                </button>
+                <div class="theme-picker">
+                    <button data-theme-id="broadsheet" onclick="setTheme('broadsheet')" title="{% trans "Broadsheet" %}">B</button>
+                    <button data-theme-id="gazette" onclick="setTheme('gazette')" title="{% trans "Gazette" %}">G</button>
+                    <button data-theme-id="evening" onclick="setTheme('evening')" title="{% trans "Evening" %}">E</button>
+                    <button data-theme-id="midnight" onclick="setTheme('midnight')" title="{% trans "Midnight" %}">M</button>
+                </div>
             </div>
         </div>
         <div class="masthead-rule-bottom"></div>

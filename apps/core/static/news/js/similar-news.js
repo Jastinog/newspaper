@@ -348,7 +348,7 @@
             });
         });
 
-        var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        var isDark = document.documentElement.getAttribute('data-scheme') === 'dark';
         var colors = {
             accent: isDark ? '#d4a24e' : '#b8862a',
             fg: cssVar('--fg'),

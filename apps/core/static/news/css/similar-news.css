@@ -119,10 +119,10 @@
 .similar-legend-dot.dot-item    { background: #a35d4f; }
 .similar-legend-dot.dot-article { background: #5a6a7a; }
 
-[data-theme="dark"] .similar-legend-dot.dot-source { background: #5bab9e; }
-[data-theme="dark"] .similar-legend-dot.dot-center { background: #d4a24e; }
-[data-theme="dark"] .similar-legend-dot.dot-item   { background: #c47a6c; }
-[data-theme="dark"] .similar-legend-dot.dot-article { background: #7a8fa3; }
+[data-scheme="dark"] .similar-legend-dot.dot-source { background: #5bab9e; }
+[data-scheme="dark"] .similar-legend-dot.dot-center { background: #d4a24e; }
+[data-scheme="dark"] .similar-legend-dot.dot-item   { background: #c47a6c; }
+[data-scheme="dark"] .similar-legend-dot.dot-article { background: #7a8fa3; }
 
 /* === LOADING / EMPTY === */
 .similar-modal-loading,
