@@ -53,6 +53,7 @@ def analytics_timeline_api(request):
             client__is_bot=False,
         )
         .select_related("client")
+        .defer("pages")
         .order_by("started_at")
     )
 
@@ -92,7 +93,6 @@ def analytics_timeline_api(request):
             "active_end": round(min(active_end_h, end_h), 3),
             "duration": format_duration(s.active_time),
             "spm": s.spm,
-            "pages": s.pages or [],
             "scrolls": s.total_scrolls,
         })
 
@@ -160,8 +160,8 @@ def client_history_api(request, client_pk):
 
     sessions = (
         client.sessions
-        .order_by("-started_at")
-        .values_list(
+        .order_by("-started_at")[:200]
+        .values(
             "started_at", "ended_at", "source", "active_time",
             "page_count", "total_scrolls", "spm", "pages",
             "referrer_domain",
@@ -169,20 +169,17 @@ def client_history_api(request, client_pk):
     )
 
     history = []
-    for row in sessions:
-        (started_at, ended_at, source, active_time,
-         page_count, total_scrolls, spm, pages, referrer_domain) = row
-
+    for s in sessions:
         history.append({
-            "started_at": timezone.localtime(started_at).strftime("%d.%m.%Y %H:%M"),
-            "ended_at": timezone.localtime(ended_at).strftime("%H:%M") if ended_at else None,
-            "source": source,
-            "active_time": format_duration(active_time),
-            "page_count": page_count,
-            "total_scrolls": total_scrolls,
-            "spm": spm,
-            "pages": pages or [],
-            "referrer_domain": referrer_domain or "",
+            "started_at": timezone.localtime(s["started_at"]).strftime("%d.%m.%Y %H:%M"),
+            "ended_at": timezone.localtime(s["ended_at"]).strftime("%H:%M") if s["ended_at"] else None,
+            "source": s["source"],
+            "active_time": format_duration(s["active_time"]),
+            "page_count": s["page_count"],
+            "total_scrolls": s["total_scrolls"],
+            "spm": s["spm"],
+            "pages": s["pages"] or [],
+            "referrer_domain": s["referrer_domain"] or "",
         })
 
     flag = country_flag(client.country)

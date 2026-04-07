@@ -89,6 +89,10 @@
         return map;
     }
 
+    function _ipColor(ipColorMap, c) {
+        return PALETTE[(ipColorMap[c.ip || c.id] || 0) % PALETTE.length];
+    }
+
     function buildDatasets(clients, ipColorMap) {
         var maxSessions = Math.max.apply(null, clients.map(function(c) { return c.sessions.length; }).concat(0));
         var datasets = [];
@@ -115,8 +119,7 @@
                 var s = c.sessions[si];
                 if (s) {
                     barData.push([s.start, s.active_end]);
-                    var colorIdx = ipColorMap[c.ip || c.id] || 0;
-                    var color = PALETTE[colorIdx % PALETTE.length];
+                    var color = _ipColor(ipColorMap, c);
                     bgColors.push(color.bg);
                     borderColors.push(color.border);
                     sessionMeta.push(s);
@@ -251,8 +254,7 @@
 
         clientLabelsPlugin._labels = clients.map(function(c) { return c.label; });
         clientLabelsPlugin._colors = clients.map(function(c) {
-            var colorIdx = ipColorMap[c.ip || c.id] || 0;
-            return PALETTE[colorIdx % PALETTE.length].border;
+            return _ipColor(ipColorMap, c).border;
         });
 
         var canvas = document.getElementById('timeline-chart');
@@ -464,7 +466,6 @@
 
 // ── Client History Modal ──────────────────────
 var HISTORY_BASE = '{% url "client_history_api" client_pk=0 %}'.replace('/0/', '/{id}/');
-var _clientsData = [];
 
 function closeClientModal() {
     document.getElementById('client-modal').style.display = 'none';
@@ -482,6 +483,8 @@ function _el(tag, style, text) {
     return el;
 }
 
+function _clear(el) { while (el.firstChild) el.removeChild(el.firstChild); }
+
 function openClientHistory(clientId) {
     var overlay = document.getElementById('client-modal-overlay');
     var modal = document.getElementById('client-modal');
@@ -490,8 +493,8 @@ function openClientHistory(clientId) {
     var timeline = document.getElementById('cm-timeline');
 
     title.textContent = 'Загрузка…';
-    while (meta.firstChild) meta.removeChild(meta.firstChild);
-    while (timeline.firstChild) timeline.removeChild(timeline.firstChild);
+    _clear(meta);
+    _clear(timeline);
     timeline.appendChild(_el('div', {textAlign:'center',color:'#6c7086',padding:'40px 0'}, 'Загрузка…'));
     overlay.style.display = 'block';
     modal.style.display = 'block';
@@ -504,7 +507,7 @@ function openClientHistory(clientId) {
             var icon = c.is_bot ? '🤖' : '👤';
             title.textContent = icon + ' ' + c.country + ', ' + c.city;
 
-            while (meta.firstChild) meta.removeChild(meta.firstChild);
+            _clear(meta);
             [c.device_type, c.browser, c.os, 'С ' + c.first_seen].forEach(function(t) {
                 meta.appendChild(_el('span', {}, t));
             });
@@ -512,13 +515,13 @@ function openClientHistory(clientId) {
             renderTimeline(timeline, data.sessions);
         })
         .catch(function() {
-            while (timeline.firstChild) timeline.removeChild(timeline.firstChild);
+            _clear(timeline);
             timeline.appendChild(_el('div', {textAlign:'center',color:'#f38ba8',padding:'40px 0'}, 'Ошибка загрузки'));
         });
 }
 
 function renderTimeline(container, sessions) {
-    while (container.firstChild) container.removeChild(container.firstChild);
+    _clear(container);
 
     if (!sessions.length) {
         container.appendChild(_el('div', {textAlign:'center',color:'#6c7086',padding:'40px 0'}, 'Нет сессий'));
@@ -531,8 +534,9 @@ function renderTimeline(container, sessions) {
     wrap.appendChild(line);
 
     sessions.forEach(function(s) {
-        var sourceColor = s.source === 'http' ? '#e76f51' : '#2d6a4f';
-        var sourceLabel = s.source === 'http' ? 'HTTP' : 'WS';
+        var isHttp = s.source === 'http';
+        var sourceColor = isHttp ? '#e76f51' : '#2d6a4f';
+        var sourceLabel = isHttp ? 'HTTP' : 'WS';
         var timeRange = s.started_at + (s.ended_at ? ' — ' + s.ended_at : '');
 
         var card = _el('div', {position:'relative',marginBottom:'20px'});

@@ -290,7 +290,6 @@ def _get_geoip_reader():
     return _geoip_reader
 
 
-
 def get_client_ip(request) -> str:
     """Extract client IP from a Django HTTP request."""
     forwarded = request.META.get("HTTP_X_FORWARDED_FOR")
