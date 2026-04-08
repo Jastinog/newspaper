@@ -331,6 +331,13 @@ def country_flag(code: str) -> str:
     return chr(0x1F1E6 + ord(c[0]) - 65) + chr(0x1F1E6 + ord(c[1]) - 65)
 
 
+def format_country(country_code: str, country_name: str) -> str:
+    """Format country as 'flag name' with fallback to em-dash."""
+    flag = country_flag(country_code)
+    label = country_name or country_code or ""
+    return f"{flag} {label}" if flag else (label or "—")
+
+
 def format_duration(seconds: int) -> str:
     """Seconds -> human-readable duration like '3m12s'."""
     if not seconds:

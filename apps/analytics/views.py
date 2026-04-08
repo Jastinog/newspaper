@@ -7,7 +7,7 @@ from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 
 from .models import Client, Session
-from .utils import country_flag, format_duration
+from .utils import country_flag, format_country, format_duration
 
 
 @staff_member_required
@@ -154,6 +154,52 @@ def analytics_bots_timeline_api(request):
 
 
 @staff_member_required
+def bot_history_api(request):
+    """Return paginated session history for a specific bot name."""
+    bot_name = request.GET.get("bot_name", "")
+    if not bot_name:
+        return JsonResponse({"error": "bot_name required"}, status=400)
+
+    try:
+        page = max(1, int(request.GET.get("page", 1)))
+    except (ValueError, TypeError):
+        return JsonResponse({"error": "invalid page"}, status=400)
+
+    per_page = 50
+    offset = (page - 1) * per_page
+
+    qs = (
+        Session.objects.filter(client__bot_name=bot_name)
+        .select_related("client")
+        .order_by("-started_at")
+    )
+
+    # Fetch one extra row to detect next page without a separate COUNT query
+    rows = list(qs[offset : offset + per_page + 1])
+    has_more = len(rows) > per_page
+    sessions = rows[:per_page]
+
+    history = []
+    for s in sessions:
+        c = s.client
+        history.append({
+            "started_at": timezone.localtime(s.started_at).strftime("%d.%m.%Y %H:%M"),
+            "ip": c.ip or "—",
+            "country": format_country(c.country, c.country_name),
+            "city": c.city or "—",
+            "path": (s.pages[0]["path"] if s.pages else "—"),
+            "user_agent": (c.user_agent or "—")[:120],
+        })
+
+    return JsonResponse({
+        "bot_name": bot_name,
+        "page": page,
+        "has_more": has_more,
+        "sessions": history,
+    })
+
+
+@staff_member_required
 def client_history_api(request, client_pk):
     """Return full session history for a single client."""
     client = get_object_or_404(Client, pk=client_pk)
@@ -182,13 +228,12 @@ def client_history_api(request, client_pk):
             "referrer_domain": s["referrer_domain"] or "",
         })
 
-    flag = country_flag(client.country)
     return JsonResponse({
         "client": {
             "device_type": client.device_type or "—",
             "browser": client.browser or "—",
             "os": client.os or "—",
-            "country": f"{flag} {client.country_name or client.country}" if flag else (client.country_name or "—"),
+            "country": format_country(client.country, client.country_name),
             "city": client.city or "—",
             "first_seen": timezone.localtime(client.first_seen).strftime("%d.%m.%Y %H:%M"),
             "is_bot": client.is_bot,

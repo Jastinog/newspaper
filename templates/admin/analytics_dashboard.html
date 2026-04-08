@@ -30,7 +30,7 @@
     </div>
 </div>
 <div id="bot-chart-wrap" class="rounded-default shadow-xs p-4" style="min-height:300px; background:#1e1e2e;">
-    <canvas id="bot-timeline-chart"></canvas>
+    <canvas id="bot-timeline-chart" style="cursor:pointer;"></canvas>
 </div>
 
 </div>
@@ -348,6 +348,7 @@
 
     var botHourLabels = [];
     var bots_count = 0;
+    var _botsList = [];  // store for click handler
 
     var botChartConfig = {
         type: 'scatter',
@@ -358,6 +359,13 @@
             maintainAspectRatio: false,
             animation: false,
             interaction: { mode: 'nearest', axis: 'y', intersect: false },
+            onClick: function(evt, elements) {
+                if (!elements.length) return;
+                var dsIdx = elements[0].datasetIndex;
+                if (dsIdx >= 0 && dsIdx < _botsList.length) {
+                    openBotHistory(_botsList[dsIdx].name);
+                }
+            },
             plugins: {
                 legend: { display: false },
                 tooltip: { enabled: false }
@@ -419,6 +427,7 @@
     function updateBotChart(data) {
         var bots = data.bots || [];
         bots_count = bots.length;
+        _botsList = bots;
 
         botLabelsPlugin._labels = bots.map(function(b) {
             return String(b.count).padStart(5, ' ') + '  ' + b.name;
@@ -464,8 +473,9 @@
     fetchBots();
 })();
 
-// ── Client History Modal ──────────────────────
+// ── Shared Modal Helpers ──────────────────────
 var HISTORY_BASE = '{% url "client_history_api" client_pk=0 %}'.replace('/0/', '/{id}/');
+var BOT_HISTORY_URL = '{% url "bot_history_api" %}';
 
 function closeClientModal() {
     document.getElementById('client-modal').style.display = 'none';
@@ -485,19 +495,24 @@ function _el(tag, style, text) {
 
 function _clear(el) { while (el.firstChild) el.removeChild(el.firstChild); }
 
-function openClientHistory(clientId) {
-    var overlay = document.getElementById('client-modal-overlay');
-    var modal = document.getElementById('client-modal');
+function _openModal(titleText) {
     var title = document.getElementById('cm-title');
     var meta = document.getElementById('cm-meta');
     var timeline = document.getElementById('cm-timeline');
 
-    title.textContent = 'Загрузка…';
+    title.textContent = titleText;
     _clear(meta);
     _clear(timeline);
     timeline.appendChild(_el('div', {textAlign:'center',color:'#6c7086',padding:'40px 0'}, 'Загрузка…'));
-    overlay.style.display = 'block';
-    modal.style.display = 'block';
+    document.getElementById('client-modal-overlay').style.display = 'block';
+    document.getElementById('client-modal').style.display = 'block';
+}
+
+// ── Client History Modal ──────────────────────
+function openClientHistory(clientId) {
+    _openModal('Загрузка…');
+    var meta = document.getElementById('cm-meta');
+    var timeline = document.getElementById('cm-timeline');
 
     var url = HISTORY_BASE.replace('{id}', clientId);
     fetch(url, { credentials: 'same-origin' })
@@ -505,7 +520,7 @@ function openClientHistory(clientId) {
         .then(function(data) {
             var c = data.client;
             var icon = c.is_bot ? '🤖' : '👤';
-            title.textContent = icon + ' ' + c.country + ', ' + c.city;
+            document.getElementById('cm-title').textContent = icon + ' ' + c.country + ', ' + c.city;
 
             _clear(meta);
             [c.device_type, c.browser, c.os, 'С ' + c.first_seen].forEach(function(t) {
@@ -518,6 +533,95 @@ function openClientHistory(clientId) {
             _clear(timeline);
             timeline.appendChild(_el('div', {textAlign:'center',color:'#f38ba8',padding:'40px 0'}, 'Ошибка загрузки'));
         });
+}
+
+// ── Bot History Modal ─────────────────────────
+var _botCurrentName = '';
+var _botCurrentPage = 0;
+var _botLoading = false;
+
+function openBotHistory(botName) {
+    _botCurrentName = botName;
+    _botCurrentPage = 0;
+    _openModal('🤖 ' + botName);
+    loadBotPage();
+}
+
+function loadBotPage() {
+    if (_botLoading) return;
+    _botLoading = true;
+
+    var page = _botCurrentPage + 1;
+    var url = BOT_HISTORY_URL + '?bot_name=' + encodeURIComponent(_botCurrentName) + '&page=' + page;
+
+    fetch(url, { credentials: 'same-origin' })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            _botCurrentPage = data.page;
+            _botLoading = false;
+
+            var timeline = document.getElementById('cm-timeline');
+
+            if (data.page === 1) {
+                _clear(timeline);
+            }
+
+            var oldBtn = document.getElementById('bot-load-more');
+            if (oldBtn) oldBtn.remove();
+
+            renderBotSessions(timeline, data.sessions);
+
+            if (data.has_more) {
+                var btn = _el('button', {
+                    display:'block',width:'100%',padding:'12px',marginTop:'16px',
+                    background:'rgba(108,112,134,.15)',border:'1px solid rgba(108,112,134,.25)',
+                    borderRadius:'8px',color:'#a6adc8',fontSize:'13px',cursor:'pointer',
+                    fontFamily:'inherit'
+                }, 'Загрузить ещё 50…');
+                btn.id = 'bot-load-more';
+                btn.onmouseover = function() { btn.style.background = 'rgba(108,112,134,.25)'; };
+                btn.onmouseout = function() { btn.style.background = 'rgba(108,112,134,.15)'; };
+                btn.onclick = loadBotPage;
+                timeline.appendChild(btn);
+            }
+        })
+        .catch(function() {
+            _botLoading = false;
+            var timeline = document.getElementById('cm-timeline');
+            if (_botCurrentPage === 0) {
+                _clear(timeline);
+            }
+            timeline.appendChild(_el('div', {textAlign:'center',color:'#f38ba8',padding:'20px 0'}, 'Ошибка загрузки'));
+        });
+}
+
+function renderBotSessions(container, sessions) {
+    if (!sessions.length) {
+        container.appendChild(_el('div', {textAlign:'center',color:'#6c7086',padding:'40px 0'}, 'Нет запросов'));
+        return;
+    }
+
+    sessions.forEach(function(s) {
+        var row = _el('div', {
+            padding:'10px 12px',marginBottom:'6px',
+            background:'rgba(108,112,134,.08)',borderRadius:'8px',
+            borderLeft:'3px solid #e76f51'
+        });
+
+        var header = _el('div', {display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'4px'});
+        header.appendChild(_el('span', {fontSize:'13px',fontWeight:'600',color:'#cdd6f4'}, s.started_at));
+        header.appendChild(_el('span', {fontSize:'12px',color:'#a6adc8'}, s.country + ', ' + s.city));
+        row.appendChild(header);
+
+        row.appendChild(_el('div', {fontSize:'12px',fontFamily:'monospace',color:'#89b4fa',marginBottom:'4px'}, s.path));
+
+        var info = _el('div', {fontSize:'11px',color:'#6c7086',display:'flex',gap:'12px'});
+        info.appendChild(_el('span', {}, 'IP: ' + s.ip));
+        info.appendChild(_el('span', {fontStyle:'italic',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:'300px'}, s.user_agent));
+        row.appendChild(info);
+
+        container.appendChild(row);
+    });
 }
 
 function renderTimeline(container, sessions) {
