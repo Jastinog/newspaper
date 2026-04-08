@@ -58,7 +58,7 @@ class SimilaritySearch:
             ORDER BY distance
             LIMIT %s
         """
-        params = list(query_embeddings) + [cutoff, max_distance, final_top_k]
+        params = [e.tolist() if hasattr(e, "tolist") else list(e) for e in query_embeddings] + [cutoff, max_distance, final_top_k]
 
         with connection.cursor() as cursor:
             cursor.execute(sql, params)
