@@ -97,11 +97,9 @@
     top: 50%;
     left: 0;
     transform: translateY(-50%);
-}
-.lang-switcher form {
     display: flex;
 }
-.lang-switcher button {
+.lang-switcher a {
     background: none;
     border: 1px solid var(--border);
     border-right: none;
@@ -112,19 +110,20 @@
     letter-spacing: 0.04em;
     cursor: pointer;
     color: var(--fg-muted);
+    text-decoration: none;
     transition: color 0.2s, background 0.2s;
 }
-.lang-switcher button:first-of-type {
+.lang-switcher a:first-of-type {
     border-radius: 3px 0 0 3px;
 }
-.lang-switcher button:last-of-type {
+.lang-switcher a:last-of-type {
     border-right: 1px solid var(--border);
     border-radius: 0 3px 3px 0;
 }
-.lang-switcher button:hover {
+.lang-switcher a:hover {
     color: var(--fg);
 }
-.lang-switcher button.active {
+.lang-switcher a.active {
     background: var(--fg);
     color: var(--bg);
     border-color: var(--fg);
