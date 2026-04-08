@@ -130,8 +130,7 @@
 /* === PINNED SECTIONS === */
 .pinned-sections {
     margin-bottom: 0.5rem;
-    opacity: 1;
-    transition: opacity 0.2s ease;
+    animation: digest-reveal 0.25s ease 0.5s forwards;
 }
 .pinned-sections .summary ul {
     column-gap: 1.5rem;
@@ -144,8 +143,11 @@
 /* === DIGEST GRID === */
 .digest-grid {
     column-gap: 1.5rem;
-    opacity: 1;
-    transition: opacity 0.2s ease;
+    animation: digest-reveal 0.25s ease 0.5s forwards;
+}
+
+@keyframes digest-reveal {
+    to { opacity: 1; }
 }
 
 .pinned-sections .digest-section,
