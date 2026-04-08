@@ -76,6 +76,8 @@
 }
 .digest-item-card {
     break-inside: avoid;
+    display: inline-block;
+    width: 100%;
     padding-bottom: 1.2rem;
     margin-bottom: 0.3rem;
     border-bottom: 1px solid var(--border-faint);
@@ -156,6 +158,8 @@
 }
 .digest-grid .digest-section {
     break-inside: avoid;
+    display: inline-block;
+    width: 100%;
 }
 
 /* === SECTION STYLES === */
@@ -213,6 +217,8 @@
 
 .digest-section .summary li {
     break-inside: avoid;
+    display: inline-block;
+    width: 100%;
     padding: 0.5rem 0;
     border-bottom: 1px solid var(--border-faint);
     margin-bottom: 0.4rem;
