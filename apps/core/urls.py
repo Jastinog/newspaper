@@ -25,6 +25,7 @@ urlpatterns = [
 
 # These should NOT be language-prefixed
 seo_urlpatterns = [
+    path("lang/<str:lang>/", views.set_language_get, name="set_language_get"),
     path("robots.txt", views.robots_txt, name="robots_txt"),
     path(
         "sitemap.xml",

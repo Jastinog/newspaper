@@ -1,3 +1,4 @@
+from django.core.cache import cache
 from django.db.models import Count
 from django.shortcuts import get_object_or_404
 from rest_framework import generics
@@ -51,14 +52,28 @@ class FeedListAPI(generics.ListAPIView):
     serializer_class = FeedSerializer
 
     def get_queryset(self):
-        return Feed.objects.select_related("category").annotate(
-            article_count=Count("articles"),
-        ).all()
+        cache_key = "feed_list_api_qs"
+        qs = cache.get(cache_key)
+        if qs is None:
+            qs = list(
+                Feed.objects.select_related("category").annotate(
+                    article_count=Count("articles"),
+                ).all()
+            )
+            cache.set(cache_key, qs, 60 * 15)
+        return qs
 
 
 class CategoryListAPI(generics.ListAPIView):
     serializer_class = CategorySerializer
-    queryset = Category.objects.all()
+
+    def get_queryset(self):
+        cache_key = "category_list_api_qs"
+        qs = cache.get(cache_key)
+        if qs is None:
+            qs = list(Category.objects.all())
+            cache.set(cache_key, qs, 60 * 60)
+        return qs
 
 
 @api_view(["POST"])

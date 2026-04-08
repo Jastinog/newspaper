@@ -7,6 +7,7 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.translation import get_language, gettext_lazy as _
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 from apps.core.models import Language
@@ -191,6 +192,7 @@ def index(request, date=None):
     return render(request, "news/index.html", context)
 
 
+@csrf_exempt
 @require_POST
 def toggle_pin(request, slug):
     """Toggle a section's pinned state (HTMX POST). Updates cookie, returns OOB swaps."""
@@ -210,6 +212,16 @@ def toggle_pin(request, slug):
 
 
 def article_detail(request, pk, slug=""):
+    lang = get_language() or "en"
+    cache_key = f"article:{pk}:{lang}"
+    context = cache.get(cache_key)
+
+    if context is not None:
+        article = context["article"]
+        if article.slug and article.slug != slug:
+            return redirect(article.get_absolute_url(), permanent=True)
+        return render(request, "news/article.html", context)
+
     article = get_object_or_404(
         Article.objects.select_related("feed", "feed__category"), pk=pk,
     )
@@ -230,9 +242,9 @@ def article_detail(request, pk, slug=""):
     if hero_image and hero_image.image:
         seo["og_image"] = request.build_absolute_uri(hero_image.image.url)
 
-    return render(request, "news/article.html", {
-        "article": article, "seo": seo, "hero_image": hero_image,
-    })
+    context = {"article": article, "seo": seo, "hero_image": hero_image}
+    cache.set(cache_key, context, 60 * 60)
+    return render(request, "news/article.html", context)
 
 
 def article_detail_redirect(request, pk):
@@ -243,101 +255,121 @@ def article_detail_redirect(request, pk):
 
 
 def category_detail(request, slug):
-    category = get_object_or_404(Category, slug=slug)
-    articles = (
-        Article.objects
-        .filter(feed__category=category)
-        .select_related("feed")
-        .order_by("-published")[:100]
-    )
+    page_num = request.GET.get("page", "1")
+    lang = get_language() or "en"
+    cache_key = f"category:{slug}:{page_num}:{lang}"
+    context = cache.get(cache_key)
 
-    seo = {
-        "title": f"{category.name} — {SITE_NAME}",
-        "description": f"Latest {category.name} news from {SITE_NAME}",
-        "canonical": request.build_absolute_uri(category.get_absolute_url()),
-        "og_type": "website",
-    }
+    if context is None:
+        category = get_object_or_404(Category, slug=slug)
+        articles_qs = (
+            Article.objects
+            .filter(feed__category=category)
+            .select_related("feed")
+            .order_by("-published")
+        )
+        paginator = Paginator(articles_qs, _ARTICLES_PER_PAGE)
+        page = paginator.get_page(page_num)
 
-    return render(request, "news/category.html", {
-        "category": category,
-        "articles": articles,
-        "seo": seo,
-    })
+        seo = {
+            "title": f"{category.name} — {SITE_NAME}",
+            "description": f"Latest {category.name} news from {SITE_NAME}",
+            "canonical": request.build_absolute_uri(category.get_absolute_url()),
+            "og_type": "website",
+        }
+
+        context = {"category": category, "page": page, "seo": seo}
+        cache.set(cache_key, context, 60 * 15)
+
+    return render(request, "news/category.html", context)
 
 
 def story_detail(request, item_id):
     current_lang = get_language() or "en"
-    item = get_object_or_404(
-        DigestItem.objects.select_related("digest", "section", "image")
-        .prefetch_related(
-            "translations", "translations__language",
-            "section__translations", "section__translations__language",
-            "articles__feed", "articles__images",
-            Prefetch("researches", queryset=Research.objects.only("id"), to_attr="_researches"),
-        ),
-        pk=item_id,
-    )
+    cache_key = f"story:{item_id}:{current_lang}"
+    context = cache.get(cache_key)
 
-    topic = item.get_topic(current_lang)
-    summary = item.get_summary(current_lang)
-    section_name = item.section.get_name(current_lang) if item.section else ""
-
-    source_articles = [
-        {
-            "title": article.title,
-            "url": article.url,
-            "feed_title": article.feed.title,
-            "feed_lean": article.feed.lean,
-            "feed_lean_display": article.feed.get_lean_display() if article.feed.lean else "",
-            "image_url": get_article_image_url(article),
-            "published": article.published,
-            "absolute_url": article.get_absolute_url(),
-        }
-        for article in item.articles.all()
-    ]
-
-    # Other items from the same section
-    section_items = []
-    if item.section and item.digest:
-        siblings = (
-            DigestItem.objects
-            .filter(digest=item.digest, section=item.section)
-            .exclude(pk=item.pk)
-            .select_related("section", "image")
+    if context is None:
+        item = get_object_or_404(
+            DigestItem.objects.select_related("digest", "section", "image")
             .prefetch_related(
                 "translations", "translations__language",
+                "section__translations", "section__translations__language",
                 "articles__feed", "articles__images",
-            )
+                Prefetch("researches", queryset=Research.objects.only("id"), to_attr="_researches"),
+            ),
+            pk=item_id,
         )
-        for si in siblings:
-            si.loc_topic = si.get_topic(current_lang)
-            si.loc_summary = si.get_summary(current_lang)
-        section_items = [si for si in siblings if si.loc_topic and si.loc_summary]
 
-    seo = {
-        "title": f"{topic} — {SITE_NAME}",
-        "description": _og_description(summary) or topic,
-        "canonical": request.build_absolute_uri(reverse("story_detail", args=[item.pk])),
-        "og_type": "article",
-        "og_image": request.build_absolute_uri(item.best_image_url) if item.best_image_url else "",
-        "published_time": item.digest.date.isoformat() if item.digest else "",
-        "section": section_name,
-    }
+        topic = item.get_topic(current_lang)
+        summary = item.get_summary(current_lang)
+        section_name = item.section.get_name(current_lang) if item.section else ""
 
-    return render(request, "news/story.html", {
-        "item": item,
-        "topic": topic,
-        "summary": summary,
-        "section_name": section_name,
-        "source_articles": source_articles,
-        "section_items": section_items,
-        "has_research": bool(item._researches),
-        "seo": seo,
-    })
+        source_articles = [
+            {
+                "title": article.title,
+                "url": article.url,
+                "feed_title": article.feed.title,
+                "feed_lean": article.feed.lean,
+                "feed_lean_display": article.feed.get_lean_display() if article.feed.lean else "",
+                "image_url": get_article_image_url(article),
+                "published": article.published,
+                "absolute_url": article.get_absolute_url(),
+            }
+            for article in item.articles.all()
+        ]
+
+        # Other items from the same section
+        section_items = []
+        if item.section and item.digest:
+            siblings = (
+                DigestItem.objects
+                .filter(digest=item.digest, section=item.section)
+                .exclude(pk=item.pk)
+                .select_related("section", "image")
+                .prefetch_related(
+                    "translations", "translations__language",
+                    "articles__feed", "articles__images",
+                )
+            )
+            for si in siblings:
+                si.loc_topic = si.get_topic(current_lang)
+                si.loc_summary = si.get_summary(current_lang)
+            section_items = [si for si in siblings if si.loc_topic and si.loc_summary]
+
+        seo = {
+            "title": f"{topic} — {SITE_NAME}",
+            "description": _og_description(summary) or topic,
+            "canonical": request.build_absolute_uri(reverse("story_detail", args=[item.pk])),
+            "og_type": "article",
+            "og_image": request.build_absolute_uri(item.best_image_url) if item.best_image_url else "",
+            "published_time": item.digest.date.isoformat() if item.digest else "",
+            "section": section_name,
+        }
+
+        context = {
+            "item": item,
+            "topic": topic,
+            "summary": summary,
+            "section_name": section_name,
+            "source_articles": source_articles,
+            "section_items": section_items,
+            "has_research": bool(item._researches),
+            "seo": seo,
+        }
+        cache.set(cache_key, context, 60 * 60)
+
+    return render(request, "news/story.html", context)
 
 
 def research(request, item_id):
     lang = get_language() or "en"
+    cache_key = f"research:{item_id}:{lang}"
+    context = cache.get(cache_key)
+
+    if context is not None:
+        return render(request, "news/research.html", context)
+
     item = get_object_or_404(
         DigestItem.objects.select_related("digest", "section")
         .prefetch_related("translations", "translations__language"),
@@ -351,7 +383,7 @@ def research(request, item_id):
             "topic": item.get_topic(lang),
         })
 
-    sources = (
+    sources = list(
         dive.sources.select_related("article__feed")
         .prefetch_related("article__images")
         .order_by("order")
@@ -366,13 +398,15 @@ def research(request, item_id):
         "og_type": "article",
     }
 
-    return render(request, "news/research.html", {
+    context = {
         "dive": dive,
         "item": item,
         "sources": sources,
         "hero_image": hero_image,
         "seo": seo,
-    })
+    }
+    cache.set(cache_key, context, 60 * 60)
+    return render(request, "news/research.html", context)
 
 
 def search(request):
@@ -389,8 +423,13 @@ def search(request):
     if sort not in ("date", "relevance"):
         sort = "date"
 
-    service = SearchService()
-    results = service.search_articles(query, top_k=30, sort=sort)
+    lang = get_language() or "en"
+    cache_key = f"search:{hash(query)}:{sort}:{lang}"
+    results = cache.get(cache_key)
+    if results is None:
+        service = SearchService()
+        results = service.search_articles(query, top_k=30, sort=sort)
+        cache.set(cache_key, results, 60 * 30)
 
     seo = {
         "title": f"{query} — {_('Search')} — {SITE_NAME}",
@@ -422,15 +461,9 @@ def _filter_options():
     )
 
 
-def feeds_list(request):
-    """All feeds with filters: category, country, lean, factuality."""
+def _feeds_list_data(category_slug, country_code, lean, factuality, q):
+    """Build feeds list with article counts and thumbnails (cacheable)."""
     qs = Feed.objects.filter(enabled=True).select_related("category", "country", "language")
-
-    category_slug = request.GET.get("category")
-    country_code = request.GET.get("country")
-    lean = request.GET.get("lean")
-    factuality = request.GET.get("factuality")
-    q = request.GET.get("q", "").strip()
 
     if category_slug:
         qs = qs.filter(category__slug=category_slug)
@@ -461,6 +494,23 @@ def feeds_list(request):
         rel = feed_image_map.get(feed.pk, "")
         feed.thumb = f"{settings.MEDIA_URL}{rel}" if rel else ""
 
+    return feeds
+
+
+def feeds_list(request):
+    """All feeds with filters: category, country, lean, factuality."""
+    category_slug = request.GET.get("category", "")
+    country_code = request.GET.get("country", "")
+    lean = request.GET.get("lean", "")
+    factuality = request.GET.get("factuality", "")
+    q = request.GET.get("q", "").strip()
+
+    cache_key = f"feeds_list:{category_slug}:{country_code}:{lean}:{factuality}:{q}"
+    feeds = cache.get(cache_key)
+    if feeds is None:
+        feeds = _feeds_list_data(category_slug, country_code, lean, factuality, q)
+        cache.set(cache_key, feeds, 60 * 15)
+
     categories, countries = _filter_options()
 
     seo = {
@@ -489,35 +539,54 @@ def feeds_list(request):
 
 def feed_detail(request, pk):
     """Single feed with its articles, paginated."""
-    feed = get_object_or_404(
-        Feed.objects.select_related("category", "country", "language"), pk=pk,
-    )
-    articles_qs = (
-        feed.articles
-        .prefetch_related(
-            Prefetch("images", queryset=ArticleImage.objects.filter(is_primary=True), to_attr="primary_images"),
+    page_num = request.GET.get("page", "1")
+    lang = get_language() or "en"
+    cache_key = f"feed_detail:{pk}:{page_num}:{lang}"
+    context = cache.get(cache_key)
+
+    if context is None:
+        feed = get_object_or_404(
+            Feed.objects.select_related("category", "country", "language"), pk=pk,
         )
-        .order_by("-published")
-    )
-    paginator = Paginator(articles_qs, _ARTICLES_PER_PAGE)
-    page = paginator.get_page(request.GET.get("page"))
+        articles_qs = (
+            feed.articles
+            .prefetch_related(
+                Prefetch("images", queryset=ArticleImage.objects.filter(is_primary=True), to_attr="primary_images"),
+            )
+            .order_by("-published")
+        )
+        paginator = Paginator(articles_qs, _ARTICLES_PER_PAGE)
+        page = paginator.get_page(page_num)
 
-    seo = {
-        "title": f"{feed.title} — {SITE_NAME}",
-        "description": feed.description or (_("Articles from %(title)s") % {"title": feed.title}),
-        "canonical": request.build_absolute_uri(request.get_full_path()),
-        "og_type": "website",
-    }
+        seo = {
+            "title": f"{feed.title} — {SITE_NAME}",
+            "description": feed.description or (_("Articles from %(title)s") % {"title": feed.title}),
+            "canonical": request.build_absolute_uri(request.get_full_path()),
+            "og_type": "website",
+        }
 
-    return render(request, "news/feed_detail.html", {
-        "feed": feed,
-        "page": page,
-        "seo": seo,
-    })
+        context = {"feed": feed, "page": page, "seo": seo}
+        cache.set(cache_key, context, 60 * 15)
+
+    return render(request, "news/feed_detail.html", context)
 
 
 def articles_list(request):
     """All articles with filters: category, feed, country, date range, search."""
+    category_slug = request.GET.get("category", "")
+    feed_id = request.GET.get("feed", "")
+    country_code = request.GET.get("country", "")
+    date_from = request.GET.get("from", "")
+    date_to = request.GET.get("to", "")
+    q = request.GET.get("q", "").strip()
+    page_num = request.GET.get("page", "1")
+    lang = get_language() or "en"
+
+    cache_key = f"articles:{category_slug}:{feed_id}:{country_code}:{date_from}:{date_to}:{q}:{page_num}:{lang}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return render(request, "news/articles.html", cached)
+
     qs = (
         Article.objects
         .select_related("feed", "feed__category", "feed__country")
@@ -525,13 +594,6 @@ def articles_list(request):
             Prefetch("images", queryset=ArticleImage.objects.filter(is_primary=True), to_attr="primary_images"),
         )
     )
-
-    category_slug = request.GET.get("category")
-    feed_id = request.GET.get("feed")
-    country_code = request.GET.get("country")
-    date_from = request.GET.get("from")
-    date_to = request.GET.get("to")
-    q = request.GET.get("q", "").strip()
 
     if category_slug:
         qs = qs.filter(feed__category__slug=category_slug)
@@ -555,7 +617,7 @@ def articles_list(request):
         ),
     ).order_by("feed_rank", "-sort_date")
     paginator = Paginator(qs, _ARTICLES_PER_PAGE)
-    page = paginator.get_page(request.GET.get("page"))
+    page = paginator.get_page(page_num)
 
     categories, countries = _filter_options()
 
@@ -566,7 +628,7 @@ def articles_list(request):
         "og_type": "website",
     }
 
-    return render(request, "news/articles.html", {
+    context = {
         "page": page,
         "categories": categories,
         "countries": countries,
@@ -579,7 +641,36 @@ def articles_list(request):
             "q": q,
         },
         "seo": seo,
-    })
+    }
+    cache.set(cache_key, context, 60 * 15)
+    return render(request, "news/articles.html", context)
+
+
+def set_language_get(request, lang):
+    """Switch UI language via GET — no CSRF token needed."""
+    from urllib.parse import urlparse
+
+    valid = {code for code, _ in settings.LANGUAGES}
+    if lang not in valid:
+        lang = settings.LANGUAGE_CODE
+
+    current = request.GET.get("next", "")
+    # Block open redirects: only allow relative paths on this host
+    if current:
+        parsed = urlparse(current)
+        if parsed.netloc or parsed.scheme:
+            current = ""
+
+    # Strip existing lang prefix and prepend new one
+    for code, _ in settings.LANGUAGES:
+        if current == f"/{code}" or current.startswith(f"/{code}/"):
+            current = current[len(f"/{code}"):]
+            break
+
+    next_url = f"/{lang}{current}" if current else f"/{lang}/"
+    response = redirect(next_url)
+    response.set_cookie(settings.LANGUAGE_COOKIE_NAME, lang, max_age=365 * 24 * 60 * 60, samesite="Lax", path="/")
+    return response
 
 
 def robots_txt(request):

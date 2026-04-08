@@ -8,11 +8,11 @@
 {% block content %}
 <div class="category-header">
     <h1>{{ category.name }}</h1>
-    <p>{{ articles|length }} {% trans "latest articles" %}</p>
+    <p>{{ page.paginator.count }} {% trans "articles" %}</p>
 </div>
 
 <ul class="article-list">
-{% for article in articles %}
+{% for article in page %}
     <li>
         <a href="{{ article.get_absolute_url }}">{{ article.title }}</a>
         <div class="meta">
@@ -24,4 +24,7 @@
     <li style="text-align:center; color: var(--fg-muted);">{% trans "No articles yet." %}</li>
 {% endfor %}
 </ul>
+
+{% include "news/_pagination.html" %}
+
 {% endblock %}

@@ -32,10 +32,11 @@
     <!-- Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📰</text></svg>">
 
-    <!-- Fonts -->
+    <!-- Fonts (non-blocking) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=PT+Serif:ital,wght@0,400;0,700;1,400&display=optional" rel="stylesheet">
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=PT+Serif:ital,wght@0,400;0,700;1,400&display=optional" onload="this.rel='stylesheet'">
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=PT+Serif:ital,wght@0,400;0,700;1,400&display=optional" rel="stylesheet"></noscript>
 
     {% block json_ld %}{% endblock %}
 
@@ -50,21 +51,21 @@
     <!-- Prevent FOUC: apply saved theme before any rendering -->
     <script>(function(){var M={light:'broadsheet',dark:'evening'},S={broadsheet:'light',gazette:'light',evening:'dark',midnight:'dark'},t=localStorage.getItem('newspaper-theme');if(M[t]){t=M[t];localStorage.setItem('newspaper-theme',t);}if(S[t]){document.documentElement.setAttribute('data-theme',t);document.documentElement.setAttribute('data-scheme',S[t]);}})()</script>
 
-    <!-- Base styles -->
-    <link rel="stylesheet" href="{% static 'news/css/fontawesome.min.css' %}">
-    <link rel="stylesheet" href="{% static 'news/css/fa-solid.min.css' %}">
-    <link rel="stylesheet" href="{% static 'news/css/fa-regular.min.css' %}">
-    <link rel="stylesheet" href="{% static 'news/css/icons.css' %}">
+    <!-- Critical styles (render-blocking) -->
     <link rel="stylesheet" href="{% static 'news/css/base.css' %}">
     <link rel="stylesheet" href="{% static 'news/css/layout.css' %}">
-    <!-- All page CSS preloaded for hx-boost SPA navigation -->
-    <link rel="stylesheet" href="{% static 'news/css/search-bar.css' %}">
-    <link rel="stylesheet" href="{% static 'news/css/digest.css' %}">
-    <link rel="stylesheet" href="{% static 'news/css/bias-spectrum.css' %}">
-    <link rel="stylesheet" href="{% static 'news/css/research-card.css' %}">
-    <link rel="stylesheet" href="{% static 'news/css/similar-news.css' %}">
-    <link rel="stylesheet" href="{% static 'news/css/browse.css' %}">
-    <link rel="stylesheet" href="{% static 'news/css/search-results.css' %}">
+    <!-- Non-critical styles (deferred) -->
+    <link rel="stylesheet" href="{% static 'news/css/fontawesome.min.css' %}" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="{% static 'news/css/fa-solid.min.css' %}" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="{% static 'news/css/fa-regular.min.css' %}" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="{% static 'news/css/icons.css' %}" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="{% static 'news/css/search-bar.css' %}" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="{% static 'news/css/digest.css' %}" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="{% static 'news/css/bias-spectrum.css' %}" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="{% static 'news/css/research-card.css' %}" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="{% static 'news/css/similar-news.css' %}" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="{% static 'news/css/browse.css' %}" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="{% static 'news/css/search-results.css' %}" media="print" onload="this.media='all'">
     {% block extra_css %}{% endblock %}
 </head>
 <body data-lang-prefix="/{{ LANGUAGE_CODE }}" data-error-generation="{% trans "Generation error" %}" data-dd-ready="{% trans "Deep dive ready" %}" data-dd-read="{% trans "Read" %}" data-dd-close="{% trans "Close" %}" data-similar-label="{% trans "Similar news" %}" data-similar-empty="{% trans "No similar news found" %}" data-similar-sources="{% trans "Source articles" %}" data-similar-current="{% trans "Current" %}" data-similar-digest="{% trans "Digest news" %}" data-similar-articles="{% trans "Articles" %}" data-similar-loading="{% trans "Loading…" %}">
@@ -73,14 +74,10 @@
         <div class="container">
             <div class="masthead">
                 <div class="lang-switcher">
-                    <form method="post" action="{% url 'set_language' %}">
-                        {% csrf_token %}
-                        <input type="hidden" name="next" value="{{ request.path }}">
-                        {% get_available_languages as languages %}
-                        {% for code, name in languages %}
-                            <button type="submit" name="language" value="{{ code }}" class="{% if code == LANGUAGE_CODE %}active{% endif %}">{{ code|upper }}</button>
-                        {% endfor %}
-                    </form>
+                    {% get_available_languages as languages %}
+                    {% for code, name in languages %}
+                        <a href="{% url 'set_language_get' code %}?next={{ request.path|urlencode }}" class="{% if code == LANGUAGE_CODE %}active{% endif %}">{{ code|upper }}</a>
+                    {% endfor %}
                 </div>
                 <div class="masthead-date" id="mastheadDate">{% block masthead_date %}{% now "l, F j, Y" %}{% endblock %}</div>
                 <div class="site-title"><a href="{% url 'index' %}">{% trans "Newspaper" %}</a></div>

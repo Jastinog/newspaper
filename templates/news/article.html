@@ -35,7 +35,7 @@
 
     {% if hero_image %}
         <div class="article-hero">
-            <img src="{{ hero_image.image.url }}" alt="{{ article.title }}">
+            <img src="{{ hero_image.image.url }}" alt="{{ article.title }}" loading="lazy">
         </div>
     {% endif %}
 

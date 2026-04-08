@@ -1,3 +1,4 @@
+from django.core.cache import cache
 from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
@@ -18,6 +19,11 @@ from .models import DigestItem
 @api_view(["GET"])
 def item_sources_api(request, item_id):
     """Return source articles for a digest item."""
+    cache_key = f"item_sources:{item_id}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return Response(cached)
+
     item = get_object_or_404(DigestItem, pk=item_id)
     articles = (
         item.articles
@@ -36,7 +42,9 @@ def item_sources_api(request, item_id):
             "feed_website": article.feed.website or article.feed.url if article.feed else "",
             "image_url": img,
         })
-    return Response({"sources": data})
+    result = {"sources": data}
+    cache.set(cache_key, result, 60 * 60)
+    return Response(result)
 
 
 # ── Similar Items API ─────────────────────────────────────
@@ -67,16 +75,22 @@ def _serialize_article(article, score=0):
 @api_view(["GET"])
 def similar_items_api(request, item_id):
     """Tree: center -> similar digest items -> their articles."""
+    lang = get_language() or "en"
+    cache_key = f"similar_items:{item_id}:{lang}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return Response(cached)
+
     item = get_object_or_404(
         DigestItem.objects.select_related("digest", "section"),
         pk=item_id,
     )
 
-    lang = get_language() or "en"
-
     article_ids = list(item.articles.values_list("id", flat=True))
     if not article_ids:
-        return Response({"items": [], "articles": [], "sources": []})
+        result = {"items": [], "articles": [], "sources": []}
+        cache.set(cache_key, result, 60 * 60)
+        return Response(result)
 
     embeddings = list(
         ArticleChunk.objects
@@ -92,7 +106,9 @@ def similar_items_api(request, item_id):
     sources_data = [_serialize_article(a) for a in own_articles]
 
     if not embeddings:
-        return Response({"items": [], "articles": [], "sources": sources_data})
+        result = {"items": [], "articles": [], "sources": sources_data}
+        cache.set(cache_key, result, 60 * 60)
+        return Response(result)
 
     search = SimilaritySearch(days=14)
     results = search.multi_query_search(embeddings, top_k_per_query=10, final_top_k=30)
@@ -105,7 +121,9 @@ def similar_items_api(request, item_id):
 
     found_ids = set(art_scores.keys())
     if not found_ids:
-        return Response({"items": [], "articles": [], "sources": sources_data})
+        result = {"items": [], "articles": [], "sources": sources_data}
+        cache.set(cache_key, result, 60 * 60)
+        return Response(result)
 
     similar = (
         DigestItem.objects
@@ -163,4 +181,6 @@ def similar_items_api(request, item_id):
             for a in orphans
         ]
 
-    return Response({"items": items_data, "articles": articles_data, "sources": sources_data})
+    result = {"items": items_data, "articles": articles_data, "sources": sources_data}
+    cache.set(cache_key, result, 60 * 60)
+    return Response(result)

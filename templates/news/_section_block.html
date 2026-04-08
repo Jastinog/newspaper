@@ -5,7 +5,6 @@
                 hx-post="{% url 'toggle_pin' group.section.slug %}"
                 hx-target="#pinnedArea"
                 hx-swap="outerHTML transition:true"
-                hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
                 title="{% if is_pinned %}{% trans 'Unpin section' %}{% else %}{% trans 'Pin section' %}{% endif %}"><i class="fas fa-thumbtack"></i></button><span>{{ group.name }}</span> <span class="section-count">{{ group.items|length }}</span></h3>
     <div class="summary">
         <ul>

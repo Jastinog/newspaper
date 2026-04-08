@@ -12,6 +12,21 @@
 
     var API = '/api/digest-items/';
     var cache = {};
+    var FORCE_GRAPH_URL = 'https://cdn.jsdelivr.net/npm/force-graph/dist/force-graph.min.js';
+    var _fgLoading = null;
+
+    function ensureForceGraph(cb) {
+        if (typeof ForceGraph !== 'undefined') return cb();
+        if (_fgLoading) return _fgLoading.then(cb);
+        _fgLoading = new Promise(function (resolve, reject) {
+            var s = document.createElement('script');
+            s.src = FORCE_GRAPH_URL;
+            s.onload = resolve;
+            s.onerror = reject;
+            document.head.appendChild(s);
+        });
+        _fgLoading.then(cb);
+    }
 
     /* ── Helpers ──────────────────────────────────── */
 
@@ -548,8 +563,6 @@
         if (!btn) return;
         e.preventDefault();
 
-        if (typeof ForceGraph === 'undefined') return;
-
         var itemId = btn.dataset.itemId;
         var container = btn.closest('li') || btn.closest('.story-detail');
         if (!container) return;
@@ -558,11 +571,13 @@
         var summaryEl = container.querySelector('.item-summary') || container.querySelector('.article-content p');
         var imgEl = container.querySelector('.item-image') || container.querySelector('.story-hero img');
 
-        launch(itemId, {
+        var centerInfo = {
             topic: topicEl ? topicEl.textContent.trim() : 'Item #' + itemId,
             summary: summaryEl ? summaryEl.textContent.trim() : '',
             imageUrl: imgEl ? imgEl.src : '',
             storyUrl: (topicEl && topicEl.href) || window.location.pathname,
-        });
+        };
+
+        ensureForceGraph(function () { launch(itemId, centerInfo); });
     });
 })();
