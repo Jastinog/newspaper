@@ -61,7 +61,6 @@ printf "  ${DIM}── services ──${RST}\n"
 svc newspaper-gunicorn
 svc newspaper-daphne
 svc newspaper-celery
-svc newspaper-celerybeat
 
 echo ""
 printf "  ${GREEN}${BOLD}Deploy complete.${RST}\n"
