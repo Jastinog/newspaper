@@ -154,6 +154,12 @@ main {
     padding: clamp(1rem, 2vw, 1.5rem) 0 clamp(1.5rem, 4vw, 3rem);
 }
 
+/* Hide column layouts until async digest.css loads (prevents reflow flash) */
+.digest-grid,
+.pinned-sections {
+    opacity: 0;
+}
+
 /* === HTMX TRANSITIONS === */
 .htmx-swapping > * {
     opacity: 0;
