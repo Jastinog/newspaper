@@ -6,7 +6,9 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 
-from .models import Client, Session
+from django.db.models import OuterRef, Subquery
+
+from .models import Activity, Client, Session
 from .utils import country_flag, format_country, format_duration
 
 
@@ -168,9 +170,14 @@ def bot_history_api(request):
     per_page = 50
     offset = (page - 1) * per_page
 
+    first_activity_path = Subquery(
+        Activity.objects.filter(session=OuterRef("pk")).values("path")[:1]
+    )
+
     qs = (
         Session.objects.filter(client__bot_name=bot_name)
         .select_related("client")
+        .annotate(request_path=first_activity_path)
         .order_by("-started_at")
     )
 
@@ -187,7 +194,7 @@ def bot_history_api(request):
             "ip": c.ip or "—",
             "country": format_country(c.country, c.country_name),
             "city": c.city or "—",
-            "path": (s.pages[0]["path"] if s.pages else "—"),
+            "path": s.request_path or "—",
             "user_agent": (c.user_agent or "—")[:120],
         })
 
