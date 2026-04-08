@@ -42,6 +42,15 @@ def _device_short(device_type: str) -> str:
     return _DEVICE_SHORT.get((device_type or "").lower(), "??")
 
 
+def _hour_labels(now):
+    """Build 25 hour-mark labels covering [now-24h .. now]."""
+    now_local = timezone.localtime(now)
+    return [
+        (now_local - timedelta(hours=24 - i)).strftime("%H")
+        for i in range(25)
+    ]
+
+
 @staff_member_required
 def analytics_timeline_api(request):
     """Return rolling 24-hour timeline: sessions from now-24h to now."""
@@ -98,19 +107,12 @@ def analytics_timeline_api(request):
             "scrolls": s.total_scrolls,
         })
 
-    # Build hour labels: from 24h ago to now
-    now_local = timezone.localtime(now)
-    labels = []
-    for i in range(25):
-        t = now_local - timedelta(hours=24 - i)
-        labels.append(t.strftime("%H"))
-
     # Sort clients: group by IP so same-IP clients are adjacent
     sorted_clients = sorted(clients_map.values(), key=lambda c: c["ip"])
 
     return JsonResponse({
         "clients": sorted_clients,
-        "hour_labels": labels,
+        "hour_labels": _hour_labels(now),
     })
 
 
@@ -134,24 +136,32 @@ def analytics_bots_timeline_api(request):
     for bot_name, started_at in rows:
         name = bot_name or "Unknown"
         if name not in bots_map:
-            bots_map[name] = {"name": name, "count": 0, "hits": []}
+            bots_map[name] = {"name": name, "count": 0, "minutes": set()}
 
         bots_map[name]["count"] += 1
         start_ago = (now - started_at).total_seconds() / 3600
-        bots_map[name]["hits"].append(round(24 - min(24, start_ago), 3))
+        # Round to the nearest minute bucket (0–1440) then back to hours
+        minute_bucket = round((24 - min(24, start_ago)) * 60)
+        bots_map[name]["minutes"].add(minute_bucket / 60)
+
+    minute_h = 1 / 60  # one minute in hours
+    for bot in bots_map.values():
+        # Merge consecutive minutes into [start, end] ranges
+        sorted_mins = sorted(bot["minutes"])
+        ranges = []
+        for h in sorted_mins:
+            if ranges and h - ranges[-1][1] < minute_h + 0.0001:
+                ranges[-1][1] = h + minute_h
+            else:
+                ranges.append([h, h + minute_h])
+        bot["sessions"] = [[round(r[0], 4), round(r[1], 4)] for r in ranges]
+        del bot["minutes"]
 
     bots_list = sorted(bots_map.values(), key=lambda b: b["count"], reverse=True)
 
-    # Build hour labels
-    now_local = timezone.localtime(now)
-    labels = []
-    for i in range(25):
-        t = now_local - timedelta(hours=24 - i)
-        labels.append(t.strftime("%H"))
-
     return JsonResponse({
         "bots": bots_list,
-        "hour_labels": labels,
+        "hour_labels": _hour_labels(now),
     })
 
 

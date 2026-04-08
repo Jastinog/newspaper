@@ -50,14 +50,123 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <script>
+// ── Shared chart utilities ────────────────────
+var BAR_STYLE = { borderWidth: 0, borderSkipped: false, barPercentage: 0.9, categoryPercentage: 0.9 };
+var ROW_HEIGHT = 24;
+
+// Row highlight plugin factory — works for any horizontal bar chart
+function makeRowHighlight(id) {
+    return {
+        id: id,
+        beforeDatasetsDraw: function(chart) {
+            var active = chart.getActiveElements();
+            if (!active.length) return;
+            var ctx = chart.ctx;
+            var yScale = chart.scales.y;
+            var idx = active[0].index;
+            var y = yScale.getPixelForValue(idx);
+            var ticks = yScale.ticks || [];
+            var h = ticks.length > 1
+                ? Math.abs(yScale.getPixelForValue(1) - yScale.getPixelForValue(0))
+                : ROW_HEIGHT;
+            ctx.save();
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
+            ctx.fillRect(chart.chartArea.left, y - h / 2, chart.chartArea.right - chart.chartArea.left, h);
+            ctx.restore();
+        }
+    };
+}
+
+// Label overlay plugin factory — draws colored text labels on Y axis
+function makeLabelsPlugin(id, defaultColor) {
+    var plugin = {
+        id: id,
+        _labels: [],
+        _colors: [],
+        afterDraw: function(chart) {
+            if (!plugin._labels.length) return;
+            var ctx = chart.ctx;
+            var yScale = chart.scales.y;
+            ctx.save();
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            ctx.font = '12px monospace';
+            plugin._labels.forEach(function(lbl, i) {
+                var y = yScale.getPixelForValue(i);
+                ctx.fillStyle = plugin._colors[i] || defaultColor;
+                ctx.fillText(lbl, chart.chartArea.left + 6, y);
+            });
+            ctx.restore();
+        }
+    };
+    return plugin;
+}
+
+// Base chart config factory — shared scales, interaction, layout
+function makeChartConfig(onClick, plugins) {
+    var hourLabels = [];
+    var config = {
+        type: 'bar',
+        data: { labels: [], datasets: [] },
+        plugins: plugins,
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: false,
+            interaction: { mode: 'index', axis: 'y', intersect: false },
+            onClick: onClick,
+            plugins: {
+                legend: { display: false },
+                tooltip: { enabled: false }
+            },
+            scales: {
+                x: {
+                    min: 0, max: 24,
+                    ticks: {
+                        stepSize: 1,
+                        color: '#6c7086',
+                        font: { size: 10 },
+                        callback: function(val) {
+                            var idx = Math.round(val);
+                            return (idx >= 0 && idx < hourLabels.length) ? hourLabels[idx] : '';
+                        }
+                    },
+                    grid: { color: 'rgba(108, 112, 134, 0.15)' },
+                    border: { color: 'rgba(108, 112, 134, 0.2)' }
+                },
+                y: {
+                    stacked: true,
+                    ticks: {
+                        color: '#a6adc8',
+                        font: { size: 12, family: 'monospace' },
+                        callback: function() { return ''; }
+                    },
+                    grid: { display: false },
+                    border: { display: false },
+                    afterFit: function(scale) { scale.width = 0; }
+                }
+            }
+        }
+    };
+    // Expose setter for hour labels (captured by the x-axis callback closure)
+    config._setHourLabels = function(labels) { hourLabels = labels || []; };
+    return config;
+}
+
+// Resize canvas container to fit row count
+function sizeChartContainer(canvas, rowCount) {
+    canvas.parentElement.style.minHeight = Math.max(80, rowCount * ROW_HEIGHT + 50) + 'px';
+}
+
+// ── Client Timeline Chart ─────────────────────
 (function() {
     'use strict';
 
     var API_URL = '{% url "analytics_timeline_api" %}';
     var chart = null;
-    var _timelineClients = [];  // store for click handler
+    var _timelineClients = [];
 
-    // ── Dark color palette ─────────────────────────
     var PALETTE = [
         { bg: 'rgba(129, 140, 248, 0.6)', border: 'rgb(129, 140, 248)' },
         { bg: 'rgba(52, 211, 153, 0.6)',  border: 'rgb(52, 211, 153)' },
@@ -69,14 +178,9 @@
         { bg: 'rgba(96, 165, 250, 0.6)',  border: 'rgb(96, 165, 250)' },
     ];
 
-    // ── Build datasets from API data ───────────────
     // Two layers: gray (idle/wall time) behind, colored (active) on top.
     var IDLE_BG = 'rgba(108, 112, 134, 0.18)';
 
-
-    var BAR_STYLE = { borderWidth: 0, borderSkipped: false, barPercentage: 0.9, categoryPercentage: 0.9 };
-
-    // Build a map: IP -> palette color index (same IP = same color)
     function buildIpColorMap(clients) {
         var map = {};
         var idx = 0;
@@ -141,115 +245,23 @@
         return datasets;
     }
 
-    // ── Row highlight on hover ──────────────────────
-    var rowHighlight = {
-        id: 'rowHighlight',
-        beforeDatasetsDraw: function(chart) {
-            var active = chart.getActiveElements();
-            if (!active.length) return;
-            var ctx = chart.ctx;
-            var yScale = chart.scales.y;
-            var idx = active[0].index;
-            var y = yScale.getPixelForValue(idx);
-            var h = yScale.getPixelForValue(1) - yScale.getPixelForValue(0);
-            ctx.save();
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
-            ctx.fillRect(chart.chartArea.left, y - h / 2, chart.chartArea.right - chart.chartArea.left, h);
-            ctx.restore();
-        }
-    };
+    var clientLabelsPlugin = makeLabelsPlugin('clientLabels', '#a6adc8');
 
-    // ── Chart config (dark theme) ──────────────────
-    var chartConfig = {
-        type: 'bar',
-        data: { labels: [], datasets: [] },
-        plugins: [rowHighlight],
-        options: {
-            indexAxis: 'y',
-            responsive: true,
-            maintainAspectRatio: false,
-            animation: false,
-            interaction: { mode: 'index', axis: 'y', intersect: false },
-            onClick: function(evt, elements) {
-                if (!elements.length) return;
-                var idx = elements[0].index;
-                if (idx >= 0 && idx < _timelineClients.length) {
-                    openClientHistory(_timelineClients[idx].id);
-                }
-            },
-            plugins: {
-                legend: { display: false },
-                tooltip: { enabled: false }
-            },
-            scales: {
-                x: {
-                    min: 0, max: 24,
-                    ticks: {
-                        stepSize: 1,
-                        color: '#6c7086',
-                        font: { size: 10 },
-                        callback: function() { return ''; }
-                    },
-                    grid: { color: 'rgba(108, 112, 134, 0.15)' },
-                    border: { color: 'rgba(108, 112, 134, 0.2)' }
-                },
-                y: {
-                    stacked: true,
-                    ticks: {
-                        color: '#a6adc8',
-                        font: { size: 12, family: 'monospace' },
-                        callback: function() { return ''; }
-                    },
-                    grid: { display: false },
-                    border: { display: false },
-                    afterFit: function(scale) { scale.width = 0; }
-                }
+    var chartConfig = makeChartConfig(
+        function(evt, elements) {
+            if (!elements.length) return;
+            var idx = elements[0].index;
+            if (idx >= 0 && idx < _timelineClients.length) {
+                openClientHistory(_timelineClients[idx].id);
             }
-        }
-    };
+        },
+        [makeRowHighlight('rowHighlight'), clientLabelsPlugin]
+    );
 
-    // Custom plugin to draw client labels on the chart
-    var clientLabelsPlugin = {
-        id: 'clientLabels',
-        _labels: [],
-        _colors: [],
-        afterDraw: function(chart) {
-            if (!this._labels.length) return;
-            var ctx = chart.ctx;
-            var yScale = chart.scales.y;
-            ctx.save();
-            ctx.textAlign = 'left';
-            ctx.textBaseline = 'middle';
-            ctx.font = '12px monospace';
-            this._labels.forEach(function(lbl, i) {
-                var y = yScale.getPixelForValue(i);
-                ctx.fillStyle = clientLabelsPlugin._colors[i] || '#a6adc8';
-                ctx.fillText(lbl, chart.chartArea.left + 6, y);
-            });
-            ctx.restore();
-        }
-    };
-    chartConfig.plugins.push(clientLabelsPlugin);
-
-    // ── Second X axis for hour labels ──────────────
-    var hourLabels = [];
-
-    function updateHourLabels(labels) {
-        hourLabels = labels || [];
-        if (chart) {
-            chart.options.scales.x.ticks.callback = function(val) {
-                var idx = Math.round(val);
-                return (idx >= 0 && idx < hourLabels.length) ? hourLabels[idx] : '';
-            };
-        }
-    }
-
-    // ── Update chart with new data ─────────────────
     function updateChart(data) {
         var clients = data.clients || [];
         _timelineClients = clients;
         var ipColorMap = buildIpColorMap(clients);
-        var labels = clients.map(function() { return ''; });
         var datasets = buildDatasets(clients, ipColorMap);
 
         clientLabelsPlugin._labels = clients.map(function(c) { return c.label; });
@@ -258,21 +270,18 @@
         });
 
         var canvas = document.getElementById('timeline-chart');
-        var rowHeight = 24;
-        canvas.parentElement.style.minHeight = Math.max(80, clients.length * rowHeight + 50) + 'px';
+        sizeChartContainer(canvas, clients.length);
 
         if (!chart) {
             chart = new Chart(canvas.getContext('2d'), chartConfig);
         }
 
-        updateHourLabels(data.hour_labels);
-
-        chart.data.labels = labels;
+        chartConfig._setHourLabels(data.hour_labels);
+        chart.data.labels = clients.map(function() { return ''; });
         chart.data.datasets = datasets;
         chart.update();
     }
 
-    // ── Fetch and render ───────────────────────────
     function fetchAndRender() {
         var dot = document.getElementById('ad-dot');
         var status = document.getElementById('ad-status');
@@ -291,7 +300,6 @@
             });
     }
 
-    // ── Initial load ───────────────────────────────
     fetchAndRender();
 })();
 
@@ -301,6 +309,7 @@
 
     var BOT_API_URL = '{% url "analytics_bots_timeline_api" %}';
     var botChart = null;
+    var _botsList = [];
 
     var BOT_COLORS = [
         'rgb(248, 113, 113)',  // red
@@ -313,141 +322,56 @@
         'rgb(244, 114, 182)',  // pink
     ];
 
-    // One scatter dataset per bot — each hit is a point {x: hour, y: botIndex}
     function buildBotDatasets(bots) {
-        return bots.map(function(bot, bi) {
-            return {
-                data: bot.hits.map(function(h) { return { x: h, y: bi }; }),
-                backgroundColor: BOT_COLORS[bi % BOT_COLORS.length],
-                pointStyle: 'rectRot',
-                pointRadius: 0.5,
-                pointHoverRadius: 0.5,
-                pointBorderWidth: 0,
-                pointHoverBorderWidth: 0,
-                _botMeta: bot,
-            };
-        });
+        var maxRanges = Math.max.apply(null, bots.map(function(b) { return b.sessions.length; }).concat(0));
+        var datasets = [];
+        for (var ri = 0; ri < maxRanges; ri++) {
+            var barData = [];
+            var bgColors = [];
+            bots.forEach(function(bot, bi) {
+                var s = bot.sessions[ri];
+                barData.push(s || null);
+                bgColors.push(s ? BOT_COLORS[bi % BOT_COLORS.length] : 'transparent');
+            });
+            datasets.push(Object.assign({ data: barData, backgroundColor: bgColors }, BAR_STYLE));
+        }
+        return datasets;
     }
 
-    // Row highlight plugin
-    var botRowHighlight = {
-        id: 'botRowHighlight',
-        beforeDatasetsDraw: function(chart) {
-            var active = chart.getActiveElements();
-            if (!active.length) return;
-            var ctx = chart.ctx;
-            var yScale = chart.scales.y;
-            var yVal = active[0].element.y;
-            var step = bots_count > 1 ? (yScale.getPixelForValue(1) - yScale.getPixelForValue(0)) : 30;
-            ctx.save();
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
-            ctx.fillRect(chart.chartArea.left, yVal - step / 2, chart.chartArea.right - chart.chartArea.left, step);
-            ctx.restore();
-        }
-    };
+    var botLabelsPlugin = makeLabelsPlugin('botLabels', '#a6adc8');
 
-    var botHourLabels = [];
-    var bots_count = 0;
-    var _botsList = [];  // store for click handler
-
-    var botChartConfig = {
-        type: 'scatter',
-        data: { datasets: [] },
-        plugins: [botRowHighlight],
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            animation: false,
-            interaction: { mode: 'nearest', axis: 'y', intersect: false },
-            onClick: function(evt, elements) {
-                if (!elements.length) return;
-                var dsIdx = elements[0].datasetIndex;
-                if (dsIdx >= 0 && dsIdx < _botsList.length) {
-                    openBotHistory(_botsList[dsIdx].name);
-                }
-            },
-            plugins: {
-                legend: { display: false },
-                tooltip: { enabled: false }
-            },
-            scales: {
-                x: {
-                    min: 0, max: 24,
-                    ticks: {
-                        stepSize: 1,
-                        color: '#6c7086',
-                        font: { size: 10 },
-                        callback: function(val) {
-                            var idx = Math.round(val);
-                            return (idx >= 0 && idx < botHourLabels.length) ? botHourLabels[idx] : '';
-                        }
-                    },
-                    grid: { color: 'rgba(108, 112, 134, 0.15)' },
-                    border: { color: 'rgba(108, 112, 134, 0.2)' }
-                },
-                y: {
-                    reverse: true,
-                    min: -0.5,
-                    ticks: {
-                        stepSize: 1,
-                        color: '#a6adc8',
-                        font: { size: 12, family: 'monospace' },
-                        callback: function() { return ''; }
-                    },
-                    grid: { display: false },
-                    border: { display: false },
-                    afterFit: function(scale) { scale.width = 0; }
-                }
+    var botChartConfig = makeChartConfig(
+        function(evt, elements) {
+            if (!elements.length) return;
+            var idx = elements[0].index;
+            if (idx >= 0 && idx < _botsList.length) {
+                openBotHistory(_botsList[idx].name);
             }
-        }
-    };
-
-    // Custom plugin to draw bot labels on the Y axis
-    var botLabelsPlugin = {
-        id: 'botLabels',
-        _labels: [],
-        afterDraw: function(chart) {
-            if (!this._labels.length) return;
-            var ctx = chart.ctx;
-            var yScale = chart.scales.y;
-            ctx.save();
-            ctx.textAlign = 'left';
-            ctx.textBaseline = 'middle';
-            ctx.font = '12px monospace';
-            this._labels.forEach(function(lbl, i) {
-                var y = yScale.getPixelForValue(i);
-                ctx.fillStyle = BOT_COLORS[i % BOT_COLORS.length];
-                ctx.fillText(lbl, chart.chartArea.left + 6, y);
-            });
-            ctx.restore();
-        }
-    };
-    botChartConfig.plugins.push(botLabelsPlugin);
+        },
+        [makeRowHighlight('botRowHighlight'), botLabelsPlugin]
+    );
 
     function updateBotChart(data) {
         var bots = data.bots || [];
-        bots_count = bots.length;
         _botsList = bots;
 
         botLabelsPlugin._labels = bots.map(function(b) {
             return String(b.count).padStart(5, ' ') + '  ' + b.name;
         });
-
-        var datasets = buildBotDatasets(bots);
-        botHourLabels = data.hour_labels || [];
+        botLabelsPlugin._colors = bots.map(function(b, i) {
+            return BOT_COLORS[i % BOT_COLORS.length];
+        });
 
         var canvas = document.getElementById('bot-timeline-chart');
-        var rowHeight = 24;
-        canvas.parentElement.style.minHeight = Math.max(80, bots.length * rowHeight + 50) + 'px';
-
-        botChartConfig.options.scales.y.max = Math.max(bots.length - 0.5, 0.5);
+        sizeChartContainer(canvas, bots.length);
 
         if (!botChart) {
             botChart = new Chart(canvas.getContext('2d'), botChartConfig);
         }
 
-        botChart.data.datasets = datasets;
-        botChart.options.scales.y.max = Math.max(bots.length - 0.5, 0.5);
+        botChartConfig._setHourLabels(data.hour_labels);
+        botChart.data.labels = bots.map(function() { return ''; });
+        botChart.data.datasets = buildBotDatasets(bots);
         botChart.update();
     }
 
