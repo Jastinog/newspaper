@@ -217,10 +217,9 @@ def article_detail(request, pk, slug=""):
     cached = cache.get(cache_key)
 
     if cached is not None:
-        # cached = (canonical_slug, canonical_url, html_bytes)
-        cached_slug, canonical_url, html = cached
+        cached_slug, html = cached
         if cached_slug and cached_slug != slug:
-            return redirect(canonical_url, permanent=True)
+            return redirect(reverse("article_detail", kwargs={"pk": pk, "slug": cached_slug}), permanent=True)
         return HttpResponse(html)
 
     article = get_object_or_404(
@@ -244,7 +243,7 @@ def article_detail(request, pk, slug=""):
         seo["og_image"] = request.build_absolute_uri(hero_image.image.url)
 
     response = render(request, "news/article.html", {"article": article, "seo": seo, "hero_image": hero_image})
-    cache.set(cache_key, (article.slug, article.get_absolute_url(), response.content), 60 * 60)
+    cache.set(cache_key, (article.slug, response.content), 60 * 60)
     return response
 
 
@@ -467,10 +466,21 @@ def _filter_options():
     )
 
 
-def _feeds_list_data(category_slug, country_code, lean, factuality, q):
-    """Build feeds list with article counts and thumbnails (cacheable)."""
-    qs = Feed.objects.filter(enabled=True).select_related("category", "country", "language")
+def feeds_list(request):
+    """All feeds with filters: category, country, lean, factuality."""
+    category_slug = request.GET.get("category", "")
+    country_code = request.GET.get("country", "")
+    lean = request.GET.get("lean", "")
+    factuality = request.GET.get("factuality", "")
+    q = request.GET.get("q", "").strip()
+    lang = get_language() or "en"
 
+    cache_key = f"feeds_list:{category_slug}:{country_code}:{lean}:{factuality}:{q}:{lang}"
+    html = cache.get(cache_key)
+    if html is not None:
+        return HttpResponse(html)
+
+    qs = Feed.objects.filter(enabled=True).select_related("category", "country", "language")
     if category_slug:
         qs = qs.filter(category__slug=category_slug)
     if country_code:
@@ -500,24 +510,6 @@ def _feeds_list_data(category_slug, country_code, lean, factuality, q):
         rel = feed_image_map.get(feed.pk, "")
         feed.thumb = f"{settings.MEDIA_URL}{rel}" if rel else ""
 
-    return feeds
-
-
-def feeds_list(request):
-    """All feeds with filters: category, country, lean, factuality."""
-    category_slug = request.GET.get("category", "")
-    country_code = request.GET.get("country", "")
-    lean = request.GET.get("lean", "")
-    factuality = request.GET.get("factuality", "")
-    q = request.GET.get("q", "").strip()
-    lang = get_language() or "en"
-
-    cache_key = f"feeds_list:{category_slug}:{country_code}:{lean}:{factuality}:{q}:{lang}"
-    html = cache.get(cache_key)
-    if html is not None:
-        return HttpResponse(html)
-
-    feeds = _feeds_list_data(category_slug, country_code, lean, factuality, q)
     categories, countries = _filter_options()
 
     seo = {
