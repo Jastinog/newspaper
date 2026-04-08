@@ -406,6 +406,7 @@ def research(request, item_id):
         "description": _og_description(dive.subtitle) or dive.title,
         "canonical": request.build_absolute_uri(request.get_full_path()),
         "og_type": "article",
+        "og_image": request.build_absolute_uri(hero_image) if hero_image else "",
     }
 
     response = render(request, "news/research.html", {
