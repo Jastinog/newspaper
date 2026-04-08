@@ -412,7 +412,7 @@
             })
             .linkWidth(1.2)
             .linkColor(linkColorByRelation)
-            .linkCurvature(0.4)
+            .linkCurvature(0)
             .linkDirectionalArrowLength(6)
             .linkDirectionalArrowRelPos(1)
             .linkDirectionalArrowColor(linkColorByRelation)
