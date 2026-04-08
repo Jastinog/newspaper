@@ -8,7 +8,7 @@ from django.utils import timezone
 
 from .models import Activity, Client, Session
 from .services import build_client_defaults, resolve_path
-from .utils import get_client_ip, parse_ua, resolve_geo
+from .utils import BOT_PATTERN, get_client_ip, parse_ua, resolve_geo
 
 logger = logging.getLogger(__name__)
 
@@ -43,26 +43,27 @@ class BotTrackingMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
+        ua_string = request.META.get("HTTP_USER_AGENT", "")[:500]
+        path = request.path
+
+        # parse_ua is expensive (250+ regexes); skip it for requests that
+        # won't render templates or need the full ua_info dict for tracking.
+        is_page_request = (
+            request.method in TRACKED_METHODS
+            and not any(path.startswith(p) for p in SKIP_PREFIXES)
+            and request.headers.get("X-Requested-With") != "XMLHttpRequest"
+        )
+
+        if is_page_request:
+            ua_info = parse_ua(ua_string)
+            request.is_bot = ua_info.get("is_bot", False)
+        else:
+            request.is_bot = bool(BOT_PATTERN.search(ua_string))
+            ua_info = None
+
         response = self.get_response(request)
 
-        # Only track GET/HEAD requests
-        if request.method not in TRACKED_METHODS:
-            return response
-
-        # Skip non-page paths
-        path = request.path
-        if any(path.startswith(prefix) for prefix in SKIP_PREFIXES):
-            return response
-
-        # Skip successful responses to AJAX/API-like requests
-        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-            return response
-
-        # Parse UA and only track bots
-        ua_string = request.META.get("HTTP_USER_AGENT", "")[:500]
-        ua_info = parse_ua(ua_string)
-
-        if not ua_info.get("is_bot", False):
+        if not is_page_request or not request.is_bot:
             return response
 
         # Extract from request now — the request object must not escape into the background thread

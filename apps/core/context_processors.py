@@ -37,3 +37,9 @@ def hreflang(request):
     result = {"hreflang_urls": urls}
     cache.set(cache_key, result, 60 * 60 * 24)
     return result
+
+
+def bot_context(request):
+    """Provide the matching base template for bot vs human rendering."""
+    is_bot = getattr(request, "is_bot", False)
+    return {"base_template": "news/base_bot.html" if is_bot else "news/base.html"}

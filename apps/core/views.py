@@ -22,6 +22,11 @@ SITE_NAME = _("Newspaper")
 SITE_DESCRIPTION = _("Daily AI-curated news digest from 100+ RSS sources worldwide")
 
 
+def _cache_suffix(request):
+    """Return ':bot' for bot requests to separate cached HTML variants."""
+    return ":bot" if getattr(request, "is_bot", False) else ""
+
+
 def _og_description(text, limit=200):
     """Collapse whitespace and truncate for use in og:description meta tag."""
     if not text:
@@ -213,7 +218,7 @@ def toggle_pin(request, slug):
 
 def article_detail(request, pk, slug=""):
     lang = get_language() or "en"
-    cache_key = f"article:{pk}:{lang}"
+    cache_key = f"article:{pk}:{lang}{_cache_suffix(request)}"
     cached = cache.get(cache_key)
 
     if cached is not None:
@@ -257,7 +262,7 @@ def article_detail_redirect(request, pk):
 def category_detail(request, slug):
     page_num = request.GET.get("page", "1")
     lang = get_language() or "en"
-    cache_key = f"category:{slug}:{page_num}:{lang}"
+    cache_key = f"category:{slug}:{page_num}:{lang}{_cache_suffix(request)}"
     html = cache.get(cache_key)
 
     if html is not None:
@@ -287,7 +292,7 @@ def category_detail(request, slug):
 
 def story_detail(request, item_id):
     current_lang = get_language() or "en"
-    cache_key = f"story:{item_id}:{current_lang}"
+    cache_key = f"story:{item_id}:{current_lang}{_cache_suffix(request)}"
     html = cache.get(cache_key)
 
     if html is not None:
@@ -366,7 +371,7 @@ def story_detail(request, item_id):
 
 def research(request, item_id):
     lang = get_language() or "en"
-    cache_key = f"research:{item_id}:{lang}"
+    cache_key = f"research:{item_id}:{lang}{_cache_suffix(request)}"
     html = cache.get(cache_key)
 
     if html is not None:
@@ -426,7 +431,7 @@ def search(request):
         sort = "date"
 
     lang = get_language() or "en"
-    cache_key = f"search:{hash(query)}:{sort}:{lang}"
+    cache_key = f"search:{hash(query)}:{sort}:{lang}{_cache_suffix(request)}"
     html = cache.get(cache_key)
     if html is not None:
         return HttpResponse(html)
@@ -475,7 +480,7 @@ def feeds_list(request):
     q = request.GET.get("q", "").strip()
     lang = get_language() or "en"
 
-    cache_key = f"feeds_list:{category_slug}:{country_code}:{lean}:{factuality}:{q}:{lang}"
+    cache_key = f"feeds_list:{category_slug}:{country_code}:{lean}:{factuality}:{q}:{lang}{_cache_suffix(request)}"
     html = cache.get(cache_key)
     if html is not None:
         return HttpResponse(html)
@@ -542,7 +547,7 @@ def feed_detail(request, pk):
     """Single feed with its articles, paginated."""
     page_num = request.GET.get("page", "1")
     lang = get_language() or "en"
-    cache_key = f"feed_detail:{pk}:{page_num}:{lang}"
+    cache_key = f"feed_detail:{pk}:{page_num}:{lang}{_cache_suffix(request)}"
     html = cache.get(cache_key)
 
     if html is not None:
@@ -584,7 +589,7 @@ def articles_list(request):
     page_num = request.GET.get("page", "1")
     lang = get_language() or "en"
 
-    cache_key = f"articles:{category_slug}:{feed_id}:{country_code}:{date_from}:{date_to}:{q}:{page_num}:{lang}"
+    cache_key = f"articles:{category_slug}:{feed_id}:{country_code}:{date_from}:{date_to}:{q}:{page_num}:{lang}{_cache_suffix(request)}"
     html = cache.get(cache_key)
     if html is not None:
         return HttpResponse(html)

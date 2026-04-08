@@ -361,6 +361,7 @@ def _empty_result(is_bot: bool, bot_name: str) -> dict:
     }
 
 
+@lru_cache(maxsize=512)
 def parse_ua(ua_string: str) -> dict:
     """Parse User-Agent string into device/browser/os info + bot identification."""
     bot_name = identify_bot(ua_string)

@@ -1,0 +1,28 @@
+{% load i18n static %}
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% include "news/_seo_head.html" %}
+
+    {% block json_ld %}{% endblock %}
+</head>
+<body>
+    <header>
+        <h1><a href="{% url 'index' %}">{% trans "Newspaper" %}</a></h1>
+        <nav>
+            <a href="{% url 'index' %}">{% trans "Digest" %}</a>
+            <a href="{% url 'articles_list' %}">{% trans "Articles" %}</a>
+            <a href="{% url 'feeds_list' %}">{% trans "Sources" %}</a>
+            <a href="{% url 'search' %}">{% trans "Search" %}</a>
+        </nav>
+    </header>
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+    <footer>
+        <p>{% trans "Newspaper" %} &mdash; {% trans "RSS aggregator" %}</p>
+    </footer>
+</body>
+</html>

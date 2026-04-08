@@ -4,33 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ seo.title|default:"Newspaper" }}</title>
-    <meta name="description" content="{{ seo.description|default:"Your daily news digest from 500+ sources worldwide. Key stories with credibility ratings, media bias spectrum, and in-depth research on every major event." }}">
-    {% if seo.canonical %}<link rel="canonical" href="{{ seo.canonical }}">{% endif %}
-
-    <!-- Hreflang alternates for multilingual SEO -->
-    {% for alt in hreflang_urls %}
-    <link rel="alternate" hreflang="{{ alt.lang }}" href="{{ alt.url }}">
-    {% endfor %}
-
-    <!-- Open Graph -->
-    <meta property="og:title" content="{{ seo.title|default:"Newspaper" }}">
-    <meta property="og:description" content="{{ seo.description|default:"Daily news digest from 500+ sources with credibility ratings and deep research" }}">
-    <meta property="og:type" content="{{ seo.og_type|default:"website" }}">
-    {% if seo.canonical %}<meta property="og:url" content="{{ seo.canonical }}">{% endif %}
-    <meta property="og:site_name" content="Newspaper">
-    {% if seo.og_image %}<meta property="og:image" content="{{ seo.og_image }}">{% endif %}
-    {% if seo.published_time %}<meta property="article:published_time" content="{{ seo.published_time }}">{% endif %}
-    {% if seo.section %}<meta property="article:section" content="{{ seo.section }}">{% endif %}
-
-    <!-- Twitter Card -->
-    <meta name="twitter:card" content="{% if seo.og_image %}summary_large_image{% else %}summary{% endif %}">
-    <meta name="twitter:title" content="{{ seo.title|default:"Newspaper" }}">
-    <meta name="twitter:description" content="{{ seo.description|default:"Daily news digest from 500+ sources with credibility ratings and deep research" }}">
-    {% if seo.og_image %}<meta name="twitter:image" content="{{ seo.og_image }}">{% endif %}
-
-    <!-- Favicon -->
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📰</text></svg>">
+    {% include "news/_seo_head.html" %}
 
     <!-- Fonts (non-blocking) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
