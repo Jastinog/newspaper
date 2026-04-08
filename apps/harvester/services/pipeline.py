@@ -26,12 +26,12 @@ from .throttle import acquire_domain, release_domain
 logger = logging.getLogger(__name__)
 
 IDLE_SLEEP = 1        # seconds – quick re-check when no work found
-WORK_SLEEP = 0.05     # seconds – minimal pause between busy cycles
 ERROR_SLEEP = 10
 FEED_INTERVAL_MINUTES = 10
 CANDIDATE_POOL = 30
 DAYS_LOOKBACK = 30
-MAX_WORKERS = 6       # concurrent stage threads
+DEFAULT_MAX_WORKERS = 2
+DEFAULT_STAGE_DELAY = 0.5
 
 _instance: "HarvestManager | None" = None
 
@@ -100,8 +100,9 @@ class HarvestManager:
     def __init__(self):
         global _instance
         self._og_source = None
+        self._current_workers = DEFAULT_MAX_WORKERS
         self._executor = ThreadPoolExecutor(
-            max_workers=MAX_WORKERS, thread_name_prefix="harvest",
+            max_workers=self._current_workers, thread_name_prefix="harvest",
         )
         self._last_cleanup = 0.0
         self._running: dict[str, Future] = {}
@@ -112,25 +113,38 @@ class HarvestManager:
     def is_active(self) -> bool:
         return PipelineSettings.load().is_active
 
+    def _ensure_pool_size(self, settings):
+        """Recreate thread pool if max_workers changed in admin."""
+        desired = max(1, min(settings.max_workers, 6))
+        if desired != self._current_workers and not self._running:
+            self._executor.shutdown(wait=False)
+            self._current_workers = desired
+            self._executor = ThreadPoolExecutor(
+                max_workers=desired, thread_name_prefix="harvest",
+            )
+            logger.info("Pipeline pool resized to %d workers", desired)
+
     def run(self):
         logger.info("HarvestManager started")
         while True:
             try:
-                if not self.is_active:
+                s = PipelineSettings.load()
+                if not s.is_active:
                     time.sleep(IDLE_SLEEP)
                     continue
-                self.dispatch()
-                time.sleep(WORK_SLEEP if self._running else IDLE_SLEEP)
+                self.dispatch(s)
+                delay = s.stage_delay if self._running else IDLE_SLEEP
+                time.sleep(delay)
             except Exception:
                 logger.exception("HarvestManager error")
                 time.sleep(ERROR_SLEEP)
 
-    def dispatch(self) -> None:
+    def dispatch(self, s) -> None:
         """Submit enabled stages and collect results without blocking.
 
         Each stage runs independently: as soon as one finishes, it is
-        re-submitted on the next tick (~50 ms) without waiting for the others.
-        Stages that found no work back off for IDLE_SLEEP before retrying.
+        re-submitted on the next tick. Stages that found no work back off
+        for IDLE_SLEEP before retrying.
         """
         now_mono = time.monotonic()
         if now_mono - self._last_cleanup > 300:
@@ -148,8 +162,8 @@ class HarvestManager:
                     pass
                 del self._running[stage]
 
-        # Submit new work for stages that aren't currently running
-        s = PipelineSettings.load()
+        # Resize pool after collecting futures so self._running is accurate
+        self._ensure_pool_size(s)
 
         for stage, enabled, fn, args, kwargs in [
             (STAGE_EMBED, s.enable_embedding,

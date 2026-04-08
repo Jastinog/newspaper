@@ -1,6 +1,7 @@
 import threading
 import time
 
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
 
@@ -102,6 +103,16 @@ class PipelineSettings(models.Model):
     """Singleton (pk=1): controls the entire harvester pipeline."""
 
     is_active = models.BooleanField(default=True, verbose_name="Pipeline active")
+    max_workers = models.PositiveSmallIntegerField(
+        default=2, verbose_name="Max worker threads",
+        validators=[MinValueValidator(1), MaxValueValidator(6)],
+        help_text="Concurrent pipeline threads (1 = sequential, 2-6 = parallel). Lower = less CPU.",
+    )
+    stage_delay = models.FloatField(
+        default=0.5, verbose_name="Delay between tasks (sec)",
+        validators=[MinValueValidator(0.05), MaxValueValidator(60.0)],
+        help_text="Pause between pipeline ticks (0.05–60s). Higher = less CPU load.",
+    )
     enable_feed_fetching = models.BooleanField(default=True, verbose_name="Feed fetching")
     enable_rss_image_download = models.BooleanField(default=True, verbose_name="RSS image download")
     enable_content_extraction = models.BooleanField(default=True, verbose_name="Content extraction")

@@ -145,6 +145,7 @@ class PipelineSettingsAdmin(ModelAdmin):
     list_display = ["__str__", "is_active", "updated_at"]
     fieldsets = [
         ("Master", {"fields": ["is_active"]}),
+        ("Performance", {"fields": ["max_workers", "stage_delay"]}),
         ("Stages", {"fields": [name for name, _ in STAGE_FIELDS]}),
     ]
 
