@@ -33,26 +33,30 @@
     </div>
 
     {% if sources %}
-    <div class="research-sources">
+    <div class="article-source-section">
         <h2>{% trans "Sources" %}</h2>
-        <ul>
+        <div class="article-source-list">
         {% for source in sources %}
-            <li>
-                <span class="source-text">
-                    <a href="{{ source.article.get_absolute_url }}">{{ source.article.title }}</a>
-                    <span class="source-feed">&mdash; {{ source.article.feed.title }}{% if source.article.feed.lean %} <span class="lean-badge lean-{{ source.article.feed.lean }}">{{ source.article.feed.get_lean_display }}</span>{% endif %}</span>
-                </span>
-                <span class="source-relevance">
+            <a class="article-source-card" href="{{ source.article.get_absolute_url }}">
+                {% if source.image_url %}<img class="article-source-img" src="{{ source.image_url }}" alt="" loading="lazy">{% else %}<span class="article-source-img article-source-img--placeholder"><i class="far fa-newspaper"></i></span>{% endif %}
+                <div class="article-source-text">
+                    <span class="article-source-title">{{ source.article.title }}</span>
+                    <span class="article-source-meta">
+                        {{ source.article.feed.title }}{% if source.article.feed.lean %} <span class="lean-badge lean-{{ source.article.feed.lean }}">{{ source.article.feed.get_lean_display }}</span>{% endif %}
+                    </span>
+                    {% if source.article.published %}<span class="article-source-date">{{ source.article.published|date:"j M Y, H:i" }}</span>{% endif %}
+                </div>
+                <span class="article-source-relevance">
                     <span class="relevance-bar" style="--fill:{{ source.relevance_pct }}%"></span>
                     {{ source.relevance_pct }}%
                 </span>
-            </li>
+            </a>
         {% endfor %}
-        </ul>
+        </div>
     </div>
     {% endif %}
 
-    <div class="research-back">
+    <div class="article-actions">
         <a href="{% url 'index' %}">&larr; {% trans "Back to digest" %}</a>
     </div>
 </article>

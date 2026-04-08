@@ -59,110 +59,22 @@
     font-style: italic;
 }
 
-/* Hero image */
-.story-hero {
-    max-width: 680px;
-    margin: 0 auto 2rem;
-}
-
-.story-hero img {
-    width: 100%;
-    aspect-ratio: 16 / 9;
-    object-fit: cover;
-    display: block;
-}
-
-/* Sources section */
-.research-sources {
-    max-width: 680px;
-    margin: 2.5rem auto 0;
-    padding-top: 1.5rem;
-    border-top: 2px solid var(--border);
-}
-
-.research-sources h2 {
-    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--fg-muted);
-    margin-bottom: 0.8rem;
-}
-
-.research-sources ul {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-}
-
-.research-sources li {
-    display: flex;
-    align-items: baseline;
-    gap: 0.6rem;
-    padding: 0.5rem 0;
-    border-bottom: 1px solid var(--border-faint);
-    font-size: 0.9rem;
-}
-
-.research-sources li:last-child {
-    border-bottom: none;
-}
-
-.source-text {
-    flex: 1;
-    min-width: 0;
-}
-
-.research-sources li a {
-    color: var(--link);
-    text-decoration: none;
-}
-.research-sources li a:hover {
-    text-decoration: underline;
-}
-
-.research-sources .source-feed {
-    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
-    font-size: 0.7rem;
-    color: var(--fg-faint);
-}
-
-.lean-badge {
-    display: inline-block;
-    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
-    font-size: 0.55rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    padding: 0.1rem 0.35rem;
-    border-radius: 2px;
-    vertical-align: middle;
-    margin-left: 0.3rem;
-    color: #fff;
-}
-.lean-badge.lean-left { background: #2962ff; }
-.lean-badge.lean-center_left { background: #42a5f5; }
-.lean-badge.lean-center { background: #9e9e9e; }
-.lean-badge.lean-center_right { background: #ef6c00; }
-.lean-badge.lean-right { background: #c62828; }
-
-.source-relevance {
+/* Relevance indicator (research-specific addition to shared source cards) */
+.article-source-relevance {
     flex-shrink: 0;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.4rem;
     font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
     color: var(--fg-muted);
-    min-width: 7rem;
-    justify-content: flex-end;
+    align-self: center;
 }
 
 .relevance-bar {
-    width: 5rem;
+    width: 3rem;
     height: 4px;
     border-radius: 2px;
     background: linear-gradient(
@@ -170,28 +82,4 @@
         var(--accent) var(--fill),
         var(--border) var(--fill)
     );
-}
-
-.research-back {
-    max-width: 680px;
-    margin: 2rem auto 0;
-    padding-top: 1rem;
-    border-top: 1px solid var(--border);
-    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-
-.research-back a {
-    color: var(--link);
-    text-decoration: none;
-}
-.research-back a:hover {
-    text-decoration: underline;
-}
-
-/* Responsive */
-@media (max-width: 480px) {
-    .research-sources { margin-top: 1.5rem; padding-top: 1rem; }
 }

@@ -40,18 +40,18 @@
     </div>
 
     {% if source_articles %}
-    <div class="story-sources">
+    <div class="article-source-section">
         <h2>{% trans "Sources" %} ({{ source_articles|length }})</h2>
-        <div class="story-sources-list">
+        <div class="article-source-list">
             {% for src in source_articles %}
-            <a class="story-source-card" href="{{ src.absolute_url }}">
-                {% if src.image_url %}<img class="story-source-img" src="{{ src.image_url }}" alt="" loading="lazy">{% else %}<span class="story-source-img story-source-img--placeholder"><i class="far fa-newspaper"></i></span>{% endif %}
-                <div class="story-source-text">
-                    <span class="story-source-title">{{ src.title }}</span>
-                    <span class="story-source-meta">
+            <a class="article-source-card" href="{{ src.absolute_url }}">
+                {% if src.image_url %}<img class="article-source-img" src="{{ src.image_url }}" alt="" loading="lazy">{% else %}<span class="article-source-img article-source-img--placeholder"><i class="far fa-newspaper"></i></span>{% endif %}
+                <div class="article-source-text">
+                    <span class="article-source-title">{{ src.title }}</span>
+                    <span class="article-source-meta">
                         {{ src.feed_title }}{% if src.feed_lean %} <span class="lean-badge lean-{{ src.feed_lean }}">{{ src.feed_lean_display }}</span>{% endif %}
                     </span>
-                    {% if src.published %}<span class="story-source-date">{{ src.published|date:"j M Y, H:i" }}</span>{% endif %}
+                    {% if src.published %}<span class="article-source-date">{{ src.published|date:"j M Y, H:i" }}</span>{% endif %}
                 </div>
             </a>
             {% endfor %}

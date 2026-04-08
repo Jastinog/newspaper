@@ -396,7 +396,10 @@ def research(request, item_id):
         .order_by("order")
     )
 
-    hero_image = next(filter(None, (get_article_image_url(s.article) for s in sources)), "")
+    for s in sources:
+        s.image_url = get_article_image_url(s.article)
+
+    hero_image = next(filter(None, (s.image_url for s in sources)), "")
 
     seo = {
         "title": f"{dive.title} — {SITE_NAME}",

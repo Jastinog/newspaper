@@ -16,17 +16,8 @@
     vertical-align: middle;
 }
 
-/* Hero image */
-.story-hero {
-    max-width: 680px;
-    margin: 0 auto 2rem;
-}
-
+/* Story hero: add pixelated rendering on top of shared .story-hero from article.css */
 .story-hero img {
-    width: 100%;
-    aspect-ratio: 16 / 9;
-    object-fit: cover;
-    display: block;
     image-rendering: pixelated;
 }
 
@@ -88,116 +79,10 @@
     color: var(--accent);
 }
 
-/* Sources section */
-.story-sources {
-    max-width: 680px;
-    margin: 2.5rem auto 0;
-    padding-top: 1.5rem;
-    border-top: 2px solid var(--border);
-}
-
-.story-sources h2 {
-    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--fg-muted);
-    margin-bottom: 0.8rem;
-}
-
-.story-sources-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-}
-
-.story-source-card {
-    display: flex;
-    gap: 0.8rem;
-    padding: 0.7rem 0;
-    border-bottom: 1px solid var(--border-faint);
-    text-decoration: none;
-    color: var(--fg);
-    transition: background 0.15s;
-}
-.story-source-card:last-child {
-    border-bottom: none;
-}
-.story-source-card:hover {
-    background: rgba(var(--fg-rgb), 0.03);
-}
-
-.story-source-img {
-    width: 100px;
-    height: 66px;
-    object-fit: cover;
-    flex-shrink: 0;
-    background: var(--border-faint);
+/* Story source images: add pixelated rendering */
+.article-source-img {
     image-rendering: pixelated;
 }
-.story-source-img--placeholder {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--fg-faint);
-    font-size: 1.4rem;
-    opacity: 0.4;
-}
-
-.story-source-text {
-    display: flex;
-    flex-direction: column;
-    gap: 0.2rem;
-    min-width: 0;
-}
-
-.story-source-title {
-    font-family: "PT Serif", Georgia, serif;
-    font-size: 0.9rem;
-    font-weight: 600;
-    line-height: 1.35;
-    color: var(--fg);
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-
-.story-source-meta {
-    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
-    font-size: 0.7rem;
-    font-weight: 600;
-    color: var(--fg-faint);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-}
-
-.story-source-date {
-    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
-    font-size: 0.65rem;
-    color: var(--fg-faint);
-}
-
-/* Lean badges (reuse from research.css) */
-.lean-badge {
-    display: inline-block;
-    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
-    font-size: 0.55rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    padding: 0.1rem 0.35rem;
-    border-radius: 2px;
-    vertical-align: middle;
-    margin-left: 0.3rem;
-    color: #fff;
-}
-.lean-badge.lean-left { background: #2962ff; }
-.lean-badge.lean-center_left { background: #42a5f5; }
-.lean-badge.lean-center { background: #9e9e9e; }
-.lean-badge.lean-center_right { background: #ef6c00; }
-.lean-badge.lean-right { background: #c62828; }
 
 /* More from section */
 .story-more-section {
@@ -234,10 +119,6 @@
 @media (max-width: 480px) {
     .story-hero {
         margin-bottom: 1.2rem;
-    }
-    .story-source-img {
-        width: 72px;
-        height: 48px;
     }
     .story-research-link {
         margin: 1rem auto;
