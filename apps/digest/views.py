@@ -10,7 +10,7 @@ from apps.core.services.utils import get_article_image_url
 from apps.feed.models import Article, ArticleChunk, ArticleImage
 from apps.research.services.search import SimilaritySearch
 
-from .models import DigestItem
+from .models import DigestItem, DigestItemTranslation, DigestSectionTranslation
 
 
 # ── Sources API ──────────────────────────────────────────
@@ -134,7 +134,14 @@ def similar_items_api(request, item_id):
         .exclude(id=item.id)
         .select_related("digest", "section", "image")
         .prefetch_related(
-            "translations",
+            Prefetch(
+                "translations",
+                queryset=DigestItemTranslation.objects.select_related("language"),
+            ),
+            Prefetch(
+                "section__translations",
+                queryset=DigestSectionTranslation.objects.select_related("language"),
+            ),
             Prefetch(
                 "articles",
                 queryset=Article.objects.select_related("feed").prefetch_related(_primary_image_prefetch()),
