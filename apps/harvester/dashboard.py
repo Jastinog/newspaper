@@ -473,36 +473,22 @@ def build_harvester_context(request):
     def _pct(done):
         return round(done / pipe_total * 100) if pipe_total else 0
 
-    queue_stages = [
-        {
-            "label": "RSS Images",
-            "done": pipe_qs.filter(rss_images_at__isnull=False).count(),
-            "color": "rgb(234, 179, 8)",
-        },
-        {
-            "label": "Extraction",
-            "done": pipe_qs.filter(content_extracted_at__isnull=False).count(),
-            "color": "rgb(239, 68, 68)",
-        },
-        {
-            "label": "OG Images",
-            "done": pipe_qs.filter(og_images_at__isnull=False).count(),
-            "color": "rgb(99, 102, 241)",
-        },
-        {
-            "label": "Embedding",
-            "done": pipe_qs.filter(embedded_at__isnull=False).count(),
-            "color": "rgb(34, 197, 94)",
-        },
-        {
-            "label": "Completed",
-            "done": pipe_qs.filter(completed_at__isnull=False).count(),
-            "color": "rgb(16, 185, 129)",
-        },
+    stage_defs = [
+        ("RSS Images",  "rss_images_at",       YELLOW[0]),
+        ("Extraction",  "content_extracted_at", RED[0]),
+        ("OG Images",   "og_images_at",         INDIGO[0]),
+        ("Embedding",   "embedded_at",          GREEN[0]),
+        ("Completed",   "completed_at",         "rgb(16, 185, 129)"),
     ]
-    for s in queue_stages:
-        s["pct"] = _pct(s["done"])
-        s["remaining"] = pipe_total - s["done"]
+    queue_stages = []
+    for label, field, color in stage_defs:
+        done = pipe_qs.filter(**{f"{field}__isnull": False}).count()
+        queue_stages.append({
+            "label": label,
+            "done": done,
+            "pct": _pct(done),
+            "color": color,
+        })
 
     # ── Pipeline state ────────────────────────────────────────
     from apps.harvester.services.pipeline import get_manager
