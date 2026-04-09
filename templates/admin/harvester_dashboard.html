@@ -291,6 +291,50 @@
     {% endcomponent %}
 </div>
 
+{# --- Processing Queue --- #}
+<div class="mb-8">
+    {% component "unfold/components/card.html" with title="Processing Queue" %}
+    <div class="space-y-4">
+        {# Horizontal stacked bar #}
+        <div id="wrap-queue-chart" class="relative w-full">
+            <canvas id="queue-canvas" height="48"></canvas>
+        </div>
+        {# Legend with numbers #}
+        <div class="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+            <div class="flex items-center gap-2">
+                <span class="inline-block w-3 h-3 rounded-sm flex-shrink-0" style="background: rgba(156,163,175,0.7)"></span>
+                <span class="text-gray-600 dark:text-gray-400">No Pipeline</span>
+                <span id="queue-n-nopipe" class="font-semibold text-gray-800 dark:text-gray-200">{{ queue_no_pipeline }}</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="inline-block w-3 h-3 rounded-sm flex-shrink-0" style="background: rgba(234,179,8,0.7)"></span>
+                <span class="text-gray-600 dark:text-gray-400">RSS Images</span>
+                <span id="queue-n-rss" class="font-semibold text-gray-800 dark:text-gray-200">{{ queue_rss_img }}</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="inline-block w-3 h-3 rounded-sm flex-shrink-0" style="background: rgba(239,68,68,0.7)"></span>
+                <span class="text-gray-600 dark:text-gray-400">Extraction</span>
+                <span id="queue-n-extract" class="font-semibold text-gray-800 dark:text-gray-200">{{ queue_extract }}</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="inline-block w-3 h-3 rounded-sm flex-shrink-0" style="background: rgba(99,102,241,0.7)"></span>
+                <span class="text-gray-600 dark:text-gray-400">OG Images</span>
+                <span id="queue-n-og" class="font-semibold text-gray-800 dark:text-gray-200">{{ queue_og_img }}</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="inline-block w-3 h-3 rounded-sm flex-shrink-0" style="background: rgba(34,197,94,0.7)"></span>
+                <span class="text-gray-600 dark:text-gray-400">Embedding</span>
+                <span id="queue-n-embed" class="font-semibold text-gray-800 dark:text-gray-200">{{ queue_embed }}</span>
+            </div>
+            <div class="flex items-center gap-2 ml-auto">
+                <span class="text-gray-500 dark:text-gray-400">Total:</span>
+                <span id="queue-n-total" class="font-bold text-gray-800 dark:text-gray-200">{{ queue_total }}</span>
+            </div>
+        </div>
+    </div>
+    {% endcomponent %}
+</div>
+
 {# --- Real-time: last 60 minutes --- #}
 <h2 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">Real-time (last 60 minutes)</h2>
 
@@ -729,6 +773,23 @@ function updatePipelineUI(active, running) {
                 updateChart(wrapId, data[CHART_MAP[wrapId]]);
             }
 
+            // Queue chart
+            if (queueChart && data.queue_chart) {
+                var qd = JSON.parse(data.queue_chart);
+                qd.datasets.forEach(function(ds, i) {
+                    if (queueChart.data.datasets[i]) {
+                        queueChart.data.datasets[i].data = ds.data;
+                    }
+                });
+                queueChart.update("none");
+            }
+            updateKPI("queue-n-nopipe", data.queue_no_pipeline);
+            updateKPI("queue-n-rss", data.queue_rss_img);
+            updateKPI("queue-n-extract", data.queue_extract);
+            updateKPI("queue-n-og", data.queue_og_img);
+            updateKPI("queue-n-embed", data.queue_embed);
+            updateKPI("queue-n-total", data.queue_total);
+
             // Timeline
             if (data.timeline_data) renderTimeline(data.timeline_data);
 
@@ -757,6 +818,42 @@ function updatePipelineUI(active, running) {
     }
 
     setInterval(refresh, INTERVAL);
+})();
+
+/* ── Queue chart (horizontal stacked bar) ──────────────── */
+var queueChart = null;
+(function() {
+    var ctx = document.getElementById("queue-canvas");
+    if (!ctx) return;
+    var data = {{ queue_chart|safe }};
+    queueChart = new Chart(ctx, {
+        type: "bar",
+        data: data,
+        options: {
+            indexAxis: "y",
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: false,
+            barPercentage: 0.6,
+            datasets: {bar: {borderRadius: 4, borderWidth: 0, borderSkipped: false}},
+            scales: {
+                x: {stacked: true, display: false},
+                y: {stacked: true, display: false},
+            },
+            plugins: {
+                legend: {display: false},
+                tooltip: {
+                    mode: "index",
+                    callbacks: {
+                        title: function() { return "Pending"; },
+                        label: function(ctx) {
+                            return ctx.dataset.label + ": " + ctx.raw;
+                        },
+                    },
+                },
+            },
+        },
+    });
 })();
 
 /* ── Timeline renderer ──────────────────────────────────── */

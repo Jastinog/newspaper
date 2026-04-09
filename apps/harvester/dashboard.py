@@ -463,6 +463,37 @@ def build_harvester_context(request):
     digest_processing = digest_no_pipeline + digest_pending_extract + digest_pending_embed
     digest_pct = round(digest_ready / window_total * 100) if window_total > 0 else 0
 
+    # ── Processing queue (backlog per stage) ────────────────────
+    cutoff_30d = now - timedelta(days=30)
+    pipe_qs = ArticlePipeline.objects.filter(
+        article__published__gte=cutoff_30d,
+        completed_at__isnull=True,
+    )
+    queue_no_pipeline = Article.objects.filter(
+        published__gte=cutoff_30d, pipeline__isnull=True,
+    ).count()
+    queue_rss_img = pipe_qs.filter(rss_images_at__isnull=True).count()
+    queue_extract = pipe_qs.filter(content_extracted_at__isnull=True).count()
+    queue_og_img = pipe_qs.filter(
+        content_extracted_at__isnull=False, og_images_at__isnull=True,
+    ).count()
+    queue_embed = pipe_qs.filter(
+        content_extracted_at__isnull=False, embedded_at__isnull=True,
+    ).exclude(article__content="").count()
+
+    queue_stages = [
+        ("No Pipeline", queue_no_pipeline, GRAY),
+        ("RSS Images",  queue_rss_img,     YELLOW),
+        ("Extraction",  queue_extract,     RED),
+        ("OG Images",   queue_og_img,      INDIGO),
+        ("Embedding",   queue_embed,       GREEN),
+    ]
+    queue_chart = _chart(["Processing Queue"], [
+        _bar_ds(label, [count], color, stack="q")
+        for label, count, color in queue_stages
+    ])
+    queue_total = sum(count for _, count, _ in queue_stages)
+
     # ── Pipeline state ────────────────────────────────────────
     from apps.harvester.services.pipeline import get_manager
     ps = PipelineSettings.load()
@@ -503,6 +534,14 @@ def build_harvester_context(request):
         # Tables
         "problem_feeds": problem_feeds,
         "recent_errors": recent_errors,
+        # Queue
+        "queue_chart": queue_chart,
+        "queue_total": queue_total,
+        "queue_no_pipeline": queue_no_pipeline,
+        "queue_rss_img": queue_rss_img,
+        "queue_extract": queue_extract,
+        "queue_og_img": queue_og_img,
+        "queue_embed": queue_embed,
         # Timeline
         "timeline_data": _build_timeline_data(now),
         # Digest readiness
