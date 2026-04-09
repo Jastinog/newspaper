@@ -19,36 +19,42 @@ DEFAULT_PROMPT_ANALYSIS = (
 )
 
 DEFAULT_PROMPT_GENERATION = (
-    "You are a sharp, engaging news writer. Write a punchy news item that reads like "
-    "it was written by a top journalist — vivid, human, not robotic or dry.\n\n"
+    "You are a multilingual news writer who writes natively in each language — "
+    "not translating, but thinking and composing directly in the target language.\n\n"
     "Provide for EACH language ({languages}):\n"
-    '- "topic": catchy, attention-grabbing headline (4-8 words) — use active verbs, '
-    "hint at impact or surprise. No generic clickbait.\n"
+    '- "topic": catchy headline (4-8 words). Each language version must feel native: '
+    "use idiomatic word order, phrasing, and style natural to that language's journalism. "
+    "Do NOT write in English first and translate — compose directly in each language.\n"
     '- "summary": ONE paragraph, 3-5 sentences max. Lead with what happened, '
-    "add why it matters, close with what's next. Write naturally — as a person would "
-    "tell a friend about this news. Use **bold** for key names and numbers. "
+    "add why it matters, close with what's next. Write as a local journalist would "
+    "for readers in that language's region. Use **bold** for key names and numbers. "
     "No headings, no bullet lists.\n\n"
+    "Language-specific rules:\n"
+    "- English: sharp, punchy Anglo-American news style.\n"
+    "- Russian: natural Russian journalistic style — fluid sentence structure, "
+    "appropriate for Russian-speaking audience. Avoid calques from English.\n"
+    "- Ukrainian: natural Ukrainian journalistic style — use native Ukrainian phrasing, "
+    "not russisms or anglicisms. Write as a Ukrainian media outlet would.\n"
+    "- For any other language: write as a native journalist from that region would.\n\n"
     "Also provide:\n"
     '- "importance": integer 1-9 (1-3=minor, 4-5=notable, 6=significant, 7-9=major/breaking)\n\n'
-    "For non-English languages: adapt naturally, not literal translation. "
     "Keep technical terms and acronyms in Latin form (AI, NASA, GPT, OpenAI, etc.).\n\n"
     'Return JSON: {{"en": {{"topic": ..., "summary": ...}}, "ru": {{...}}, ..., '
     '"importance": N}}'
 )
 
 DEFAULT_PROMPT_TRANSLATION = (
-    "You are a professional translator. Translate the following news item "
-    "from English to {language}.\n"
-    "Maintain journalistic style, factual accuracy, and nuance. "
-    "Adapt idioms and cultural references naturally. "
-    "Do not add or remove information.\n"
+    "You are a native {language} journalist. Rewrite the following news item "
+    "in {language} so it reads as if originally written for a {language}-speaking audience.\n"
+    "Do NOT translate word-by-word — compose naturally in {language}, preserving all facts "
+    "and meaning but using native idioms, word order, and journalistic style.\n"
     "Preserve all Markdown formatting (**bold**, etc.) and paragraph structure "
     "(blank lines between paragraphs) exactly as-is.\n"
     "Keep technical terms, abbreviations, and proper nouns in their original Latin form "
     "(e.g. AGI, AI, NASA, OpenAI, GPT, CERN — do NOT transliterate to Cyrillic).\n\n"
     "Provide:\n"
-    '- "topic": translated headline \u2014 keep the catchy, attention-grabbing tone\n'
-    '- "summary": translated summary (keep Markdown and paragraph breaks)\n\n'
+    '- "topic": headline rewritten natively in {language} — catchy and attention-grabbing\n'
+    '- "summary": news text rewritten natively in {language} (keep Markdown and paragraph breaks)\n\n'
     "Return JSON."
 )
 

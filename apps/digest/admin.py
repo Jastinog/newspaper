@@ -69,7 +69,6 @@ class DigestConfigAdmin(ModelAdmin):
             "fields": (
                 "system_prompt_analysis",
                 "system_prompt_generation",
-                "system_prompt_translation",
             ),
         }),
     )

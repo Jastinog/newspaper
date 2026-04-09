@@ -18,7 +18,6 @@ from apps.core.services.ai.embeddings import BATCH_SIZE
 from apps.digest.models import (
     DEFAULT_PROMPT_ANALYSIS,
     DEFAULT_PROMPT_GENERATION,
-    DEFAULT_PROMPT_TRANSLATION,
     DigestConfig,
     DigestSection,
     DigestSectionTranslation,
@@ -33,7 +32,6 @@ FIXTURES_DIR = Path(__file__).resolve().parent.parent.parent / "fixtures" / "sec
 CONFIG_DEFAULTS = {
     "system_prompt_analysis": DEFAULT_PROMPT_ANALYSIS,
     "system_prompt_generation": DEFAULT_PROMPT_GENERATION,
-    "system_prompt_translation": DEFAULT_PROMPT_TRANSLATION,
 }
 
 
