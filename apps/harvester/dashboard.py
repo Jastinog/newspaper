@@ -463,36 +463,46 @@ def build_harvester_context(request):
     digest_processing = digest_no_pipeline + digest_pending_extract + digest_pending_embed
     digest_pct = round(digest_ready / window_total * 100) if window_total > 0 else 0
 
-    # ── Processing queue (backlog per stage) ────────────────────
+    # ── Processing queue (per-stage progress) ──────────────────
     cutoff_30d = now - timedelta(days=30)
     pipe_qs = ArticlePipeline.objects.filter(
         article__published__gte=cutoff_30d,
-        completed_at__isnull=True,
     )
-    queue_no_pipeline = Article.objects.filter(
-        published__gte=cutoff_30d, pipeline__isnull=True,
-    ).count()
-    queue_rss_img = pipe_qs.filter(rss_images_at__isnull=True).count()
-    queue_extract = pipe_qs.filter(content_extracted_at__isnull=True).count()
-    queue_og_img = pipe_qs.filter(
-        content_extracted_at__isnull=False, og_images_at__isnull=True,
-    ).count()
-    queue_embed = pipe_qs.filter(
-        content_extracted_at__isnull=False, embedded_at__isnull=True,
-    ).exclude(article__content="").count()
+    pipe_total = pipe_qs.count()
+
+    def _pct(done):
+        return round(done / pipe_total * 100) if pipe_total else 0
 
     queue_stages = [
-        ("No Pipeline", queue_no_pipeline, GRAY),
-        ("RSS Images",  queue_rss_img,     YELLOW),
-        ("Extraction",  queue_extract,     RED),
-        ("OG Images",   queue_og_img,      INDIGO),
-        ("Embedding",   queue_embed,       GREEN),
+        {
+            "label": "RSS Images",
+            "done": pipe_qs.filter(rss_images_at__isnull=False).count(),
+            "color": "rgb(234, 179, 8)",
+        },
+        {
+            "label": "Extraction",
+            "done": pipe_qs.filter(content_extracted_at__isnull=False).count(),
+            "color": "rgb(239, 68, 68)",
+        },
+        {
+            "label": "OG Images",
+            "done": pipe_qs.filter(og_images_at__isnull=False).count(),
+            "color": "rgb(99, 102, 241)",
+        },
+        {
+            "label": "Embedding",
+            "done": pipe_qs.filter(embedded_at__isnull=False).count(),
+            "color": "rgb(34, 197, 94)",
+        },
+        {
+            "label": "Completed",
+            "done": pipe_qs.filter(completed_at__isnull=False).count(),
+            "color": "rgb(16, 185, 129)",
+        },
     ]
-    queue_chart = _chart(["Processing Queue"], [
-        _bar_ds(label, [count], color, stack="q")
-        for label, count, color in queue_stages
-    ])
-    queue_total = sum(count for _, count, _ in queue_stages)
+    for s in queue_stages:
+        s["pct"] = _pct(s["done"])
+        s["remaining"] = pipe_total - s["done"]
 
     # ── Pipeline state ────────────────────────────────────────
     from apps.harvester.services.pipeline import get_manager
@@ -535,13 +545,8 @@ def build_harvester_context(request):
         "problem_feeds": problem_feeds,
         "recent_errors": recent_errors,
         # Queue
-        "queue_chart": queue_chart,
-        "queue_total": queue_total,
-        "queue_no_pipeline": queue_no_pipeline,
-        "queue_rss_img": queue_rss_img,
-        "queue_extract": queue_extract,
-        "queue_og_img": queue_og_img,
-        "queue_embed": queue_embed,
+        "queue_stages": queue_stages,
+        "queue_total": pipe_total,
         # Timeline
         "timeline_data": _build_timeline_data(now),
         # Digest readiness
