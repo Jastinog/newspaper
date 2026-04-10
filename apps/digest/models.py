@@ -88,7 +88,7 @@ class DigestConfig(models.Model):
 
     # ── Article Collection ────────────────────────────────────
     hours_lookback = models.PositiveIntegerField(
-        default=36, help_text="Collect articles published within this many hours",
+        default=24, help_text="Collect articles published within this many hours",
     )
     articles_per_section = models.PositiveIntegerField(
         default=20, help_text="Max articles to collect per section",
