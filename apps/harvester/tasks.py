@@ -1,4 +1,5 @@
 import logging
+from datetime import timedelta
 
 from celery import shared_task
 from django.utils import timezone
@@ -129,4 +130,40 @@ def embed_articles():
         "articles_embedded": run.articles_embedded,
         "chunks_created": run.chunks_created,
         "tokens_used": run.tokens_used,
+    }
+
+
+ARTICLE_RETENTION_DAYS = 14
+
+
+@shared_task(name="harvester.cleanup")
+def cleanup_articles():
+    """Delete articles older than 14 days that are not linked to any digest."""
+    from apps.feed.models import Article, ArticleImage
+
+    cutoff = timezone.now() - timedelta(days=ARTICLE_RETENTION_DAYS)
+    article_ids = list(
+        Article.objects
+        .filter(published__lt=cutoff)
+        .exclude(digest_items__isnull=False)
+        .values_list("pk", flat=True)
+    )
+
+    images_qs = ArticleImage.objects.filter(
+        article_id__in=article_ids,
+    ).exclude(image="")
+    deleted_images = 0
+    for img in images_qs.iterator():
+        img.image.delete(save=False)
+        deleted_images += 1
+
+    deleted_articles, _ = Article.objects.filter(pk__in=article_ids).delete()
+
+    logger.info(
+        "Cleanup done: %d articles, %d images deleted",
+        deleted_articles, deleted_images,
+    )
+    return {
+        "deleted_articles": deleted_articles,
+        "deleted_images": deleted_images,
     }

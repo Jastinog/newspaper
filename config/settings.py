@@ -165,6 +165,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "core.warm_sitemap_cache",
         "schedule": crontab(hour=0, minute=5),
     },
+    "cleanup-old-articles": {
+        "task": "harvester.cleanup",
+        "schedule": timedelta(minutes=1),
+    },
 }
 
 UNFOLD = {
