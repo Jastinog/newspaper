@@ -1,5 +1,5 @@
 {% extends base_template %}
-{% load i18n static news_extras %}
+{% load i18n static news_extras markdown_extras %}
 
 {% block content %}
 <div class="browse-page">
@@ -53,7 +53,7 @@
             </a>
             <div class="article-row-content">
                 <a href="{{ article.get_absolute_url }}" class="article-row-title">{{ article.title }}</a>
-                {% if article.content %}<p class="article-row-snippet">{{ article.content|truncatechars_word:200 }}</p>{% endif %}
+                {% if article.content %}<p class="article-row-snippet">{{ article.content|plain|truncatechars_word:200 }}</p>{% endif %}
                 <div class="article-row-bottom">
                     <div class="article-row-meta">
                         {% if article.published %}<span>{{ article.published|timesince }} {% trans "ago" %}</span>{% elif article.created_at %}<span>{{ article.created_at|timesince }} {% trans "ago" %}</span>{% endif %}

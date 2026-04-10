@@ -5,11 +5,10 @@ import time
 from collections import Counter, defaultdict, deque
 from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
-from html import unescape
-
 import requests
 from django.db.models import Q
 from django.utils import timezone as django_tz
+from markdownify import markdownify as md
 from readability import Document
 
 from apps.feed.models import Article, ArticleImage, ArticleImageSource, ArticlePipeline
@@ -64,16 +63,17 @@ def _classify_error(error: Exception) -> tuple[str, str]:
     return ERR_OTHER, msg
 
 
-def _strip_html(text: str) -> str:
-    """Remove HTML tags, decode entities, collapse whitespace."""
-    text = re.sub(r"<br\s*/?>", "\n", text, flags=re.IGNORECASE)
-    text = re.sub(r"</?p[^>]*>", "\n", text, flags=re.IGNORECASE)
-    text = re.sub(r"<[^>]+>", "", text)
-    text = unescape(text)
-    # Collapse multiple blank lines
+def _html_to_markdown(html: str) -> str:
+    """Convert HTML to clean Markdown, preserving structure."""
+    text = md(
+        html,
+        heading_style="atx",
+        bullets="-",
+        escape_misc=True,
+        strip=["img", "script", "style", "iframe"],
+    )
+    # Collapse excessive blank lines
     text = re.sub(r"\n{3,}", "\n\n", text)
-    # Collapse spaces within lines
-    text = re.sub(r"[^\S\n]+", " ", text)
     return text.strip()
 
 
@@ -136,7 +136,7 @@ def fetch_and_extract(article_id: int, url: str) -> tuple[int, str, str, list[st
         doc = Document(html)
         html_content = doc.summary(html_partial=True)
         content_images = _extract_content_images(html_content)
-        clean_text = _strip_html(html_content)
+        clean_text = _html_to_markdown(html_content)
 
         if len(clean_text) < 50:
             return article_id, "", og_image, content_images, ERR_TOO_SHORT, f"Content too short ({len(clean_text)} chars)"
@@ -262,7 +262,7 @@ class ContentExtractor:
                     if err_category:
                         use_fallback = rss_content and len(rss_content) >= 50
                         if use_fallback:
-                            content = rss_content
+                            content = _html_to_markdown(rss_content)
                             error_msg = f"[{err_category}] {err_message} (rss fallback)"[:500]
                             extracted += 1
                             fallback_count += 1

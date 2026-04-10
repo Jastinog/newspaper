@@ -23,4 +23,6 @@ dependencies = [
     "Pillow>=11.0",
     "fake-useragent>=2.2.0",
     "tiktoken>=0.7",
+    "markdownify>=1.2.2",
+    "nh3>=0.3.4",
 ]

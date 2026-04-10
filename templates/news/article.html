@@ -1,5 +1,5 @@
 {% extends base_template %}
-{% load tz i18n static %}
+{% load tz i18n static markdown_extras %}
 
 {% block json_ld %}
 <script type="application/ld+json">
@@ -46,7 +46,7 @@
 
     <div class="article-content article-body">
         {% if article.content %}
-            {{ article.content|safe }}
+            {{ article.content|markdown }}
         {% else %}
             <p style="color: var(--fg-muted);">{% trans "No content available." %} <a href="{{ article.url }}" target="_blank" rel="noopener">{% trans "Read on the original site" %} &rarr;</a></p>
         {% endif %}

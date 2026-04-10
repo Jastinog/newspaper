@@ -27,10 +27,15 @@ def _cache_suffix(request):
     return ":bot" if getattr(request, "is_bot", False) else ""
 
 
+import re as _re
+_MD_CHARS = _re.compile(r"[\*_#\[\]\(\)>`~|]")
+
+
 def _og_description(text, limit=200):
-    """Collapse whitespace and truncate for use in og:description meta tag."""
+    """Collapse whitespace, strip Markdown, and truncate for og:description."""
     if not text:
         return ""
+    text = _MD_CHARS.sub("", text)
     return " ".join(text.split())[:limit]
 
 _PINNED_COOKIE = "pinned_sections"
