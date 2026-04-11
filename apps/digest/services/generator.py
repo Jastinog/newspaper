@@ -41,8 +41,10 @@ class ItemGenerator:
                 by_lang = {"en": {"topic": str, "summary": str}, "ru": {...}, ...}
                 common = {"importance": int}
         """
+        label = story.get("label", "Unknown")
+
         if not articles:
-            empty_lang = {code: {"topic": story.get("label", ""), "summary": ""} for code, _ in languages}
+            empty_lang = {code: {"topic": label, "summary": ""} for code, _ in languages}
             return empty_lang, {"importance": 0}, {}
 
         cfg = self.config
@@ -50,7 +52,7 @@ class ItemGenerator:
 
         system = cfg.system_prompt_generation.format(languages=lang_labels)
         user = (
-            f"Story: {story.get('label', 'Unknown')}\n\n"
+            f"Story: {label}\n\n"
             f"Articles:\n\n{self._build_article_list(articles)}"
         )
 
@@ -63,38 +65,56 @@ class ItemGenerator:
             response_format={"type": "json_object"},
         )
 
+        lang_codes = {code for code, _ in languages}
+        max_attempts = 5
         data = None
+        usage = {}
         last_error = None
-        for attempt in range(2):
-            content, usage = self.client.chat(**chat_kwargs)
-            fixed = fix_truncated_json(content)
+
+        for attempt in range(max_attempts):
             try:
+                content, usage = self.client.chat(**chat_kwargs)
+                fixed = fix_truncated_json(content)
                 data = json.loads(fixed)
-                break
             except json.JSONDecodeError as e:
-                last_error = e
+                last_error = f"JSON parse error: {e}"
                 logger.warning(
-                    "JSON parse failed for '%s' (attempt %d): %s",
-                    story.get("label"), attempt + 1, e,
+                    "JSON parse failed for '%s' (attempt %d/%d): %s",
+                    label, attempt + 1, max_attempts, e,
                 )
+                continue
+
+            # Validate all languages are present with non-empty topic+summary
+            missing = [
+                code for code in lang_codes
+                if not isinstance(data.get(code), dict)
+                or not data[code].get("topic")
+                or not data[code].get("summary")
+            ]
+
+            if not missing:
+                break
+
+            last_error = f"missing languages: {missing}"
+            logger.warning(
+                "Incomplete response for '%s' (attempt %d/%d): %s",
+                label, attempt + 1, max_attempts, last_error,
+            )
+            data = None
 
         if data is None:
             raise OpenAIError(
-                f"Failed to parse item for '{story.get('label')}' after 2 attempts: {last_error}\n"
-                f"Response (first 300 chars): {fixed[:300]}"
+                f"Failed to generate '{label}' after {max_attempts} "
+                f"attempts: {last_error}"
             )
 
         common = {
             "importance": data.get("importance", 0),
         }
 
-        by_lang = {}
-        for code, _ in languages:
-            lang_data = data.get(code, {})
-            if isinstance(lang_data, dict):
-                by_lang[code] = {
-                    "topic": lang_data.get("topic", ""),
-                    "summary": lang_data.get("summary", ""),
-                }
+        by_lang = {
+            code: {"topic": data[code]["topic"], "summary": data[code]["summary"]}
+            for code, _ in languages
+        }
 
         return by_lang, common, usage

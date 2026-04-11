@@ -39,6 +39,8 @@ DEFAULT_PROMPT_GENERATION = (
     "Also provide:\n"
     '- "importance": integer 1-9 (1-3=minor, 4-5=notable, 6=significant, 7-9=major/breaking)\n\n'
     "Keep technical terms and acronyms in Latin form (AI, NASA, GPT, OpenAI, etc.).\n\n"
+    "CRITICAL: You MUST return ALL requested languages. Every language key MUST be present "
+    "in the response with non-empty \"topic\" and \"summary\". Missing languages are unacceptable.\n\n"
     'Return JSON: {{"en": {{"topic": ..., "summary": ...}}, "ru": {{...}}, ..., '
     '"importance": N}}'
 )
