@@ -761,6 +761,7 @@ def robots_txt(request):
         "Disallow: /analytics/",
         "",
         f"Sitemap: {request.build_absolute_uri('/sitemap.xml')}",
+        f"Sitemap: {request.build_absolute_uri('/sitemap-news.xml')}",
         f"RSS: {request.build_absolute_uri('/feed/rss/')}",
     ]
     return HttpResponse("\n".join(lines), content_type="text/plain")

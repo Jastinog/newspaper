@@ -4,6 +4,7 @@ from django.views.decorators.cache import cache_page
 
 from . import views
 from .feeds import DigestFeed
+from .news_sitemap import news_sitemap
 from .sitemaps import sitemaps
 
 cached_sitemap_index = cache_page(86400)(sitemap_views.index)
@@ -30,6 +31,7 @@ seo_urlpatterns = [
     path("robots.txt", views.robots_txt, name="robots_txt"),
     path("manifest.json", views.manifest_json, name="manifest_json"),
     path("feed/rss/", DigestFeed(), name="rss_feed"),
+    path("sitemap-news.xml", news_sitemap, name="news_sitemap"),
     path(
         "sitemap.xml",
         cached_sitemap_index,
