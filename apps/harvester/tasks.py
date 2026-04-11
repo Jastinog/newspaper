@@ -140,6 +140,7 @@ ARTICLE_RETENTION_DAYS = 14
 def cleanup_articles():
     """Delete articles older than 14 days that are not linked to any digest."""
     from apps.feed.models import Article, ArticleImage
+    from apps.harvester.services.downloader import _remove_image
 
     cutoff = timezone.now() - timedelta(days=ARTICLE_RETENTION_DAYS)
     article_ids = list(
@@ -152,10 +153,9 @@ def cleanup_articles():
     images_qs = ArticleImage.objects.filter(
         article_id__in=article_ids,
     ).exclude(image="")
-    deleted_images = 0
+    deleted_images = images_qs.count()
     for img in images_qs.iterator():
-        img.image.delete(save=False)
-        deleted_images += 1
+        _remove_image(img)
 
     deleted_articles, _ = Article.objects.filter(pk__in=article_ids).delete()
 
