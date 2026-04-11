@@ -1,9 +1,11 @@
+import re as _re
+
 from django.conf import settings
 from django.core.cache import cache
 from django.core.paginator import Paginator
 from django.db.models import Count, F, Prefetch, Q, Window
 from django.db.models.functions import Coalesce, RowNumber
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.translation import get_language, gettext_lazy as _
@@ -22,12 +24,24 @@ SITE_NAME = _("Newspaper")
 SITE_DESCRIPTION = _("Daily AI-curated news digest from 100+ RSS sources worldwide")
 
 
+def _breadcrumbs(request, *crumbs):
+    """Build breadcrumb list with absolute URLs. Each crumb is (name, url_name_or_path)."""
+    base = f"{request.scheme}://{request.get_host()}"
+    lang = get_language() or "en"
+    result = [{"name": str(SITE_NAME), "url": f"{base}/{lang}/"}]
+    for name, url in crumbs:
+        if url.startswith("/"):
+            result.append({"name": str(name), "url": f"{base}{url}"})
+        else:
+            result.append({"name": str(name), "url": f"{base}{reverse(url)}"})
+    return result
+
+
 def _cache_suffix(request):
     """Return ':bot' for bot requests to separate cached HTML variants."""
     return ":bot" if getattr(request, "is_bot", False) else ""
 
 
-import re as _re
 _MD_CHARS = _re.compile(r"[\*_#\[\]\(\)>`~|]")
 
 
@@ -239,6 +253,11 @@ def article_detail(request, pk, slug=""):
         return redirect(article.get_absolute_url(), permanent=True)
 
     description = _og_description(article.content) or article.title
+    crumbs = [(_("Articles"), "articles_list")]
+    if article.feed.category:
+        crumbs.append((article.feed.category.name, article.feed.category.get_absolute_url()))
+    crumbs.append((article.title, article.get_absolute_url()))
+
     seo = {
         "title": f"{article.title} — {SITE_NAME}",
         "description": description,
@@ -246,6 +265,7 @@ def article_detail(request, pk, slug=""):
         "og_type": "article",
         "published_time": article.published.isoformat() if article.published else "",
         "section": article.feed.category.name if article.feed.category else "",
+        "breadcrumbs": _breadcrumbs(request, *crumbs),
     }
 
     hero_image = article.images.filter(is_primary=True).exclude(image="").first()
@@ -288,6 +308,11 @@ def category_detail(request, slug):
         "description": f"Latest {category.name} news from {SITE_NAME}",
         "canonical": request.build_absolute_uri(category.get_absolute_url()),
         "og_type": "website",
+        "breadcrumbs": _breadcrumbs(
+            request,
+            (_("Articles"), "articles_list"),
+            (category.name, category.get_absolute_url()),
+        ),
     }
 
     response = render(request, "news/category.html", {"category": category, "page": page, "seo": seo})
@@ -358,6 +383,11 @@ def story_detail(request, item_id):
         "og_image": request.build_absolute_uri(item.best_image_url) if item.best_image_url else "",
         "published_time": item.digest.date.isoformat() if item.digest else "",
         "section": section_name,
+        "breadcrumbs": _breadcrumbs(
+            request,
+            (_("Digest"), "index"),
+            (topic, reverse("story_detail", args=[item.pk])),
+        ),
     }
 
     response = render(request, "news/story.html", {
@@ -412,6 +442,12 @@ def research(request, item_id):
         "canonical": request.build_absolute_uri(request.get_full_path()),
         "og_type": "article",
         "og_image": request.build_absolute_uri(hero_image) if hero_image else "",
+        "breadcrumbs": _breadcrumbs(
+            request,
+            (_("Digest"), "index"),
+            (item.get_topic(lang), reverse("story_detail", args=[item.pk])),
+            (dive.title, request.get_full_path()),
+        ),
     }
 
     response = render(request, "news/research.html", {
@@ -531,6 +567,7 @@ def feeds_list(request):
         "description": _("All news sources and RSS feeds"),
         "canonical": request.build_absolute_uri(request.get_full_path()),
         "og_type": "website",
+        "breadcrumbs": _breadcrumbs(request, (_("Sources"), "feeds_list")),
     }
 
     response = render(request, "news/feeds.html", {
@@ -580,6 +617,11 @@ def feed_detail(request, pk):
         "description": feed.description or (_("Articles from %(title)s") % {"title": feed.title}),
         "canonical": request.build_absolute_uri(request.get_full_path()),
         "og_type": "website",
+        "breadcrumbs": _breadcrumbs(
+            request,
+            (_("Sources"), "feeds_list"),
+            (feed.title, request.get_full_path()),
+        ),
     }
 
     response = render(request, "news/feed_detail.html", {"feed": feed, "page": page, "seo": seo})
@@ -642,6 +684,7 @@ def articles_list(request):
         "description": _("Browse all news articles"),
         "canonical": request.build_absolute_uri(request.get_full_path()),
         "og_type": "website",
+        "breadcrumbs": _breadcrumbs(request, (_("Articles"), "articles_list")),
     }
 
     response = render(request, "news/articles.html", {
@@ -689,6 +732,26 @@ def set_language_get(request, lang):
     return response
 
 
+def manifest_json(request):
+    manifest = {
+        "name": "Newspaper — Daily News Digest",
+        "short_name": "Newspaper",
+        "description": "Daily AI-curated news digest from 100+ RSS sources worldwide",
+        "start_url": "/",
+        "display": "standalone",
+        "background_color": "#f5f0e8",
+        "theme_color": "#2c2c2c",
+        "icons": [
+            {
+                "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📰</text></svg>",
+                "sizes": "any",
+                "type": "image/svg+xml",
+            }
+        ],
+    }
+    return JsonResponse(manifest, content_type="application/manifest+json")
+
+
 def robots_txt(request):
     lines = [
         "User-agent: *",
@@ -698,5 +761,6 @@ def robots_txt(request):
         "Disallow: /analytics/",
         "",
         f"Sitemap: {request.build_absolute_uri('/sitemap.xml')}",
+        f"RSS: {request.build_absolute_uri('/feed/rss/')}",
     ]
     return HttpResponse("\n".join(lines), content_type="text/plain")

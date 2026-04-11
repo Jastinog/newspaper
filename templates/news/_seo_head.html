@@ -23,4 +23,42 @@
 <meta name="twitter:description" content="{{ seo.description|default:"Daily news digest from 500+ sources with credibility ratings and deep research" }}">
 {% if seo.og_image %}<meta name="twitter:image" content="{{ seo.og_image }}">{% endif %}
 
+<!-- Structured Data: WebSite with SearchAction -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "Newspaper",
+  "url": "{{ request.scheme }}://{{ request.get_host }}/",
+  "potentialAction": {
+    "@type": "SearchAction",
+    "target": {
+      "@type": "EntryPoint",
+      "urlTemplate": "{{ request.scheme }}://{{ request.get_host }}/{{ LANGUAGE_CODE }}/search/?q={search_term_string}"
+    },
+    "query-input": "required name=search_term_string"
+  }
+}
+</script>
+{% if seo.breadcrumbs %}
+<!-- Structured Data: BreadcrumbList -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [{% for crumb in seo.breadcrumbs %}
+    {
+      "@type": "ListItem",
+      "position": {{ forloop.counter }},
+      "name": "{{ crumb.name|escapejs }}",
+      "item": "{{ crumb.url }}"
+    }{% if not forloop.last %},{% endif %}{% endfor %}
+  ]
+}
+</script>
+{% endif %}
+
+<link rel="alternate" type="application/rss+xml" title="Newspaper RSS" href="{% url 'rss_feed' %}">
+<link rel="manifest" href="{% url 'manifest_json' %}">
+<meta name="theme-color" content="#2c2c2c">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📰</text></svg>">
