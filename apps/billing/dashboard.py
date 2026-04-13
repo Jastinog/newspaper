@@ -99,12 +99,14 @@ def dashboard_callback(request, context):
             "pointHoverRadius": 4,
         })
 
-    # Total line — drawn on top, bolder.
+    # Total line — drawn on top, bolder. Bright amber stays visible on both
+    # dark and light themes (the unfold default near-black would disappear in
+    # dark mode).
     datasets.append({
         "label": "Total",
         "data": total_per_day,
-        "borderColor": "rgb(17, 24, 39)",
-        "backgroundColor": "rgba(17, 24, 39, 0.08)",
+        "borderColor": "rgb(250, 204, 21)",
+        "backgroundColor": "rgba(250, 204, 21, 0.12)",
         "borderWidth": 3,
         "borderDash": [6, 4],
         "tension": 0.3,
