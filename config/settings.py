@@ -167,7 +167,7 @@ CELERY_BEAT_SCHEDULE = {
     },
     "cleanup-old-articles": {
         "task": "harvester.cleanup",
-        "schedule": timedelta(minutes=1),
+        "schedule": timedelta(hours=1),
     },
 }
 
