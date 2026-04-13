@@ -14,12 +14,94 @@
     {% endcomponent %}
 </div>
 
-{# --- Daily cost chart --- #}
+{# --- Daily cost chart (per-model + total) --- #}
 <div class="grid grid-cols-1 mb-8">
-    {% component "unfold/components/card.html" with title="Daily Cost (30 days)" %}
-        {% component "unfold/components/chart/bar.html" with data=cost_chart height=320 %}{% endcomponent %}
+    {% component "unfold/components/card.html" with title="Daily Cost by Model (30 days)" %}
+        <div id="cost-by-model-chart" class="cost-by-model-chart">
+            {% component "unfold/components/chart/line.html" with data=cost_chart height=320 %}{% endcomponent %}
+        </div>
     {% endcomponent %}
 </div>
+
+<script>
+(function () {
+    // Upgrade the cost-by-model chart tooltip with USD formatting + total footer.
+    // Runs after unfold's renderCharts on DOMContentLoaded — we defer to window.load
+    // so Chart.getChart() can find the instance.
+    function upgrade() {
+        var wrapper = document.getElementById("cost-by-model-chart");
+        if (!wrapper || typeof Chart === "undefined") return;
+        var canvas = wrapper.querySelector("canvas.chart");
+        if (!canvas) return;
+        var chart = Chart.getChart(canvas);
+        if (!chart) {
+            // Unfold may not have rendered yet — retry shortly.
+            return setTimeout(upgrade, 50);
+        }
+
+        var usd = function (v) {
+            return "$" + Number(v || 0).toLocaleString("en-US", {
+                minimumFractionDigits: 4,
+                maximumFractionDigits: 4,
+            });
+        };
+
+        chart.options.interaction = { mode: "index", intersect: false };
+        chart.options.plugins.legend = {
+            display: true,
+            align: "end",
+            position: "top",
+            labels: {
+                boxHeight: 6,
+                boxWidth: 6,
+                color: "#9ca3af",
+                pointStyle: "circle",
+                usePointStyle: true,
+            },
+        };
+        chart.options.plugins.tooltip = {
+            enabled: true,
+            mode: "index",
+            intersect: false,
+            backgroundColor: "rgba(17, 24, 39, 0.95)",
+            titleColor: "#f9fafb",
+            bodyColor: "#f3f4f6",
+            footerColor: "#f9fafb",
+            borderColor: "rgba(255,255,255,0.08)",
+            borderWidth: 1,
+            padding: 12,
+            boxPadding: 6,
+            usePointStyle: true,
+            titleFont: { weight: "600", size: 13 },
+            bodyFont: { size: 12 },
+            footerFont: { weight: "700", size: 12 },
+            itemSort: function (a, b) { return b.parsed.y - a.parsed.y; },
+            callbacks: {
+                label: function (ctx) {
+                    return "  " + ctx.dataset.label + ": " + usd(ctx.parsed.y);
+                },
+                footer: function (items) {
+                    var total = items.reduce(function (sum, item) {
+                        return item.dataset.label === "Total" ? sum : sum + (item.parsed.y || 0);
+                    }, 0);
+                    return "Sum: " + usd(total);
+                },
+            },
+        };
+        chart.options.scales.y.ticks.callback = function (v) {
+            return "$" + Number(v).toFixed(2);
+        };
+        chart.options.scales.y.ticks.display = true;
+        chart.update();
+    }
+
+    if (document.readyState === "complete") {
+        upgrade();
+    } else {
+        window.addEventListener("load", upgrade);
+    }
+})();
+</script>
 
 {{ block.super }}
 {% endblock %}
