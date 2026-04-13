@@ -3,6 +3,7 @@ from datetime import timedelta
 from decimal import Decimal
 
 from django.db.models import Sum
+from django.db.models.functions import TruncDate
 from django.utils import timezone
 
 from apps.billing.models import APIUsage
@@ -33,18 +34,18 @@ def dashboard_callback(request, context):
     # === Daily cost chart (last 30 days) ===
     daily_usage = (
         APIUsage.objects.filter(created_at__gte=thirty_days_ago)
-        .extra(select={"day": "DATE(created_at)"})
+        .annotate(day=TruncDate("created_at"))
         .values("day")
         .annotate(cost=Sum("cost_usd"))
         .order_by("day")
     )
-    days_map = {str(r["day"]): float(r["cost"]) for r in daily_usage}
+    days_map = {r["day"]: float(r["cost"]) for r in daily_usage}
 
     cost_chart = json.dumps({
         "labels": labels,
         "datasets": [{
             "label": "Cost ($)",
-            "data": [days_map.get(str(d), 0) for d in dates],
+            "data": [days_map.get(d, 0) for d in dates],
             "backgroundColor": "rgba(99, 102, 241, 0.5)",
             "borderColor": "rgb(99, 102, 241)",
             "borderWidth": 2,
