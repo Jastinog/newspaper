@@ -12,6 +12,7 @@ from django.db import IntegrityError
 from django.utils import timezone as django_tz
 
 from apps.harvester.models import HarvesterFeed, RunStatus
+from apps.harvester.retention import ARTICLE_RETENTION_DAYS
 from apps.feed.models import Article, ArticleImage, ArticleImageSource, ArticlePipeline, Feed
 from .http import get_domain, random_headers
 from .throttle import acquire_domain, release_domain
@@ -111,8 +112,10 @@ def save_articles(feed_id, entries) -> tuple[int, list[int]]:
                 rss_content = _strip_html_basic(str(val)).strip()
                 break
 
-        # Skip articles older than 30 days
-        if published and published < datetime.now(timezone.utc) - timedelta(days=30):
+        # Skip articles older than retention window — otherwise the cleanup
+        # task would delete them within a minute of insertion, and the next
+        # poll would re-insert them, ping-ponging forever.
+        if published and published < datetime.now(timezone.utc) - timedelta(days=ARTICLE_RETENTION_DAYS):
             continue
 
         image_url = _extract_rss_image(entry)

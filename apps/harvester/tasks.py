@@ -5,6 +5,7 @@ from celery import shared_task
 from django.utils import timezone
 
 from apps.harvester.models import HarvesterContent, HarvesterEmbedding, HarvesterImage, RunStatus
+from apps.harvester.retention import ARTICLE_RETENTION_DAYS
 from apps.harvester.services.downloader import DOWNLOAD_BATCH_SIZE
 from apps.harvester.services.extractor import EXTRACT_BATCH_SIZE
 
@@ -131,9 +132,6 @@ def embed_articles():
         "chunks_created": run.chunks_created,
         "tokens_used": run.tokens_used,
     }
-
-
-ARTICLE_RETENTION_DAYS = 14
 
 
 @shared_task(name="harvester.cleanup")
