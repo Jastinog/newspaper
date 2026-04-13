@@ -52,6 +52,7 @@ class Feed(models.Model):
     )
     reliability = models.PositiveSmallIntegerField(default=3)
     last_fetched = models.DateTimeField(null=True, blank=True)
+    last_entry_published = models.DateTimeField(null=True, blank=True, db_index=True)
     enabled = models.BooleanField(default=True)
     lean = models.CharField(max_length=20, choices=Lean.choices, blank=True, default="", db_index=True)
     factuality = models.CharField(max_length=10, choices=Factuality.choices, blank=True, default="", db_index=True)

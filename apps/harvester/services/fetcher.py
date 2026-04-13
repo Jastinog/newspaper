@@ -8,8 +8,9 @@ from html import unescape
 
 import feedparser
 import requests
-from django.db import IntegrityError
+from django.db import transaction
 from django.utils import timezone as django_tz
+from django.utils.text import slugify
 
 from apps.harvester.models import HarvesterFeed, RunStatus
 from apps.harvester.retention import ARTICLE_RETENTION_DAYS
@@ -81,67 +82,126 @@ def _get_rss_source():
     return src
 
 
+def _parse_published(entry):
+    """Extract a timezone-aware datetime from a feedparser entry, or None."""
+    for date_field in ("published_parsed", "updated_parsed"):
+        parsed_time = getattr(entry, date_field, None)
+        if parsed_time:
+            try:
+                return datetime(*parsed_time[:6], tzinfo=timezone.utc)
+            except (ValueError, TypeError):
+                pass
+    return None
+
+
+def _extract_rss_content(entry) -> str:
+    """Grab RSS description/summary as fallback article content."""
+    for field in ("summary", "description", "content"):
+        val = getattr(entry, field, None)
+        if isinstance(val, list):
+            val = val[0].get("value", "") if val else ""
+        if val:
+            return _strip_html_basic(str(val)).strip()
+    return ""
+
+
 def save_articles(feed_id, entries) -> tuple[int, list[int]]:
-    """Save articles from parsed RSS entries. Returns (count, article_ids)."""
-    rss_source = _get_rss_source()
-    new_count = 0
-    article_ids = []
+    """Save new articles from parsed RSS entries. Returns (count, article_ids).
+
+    Dedup strategy:
+      1. In-memory filter: drop entries without `published`, older than HWM,
+         or outside the retention window. If nothing survives, 0 DB calls.
+      2. Bulk SELECT of surviving URLs to filter out already-stored articles.
+      3. Bulk INSERT with ignore_conflicts=True as a race-condition safety net.
+      4. Advance the feed's HWM to max(entry.published) so the next poll can
+         short-circuit even faster.
+    """
+    now = datetime.now(timezone.utc)
+    retention_cutoff = now - timedelta(days=ARTICLE_RETENTION_DAYS)
+    feed = Feed.objects.only("id", "last_entry_published").get(pk=feed_id)
+    hwm = feed.last_entry_published
+
+    # 1. In-memory filter — no DB calls yet
+    candidates = []  # list of (entry, published, link, title)
+    max_entry_pub = hwm
     for entry in entries:
-        title = getattr(entry, "title", "") or ""
-        link = getattr(entry, "link", "") or ""
+        link = (getattr(entry, "link", "") or "").strip()
         if not link:
             continue
-
-        published = None
-        for date_field in ("published_parsed", "updated_parsed"):
-            parsed_time = getattr(entry, date_field, None)
-            if parsed_time:
-                try:
-                    published = datetime(*parsed_time[:6], tzinfo=timezone.utc)
-                except (ValueError, TypeError):
-                    pass
-                break
-
-        # Grab RSS description/summary as fallback content
-        rss_content = ""
-        for field in ("summary", "description", "content"):
-            val = getattr(entry, field, None)
-            if isinstance(val, list):
-                val = val[0].get("value", "") if val else ""
-            if val:
-                rss_content = _strip_html_basic(str(val)).strip()
-                break
-
-        # Skip articles older than retention window — otherwise the cleanup
-        # task would delete them within a minute of insertion, and the next
-        # poll would re-insert them, ping-ponging forever.
-        if published and published < datetime.now(timezone.utc) - timedelta(days=ARTICLE_RETENTION_DAYS):
+        published = _parse_published(entry)
+        if not published:
             continue
+        if max_entry_pub is None or published > max_entry_pub:
+            max_entry_pub = published
+        if hwm is not None and published <= hwm:
+            continue
+        if published < retention_cutoff:
+            continue
+        title = (getattr(entry, "title", "") or "")[:1000]
+        candidates.append((entry, published, link[:2000], title))
 
-        image_url = _extract_rss_image(entry)
+    # Advance HWM opportunistically even if no new articles (keeps old stuff
+    # from being reconsidered on future polls).
+    if max_entry_pub is not None and (hwm is None or max_entry_pub > hwm):
+        Feed.objects.filter(pk=feed_id).update(last_entry_published=max_entry_pub)
 
-        try:
-            article = Article.objects.create(
-                feed_id=feed_id,
-                title=title[:1000],
-                url=link[:2000],
-                published=published,
-                rss_content=rss_content,
-            )
-            ArticlePipeline.objects.create(article=article)
-            new_count += 1
-            article_ids.append(article.id)
-            if image_url:
-                ArticleImage.objects.create(
-                    article=article,
+    if not candidates:
+        return 0, []
+
+    # 2. Bulk dedup via one SELECT
+    candidate_urls = [c[2] for c in candidates]
+    existing_urls = set(
+        Article.objects.filter(url__in=candidate_urls).values_list("url", flat=True)
+    )
+    to_insert = [c for c in candidates if c[2] not in existing_urls]
+    if not to_insert:
+        return 0, []
+
+    # 3. Bulk INSERT with safety net for races. bulk_create bypasses
+    # Article.save(), so populate the slug explicitly here.
+    rss_source = _get_rss_source()
+    articles = [
+        Article(
+            feed_id=feed_id,
+            title=title,
+            slug=slugify(title, allow_unicode=True)[:300],
+            url=url,
+            published=published,
+            rss_content=_extract_rss_content(entry),
+        )
+        for entry, published, url, title in to_insert
+    ]
+    with transaction.atomic():
+        Article.objects.bulk_create(articles, ignore_conflicts=True)
+        # Reload to get ids — ignore_conflicts on PG doesn't populate pks.
+        created = list(
+            Article.objects.filter(url__in=[a.url for a in articles]).only("id", "url")
+        )
+        by_url = {a.url: a.id for a in created}
+        ArticlePipeline.objects.bulk_create(
+            [ArticlePipeline(article_id=by_url[a.url]) for a in articles if a.url in by_url],
+            ignore_conflicts=True,
+        )
+        image_rows = []
+        for entry, _pub, url, _title in to_insert:
+            if url not in by_url:
+                continue
+            image_url = _extract_rss_image(entry)
+            if not image_url:
+                continue
+            image_rows.append(
+                ArticleImage(
+                    article_id=by_url[url],
                     source=rss_source,
                     source_url=image_url[:2000],
                     is_primary=True,
                 )
-        except IntegrityError:
-            pass
+            )
+        if image_rows:
+            ArticleImage.objects.bulk_create(image_rows, ignore_conflicts=True)
 
-    return new_count, article_ids
+    article_ids = [by_url[a.url] for a in articles if a.url in by_url]
+    return len(article_ids), article_ids
 
 
 class FeedFetcher:
