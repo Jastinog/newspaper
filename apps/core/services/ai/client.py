@@ -11,17 +11,22 @@ from .embeddings import MODEL as EMBEDDING_MODEL
 logger = logging.getLogger(__name__)
 
 MODEL_MINI = "gpt-4.1-mini"
+MODEL_FULL = "gpt-4.1"
 
 # Pricing per 1M tokens (USD)
-GPT41_MINI_INPUT_PRICE = 0.40
-GPT41_MINI_OUTPUT_PRICE = 1.60
+MODEL_PRICING = {
+    "gpt-4.1-mini": (0.40, 1.60),
+    "gpt-4.1": (2.00, 8.00),
+    "gpt-4.1-nano": (0.10, 0.40),
+}
 EMBEDDING_PRICE = 0.02
 
 
 def calculate_cost(model, prompt_tokens, completion_tokens=0):
     """Calculate cost in USD based on model and token counts."""
-    if model == MODEL_MINI:
-        return (prompt_tokens * GPT41_MINI_INPUT_PRICE + completion_tokens * GPT41_MINI_OUTPUT_PRICE) / 1_000_000
+    if model in MODEL_PRICING:
+        in_price, out_price = MODEL_PRICING[model]
+        return (prompt_tokens * in_price + completion_tokens * out_price) / 1_000_000
     if model == EMBEDDING_MODEL:
         return (prompt_tokens + completion_tokens) * EMBEDDING_PRICE / 1_000_000
     return 0
@@ -42,7 +47,7 @@ class OpenAIClient:
             raise OpenAIError("OPENAI_API_KEY is not set")
 
     def chat(self, *, system, user, model=MODEL_MINI, max_tokens=8000, temperature=0.3,
-             response_format=None):
+             response_format=None, timeout=120):
         """Send a chat completion request with retries for transient errors."""
         payload = {
             "model": model,
@@ -67,7 +72,7 @@ class OpenAIClient:
 
             try:
                 resp = requests.post(
-                    self.API_URL, json=payload, headers=headers, timeout=120,
+                    self.API_URL, json=payload, headers=headers, timeout=timeout,
                 )
             except requests.RequestException as e:
                 last_err = f"Request failed: {e}"

@@ -8,6 +8,13 @@ def _get_encoder():
     return tiktoken.encoding_for_model("gpt-4o")
 
 
+def count_tokens(text: str) -> int:
+    """Count tokens in text using the standard encoding."""
+    if not text:
+        return 0
+    return len(_get_encoder().encode(text))
+
+
 def trim_to_tokens(text: str, max_tokens: int) -> str:
     """Trim text to fit within max_tokens, breaking at paragraph or sentence boundaries."""
     if not text:

@@ -1,9 +1,6 @@
-"""Seed digest sections, embeddings, translations, and config.
+"""Seed digest sections, translations, and config.
 
 Idempotent: safe to run multiple times. Uses get_or_create on slug.
-Generates embeddings for any SectionEmbedding entries missing vectors.
-Resets DigestConfig to model defaults on every run.
-
 Section data is loaded from JSON fixtures in apps/digest/fixtures/sections/.
 """
 
@@ -13,25 +10,19 @@ from pathlib import Path
 from django.core.management.base import BaseCommand
 
 from apps.core.models import Language
-from apps.core.services.ai import EmbeddingClient
-from apps.core.services.ai.embeddings import BATCH_SIZE
 from apps.digest.models import (
-    DEFAULT_PROMPT_ANALYSIS,
-    DEFAULT_PROMPT_GENERATION,
+    DEFAULT_PROMPT_PLANNER,
+    DEFAULT_PROMPT_WRITER,
     DigestConfig,
     DigestSection,
     DigestSectionTranslation,
-    SectionEmbedding,
 )
 
 FIXTURES_DIR = Path(__file__).resolve().parent.parent.parent / "fixtures" / "sections"
 
-# Canonical defaults for DigestConfig — single source of truth.
-# Numeric defaults live on the model fields; prompts live here
-# because they are excluded from field.default to keep migrations clean.
 CONFIG_DEFAULTS = {
-    "system_prompt_analysis": DEFAULT_PROMPT_ANALYSIS,
-    "system_prompt_generation": DEFAULT_PROMPT_GENERATION,
+    "system_prompt_planner": DEFAULT_PROMPT_PLANNER,
+    "system_prompt_writer": DEFAULT_PROMPT_WRITER,
 }
 
 
@@ -49,14 +40,9 @@ def _load_sections() -> list[dict]:
 
 
 class Command(BaseCommand):
-    help = "Seed digest sections, embeddings, translations, and config (idempotent)"
+    help = "Seed digest sections, translations, and config (idempotent)"
 
     def add_arguments(self, parser):
-        parser.add_argument(
-            "--no-embed",
-            action="store_true",
-            help="Skip embedding generation (create section structure only)",
-        )
         parser.add_argument(
             "--reset",
             action="store_true",
@@ -68,18 +54,11 @@ class Command(BaseCommand):
         languages = self._sync_languages()
         sections = _load_sections()
         self._sync_sections(languages, sections)
-        self._generate_embeddings(skip=options["no_embed"])
 
     def _sync_config(self, force=False):
-        """Reset DigestConfig to canonical defaults.
-
-        By default preserves operator-customized prompts.
-        With force=True, resets everything including prompts.
-        """
         config = DigestConfig.get()
         updated = []
 
-        # Numeric/simple defaults from model field definitions
         for field in config._meta.get_fields():
             if field.name in ("id", "pk") or field.name in CONFIG_DEFAULTS:
                 continue
@@ -90,7 +69,6 @@ class Command(BaseCommand):
                 setattr(config, field.name, default)
                 updated.append(field.name)
 
-        # Prompt defaults: fill empty or force-reset all
         for field_name, default in CONFIG_DEFAULTS.items():
             current = getattr(config, field_name, "")
             if not current or (force and current != default):
@@ -117,13 +95,11 @@ class Command(BaseCommand):
 
     def _sync_sections(self, languages, sections):
         fixture_slugs = set()
-        total_new_emb = 0
 
         for data in sections:
             slug = data["slug"]
             fixture_slugs.add(slug)
 
-            # Create or update section metadata
             section, created = DigestSection.objects.get_or_create(
                 slug=slug,
                 defaults={
@@ -147,7 +123,6 @@ class Command(BaseCommand):
                         setattr(section, field, desired[field])
                     section.save(update_fields=changed)
 
-            # Upsert translations
             for lang_code, name in data["translations"].items():
                 trans, t_created = DigestSectionTranslation.objects.get_or_create(
                     section=section, language=languages[lang_code],
@@ -157,19 +132,9 @@ class Command(BaseCommand):
                     trans.name = name
                     trans.save(update_fields=["name"])
 
-            # Replace embeddings: delete old, bulk-create new
-            old_count = section.embeddings.count()
-            section.embeddings.all().delete()
-            SectionEmbedding.objects.bulk_create([
-                SectionEmbedding(section=section, description=desc)
-                for desc in data["embeddings"]
-            ])
-            total_new_emb += len(data["embeddings"])
-
-            status = "created" if created else f"updated (had {old_count} emb)"
+            status = "created" if created else "updated"
             self.stdout.write(f"  [{section.order:>2}] {data['translations']['en']}: {status}")
 
-        # Disable sections not in fixtures (preserve data, stop matching)
         stale = DigestSection.objects.filter(enabled=True).exclude(slug__in=fixture_slugs)
         if stale.exists():
             names = list(stale.values_list("slug", flat=True))
@@ -178,27 +143,4 @@ class Command(BaseCommand):
                 self.style.WARNING(f"  Disabled {len(names)} stale sections: {', '.join(names)}")
             )
 
-        self.stdout.write(f"Sections: {len(sections)} active, {total_new_emb} embeddings to generate")
-
-    def _generate_embeddings(self, skip=False):
-        if skip:
-            self.stdout.write("Skipping embedding generation (--no-embed)")
-            return
-
-        pending = list(SectionEmbedding.objects.filter(embedding__isnull=True))
-        if not pending:
-            self.stdout.write("All embeddings already generated.")
-            return
-
-        self.stdout.write(f"Generating {len(pending)} embeddings...")
-        client = EmbeddingClient()
-
-        for i in range(0, len(pending), BATCH_SIZE):
-            batch = pending[i:i + BATCH_SIZE]
-            vectors, tokens = client.embed_batch([e.description for e in batch])
-            for emb_obj, vector in zip(batch, vectors):
-                emb_obj.embedding = vector
-            SectionEmbedding.objects.bulk_update(batch, ["embedding"])
-            self.stdout.write(f"  Batch {i // BATCH_SIZE + 1}: {len(batch)} embeddings, {tokens} tokens")
-
-        self.stdout.write(self.style.SUCCESS(f"Done! {len(pending)} embeddings generated."))
+        self.stdout.write(f"Sections: {len(sections)} active")

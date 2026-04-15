@@ -125,3 +125,11 @@ class DigestSaver:
 
         logger.info("Saved %s translations for digest %s: %d items",
                      language.code, digest.date, len(item_translations))
+
+    @staticmethod
+    def invalidate_index_cache():
+        """Clear cached index pages so the new digest is served immediately."""
+        from django.conf import settings
+        from django.core.cache import cache
+        for lang_code, _ in settings.LANGUAGES:
+            cache.delete(f"index:{lang_code}:latest")

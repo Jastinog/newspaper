@@ -1,5 +1,4 @@
 from django.db import models
-from pgvector.django import VectorField
 
 from apps.core.services.utils import get_translated_field
 
@@ -7,57 +6,55 @@ from apps.core.services.utils import get_translated_field
 # ── Default prompts (used as defaults for DigestConfig fields) ───
 
 
-DEFAULT_PROMPT_ANALYSIS = (
-    "You are a news analyst. Given articles from the \"{section}\" digest section, "
-    "identify {min}-{max} distinct news stories.\n\n"
+DEFAULT_PROMPT_PLANNER = (
+    "You are the editor-in-chief of a multilingual news digest. You receive articles "
+    "published in the last 24 hours. Plan today's complete edition.\n\n"
+    "Available sections:\n{sections}\n\n"
+    "MANDATORY TARGET: Produce {items_per_section} stories for EACH of the 20 sections. "
+    "Total target: {items_per_section} × 20 = {total} stories.\n\n"
     "For each story provide:\n"
-    "- \"label\": brief story label (2-5 words, English)\n"
-    "- \"article_ids\": array of article IDs covering this story\n"
-    "- \"search_queries\": 2-3 search queries to find the most relevant articles "
-    "about this specific story\n\n"
-    "Return JSON with key \"stories\" containing an array of story objects."
+    '- "label": brief story label (3-6 words, English)\n'
+    '- "section": section slug from the list above\n'
+    '- "article_ids": array of article IDs covering this story (1-3 articles)\n'
+    '- "importance": integer 1-9 (1-3=minor, 4-5=notable, 6=significant, 7-9=major/breaking)\n'
+    '- "angle": one sentence — what the journalist should focus on when writing the summary\n\n'
+    "Critical rules:\n"
+    "- Produce many distinct stories — do NOT over-group. Only merge articles when they "
+    "cover the EXACT same event (same people, same event, same day). Different angles "
+    "on the same topic = DIFFERENT stories.\n"
+    "- Every single-article story counts — do not discard articles just because "
+    "they are the only source. A minor local story is still a story.\n"
+    "- Each article can appear in at most one story\n"
+    "- Only skip articles that are obvious spam, empty titles, or exact duplicates\n"
+    "- Fill every section that has any relevant articles\n"
+    "- Quantity matters: aim for the full target of {total} stories\n\n"
+    'Return JSON: {{"stories": [...]}}'
 )
 
-DEFAULT_PROMPT_GENERATION = (
-    "You are a multilingual news writer who writes natively in each language — "
+DEFAULT_PROMPT_WRITER = (
+    "You are a multilingual news journalist who writes natively in each language — "
     "not translating, but thinking and composing directly in the target language.\n\n"
-    "Provide for EACH language ({languages}):\n"
-    '- "topic": catchy headline (4-8 words). Each language version must feel native: '
+    "Editorial guidance: {angle}\n\n"
+    "Write about this story using the articles provided.\n\n"
+    "For EACH language ({languages}):\n"
+    '- "topic": catchy headline (4-8 words). Each language must feel native — '
     "use idiomatic word order, phrasing, and style natural to that language's journalism. "
-    "Do NOT write in English first and translate — compose directly in each language.\n"
+    "Do NOT write in English first and translate.\n"
     '- "summary": ONE paragraph, 3-5 sentences max. Lead with what happened, '
-    "add why it matters, close with what's next. Write as a local journalist would "
-    "for readers in that language's region. Use **bold** for key names and numbers. "
-    "No headings, no bullet lists.\n\n"
+    "add why it matters, close with what's next. Write as a local journalist would. "
+    "Use **bold** for key names and numbers. No headings, no bullet lists.\n\n"
     "Language-specific rules:\n"
-    "- English: sharp, punchy Anglo-American news style.\n"
-    "- Russian: natural Russian journalistic style — fluid sentence structure, "
-    "appropriate for Russian-speaking audience. Avoid calques from English.\n"
-    "- Ukrainian: natural Ukrainian journalistic style — use native Ukrainian phrasing, "
-    "not russisms or anglicisms. Write as a Ukrainian media outlet would.\n"
-    "- For any other language: write as a native journalist from that region would.\n\n"
+    "- English: sharp, punchy Anglo-American news style\n"
+    "- Russian: natural Russian journalistic style, avoid calques from English\n"
+    "- Ukrainian: native Ukrainian phrasing, not russisms or anglicisms\n"
+    "- For any other language: write as a native journalist from that region would\n\n"
     "Also provide:\n"
-    '- "importance": integer 1-9 (1-3=minor, 4-5=notable, 6=significant, 7-9=major/breaking)\n\n'
+    '- "importance": integer 1-9\n\n'
     "Keep technical terms and acronyms in Latin form (AI, NASA, GPT, OpenAI, etc.).\n\n"
     "CRITICAL: You MUST return ALL requested languages. Every language key MUST be present "
-    "in the response with non-empty \"topic\" and \"summary\". Missing languages are unacceptable.\n\n"
+    "with non-empty \"topic\" and \"summary\".\n\n"
     'Return JSON: {{"en": {{"topic": ..., "summary": ...}}, "ru": {{...}}, ..., '
     '"importance": N}}'
-)
-
-DEFAULT_PROMPT_TRANSLATION = (
-    "You are a native {language} journalist. Rewrite the following news item "
-    "in {language} so it reads as if originally written for a {language}-speaking audience.\n"
-    "Do NOT translate word-by-word — compose naturally in {language}, preserving all facts "
-    "and meaning but using native idioms, word order, and journalistic style.\n"
-    "Preserve all Markdown formatting (**bold**, etc.) and paragraph structure "
-    "(blank lines between paragraphs) exactly as-is.\n"
-    "Keep technical terms, abbreviations, and proper nouns in their original Latin form "
-    "(e.g. AGI, AI, NASA, OpenAI, GPT, CERN — do NOT transliterate to Cyrillic).\n\n"
-    "Provide:\n"
-    '- "topic": headline rewritten natively in {language} — catchy and attention-grabbing\n'
-    '- "summary": news text rewritten natively in {language} (keep Markdown and paragraph breaks)\n\n'
-    "Return JSON."
 )
 
 
@@ -70,76 +67,57 @@ class DigestConfig(models.Model):
     # ── LLM Model ───────────────────────────────────────────────
     chat_model = models.CharField(
         max_length=100, default="gpt-4.1-mini",
-        help_text="OpenAI model for analysis, generation, and translation",
+        help_text="Default OpenAI model (used by writer)",
+    )
+    planner_model = models.CharField(
+        max_length=100, default="gpt-4.1",
+        help_text="OpenAI model for the planner step (needs to produce many items, use full-size)",
     )
     temperature = models.FloatField(
         default=0.3,
         help_text="LLM temperature (0 = deterministic, 1 = creative)",
     )
-
-    # ── Token Limits ──────────────────────────────────────────
-    max_tokens_analysis = models.PositiveIntegerField(
-        default=2000, help_text="Max tokens for story analysis response",
-    )
     max_tokens_generation = models.PositiveIntegerField(
-        default=2500, help_text="Max tokens for item generation response (includes all languages)",
+        default=4000, help_text="Max tokens for item generation response (includes all languages)",
     )
-    max_tokens_translation = models.PositiveIntegerField(
-        default=1000, help_text="Max tokens for translation response",
-    )
-
-    # ── Article Collection ────────────────────────────────────
     hours_lookback = models.PositiveIntegerField(
         default=24, help_text="Collect articles published within this many hours",
     )
-    articles_per_section = models.PositiveIntegerField(
-        default=20, help_text="Max articles to collect per section",
-    )
-    similarity_threshold = models.FloatField(
-        default=0.25,
-        help_text="Cosine distance threshold (0.25 = similarity >= 0.75)",
-    )
-    chunks_per_query = models.PositiveIntegerField(
-        default=60, help_text="Max article chunks per embedding query",
-    )
-    article_snippet_tokens = models.PositiveIntegerField(
-        default=80, help_text="Snippet length (tokens) sent to analyzer per article",
-    )
 
-    # ── Story Refinement ──────────────────────────────────────
-    context_trim_tokens = models.PositiveIntegerField(
-        default=250, help_text="Article content length (tokens) sent to generator per article (~1000 chars)",
+    # ── Edition Settings ─────────────────────────────────────
+    edition_items_per_section = models.PositiveIntegerField(
+        default=5, help_text="Target stories per section",
     )
-    refine_search_top_k = models.PositiveIntegerField(
-        default=10, help_text="Additional articles to find per refine query",
+    edition_max_workers = models.PositiveIntegerField(
+        default=20, help_text="Max parallel writer threads",
     )
-    max_articles_per_story = models.PositiveIntegerField(
-        default=3, help_text="Max articles sent to generator per story",
+    edition_article_card_tokens = models.PositiveIntegerField(
+        default=200, help_text="Max snippet length (tokens) per article in planner context",
     )
-
-    # ── Generation ────────────────────────────────────────────
-    items_per_section_min = models.PositiveIntegerField(
-        default=10, help_text="Min stories the analyzer should identify per section",
+    edition_article_body_tokens = models.PositiveIntegerField(
+        default=2000, help_text="Full content length (tokens) for writer per article",
     )
-    items_per_section_max = models.PositiveIntegerField(
-        default=15, help_text="Max stories the analyzer should identify per section",
+    edition_max_articles_per_story = models.PositiveIntegerField(
+        default=5, help_text="Max articles sent to writer per story",
     )
-    max_workers = models.PositiveIntegerField(
-        default=5, help_text="Max parallel workers (for batch mode)",
+    edition_writer_budget_tokens = models.PositiveIntegerField(
+        default=6000, help_text="Hard cap on total article content tokens per write call",
+    )
+    edition_planner_budget_tokens = models.PositiveIntegerField(
+        default=80000, help_text="Hard cap on total article card tokens sent to planner",
+    )
+    edition_max_planner_articles = models.PositiveIntegerField(
+        default=2000, help_text="Max articles sent to planner (round-robin picks from all feeds)",
     )
 
     # ── System Prompts (defaults managed by initdigest) ────────
-    system_prompt_analysis = models.TextField(
+    system_prompt_planner = models.TextField(
         default="",
-        help_text="Prompt for identifying stories from articles. Variables: {section}, {min}, {max}",
+        help_text="Editor-in-chief prompt. Variables: {sections}, {items_per_section}, {total}",
     )
-    system_prompt_generation = models.TextField(
+    system_prompt_writer = models.TextField(
         default="",
-        help_text="Prompt for generating topic/summary/importance from articles",
-    )
-    system_prompt_translation = models.TextField(
-        default="",
-        help_text="Prompt for translating items. Variable: {language}",
+        help_text="Journalist prompt. Variables: {angle}, {languages}",
     )
 
     class Meta:
@@ -169,7 +147,6 @@ class DigestSection(models.Model):
     description = models.TextField(blank=True, default="")
     order = models.PositiveIntegerField(default=0)
     enabled = models.BooleanField(default=True)
-    system_prompt_override = models.TextField(blank=True, default="")
 
     class Meta:
         ordering = ["order"]
@@ -194,21 +171,6 @@ class DigestSectionTranslation(models.Model):
         return f"{self.section.slug} [{self.language.code}]: {self.name}"
 
 
-class SectionEmbedding(models.Model):
-    """Search embeddings for a digest section (multiple per section for different angles)."""
-
-    section = models.ForeignKey(DigestSection, on_delete=models.CASCADE, related_name="embeddings")
-    description = models.TextField(help_text="Search query describing this angle of the section")
-    embedding = VectorField(dimensions=1536, null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ["section__order"]
-
-    def __str__(self):
-        return f"{self.section.slug}: {self.description[:60]}"
-
-
 # ── Digest ───────────────────────────────────────────────────────
 
 
@@ -217,10 +179,6 @@ class Digest(models.Model):
 
     class Stage(models.IntegerChoices):
         PENDING = 0, "Pending"
-        ANALYZED = 1, "Analyzed"
-        REFINED = 2, "Refined"
-        GENERATED = 3, "Generated"
-        SAVED = 4, "Saved"
         DONE = 5, "Done"
 
     date = models.DateField(unique=True)
@@ -246,6 +204,48 @@ class DigestTranslation(models.Model):
 
     def __str__(self):
         return f"Digest {self.digest.date} [{self.language.code}]"
+
+
+# ── Digest Run (telemetry) ──────────────────────────────────────
+
+
+class DigestRun(models.Model):
+    """Per-digest generation run telemetry."""
+
+    digest = models.OneToOneField(Digest, on_delete=models.CASCADE, related_name="run")
+    model = models.CharField(max_length=100, default="")
+    items_per_section = models.PositiveIntegerField(default=5)
+
+    # Timing
+    started_at = models.DateTimeField()
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    # Collect step
+    articles_collected = models.PositiveIntegerField(default=0)
+
+    # Plan step
+    stories_planned = models.PositiveIntegerField(default=0)
+    plan_duration_ms = models.PositiveIntegerField(default=0)
+    plan_input_tokens = models.PositiveIntegerField(default=0)
+    plan_output_tokens = models.PositiveIntegerField(default=0)
+    plan_cost_usd = models.DecimalField(max_digits=10, decimal_places=6, default=0)
+
+    # Write step (aggregate across all parallel writes)
+    items_generated = models.PositiveIntegerField(default=0)
+    items_failed = models.PositiveIntegerField(default=0)
+    write_duration_ms = models.PositiveIntegerField(default=0)
+    write_input_tokens = models.PositiveIntegerField(default=0)
+    write_output_tokens = models.PositiveIntegerField(default=0)
+    write_cost_usd = models.DecimalField(max_digits=10, decimal_places=6, default=0)
+
+    # Total
+    total_cost_usd = models.DecimalField(max_digits=10, decimal_places=6, default=0)
+
+    class Meta:
+        verbose_name = "Digest Run"
+
+    def __str__(self):
+        return f"Run for {self.digest.date} ({self.model})"
 
 
 # ── Digest Items ─────────────────────────────────────────────────
@@ -281,11 +281,9 @@ class DigestItem(models.Model):
         return ""
 
     def get_topic(self, language):
-        """Get topic text for a language. Prefetch-safe."""
         return get_translated_field(self.translations.all(), "topic", language)
 
     def get_summary(self, language):
-        """Get summary text for a language. Prefetch-safe."""
         return get_translated_field(self.translations.all(), "summary", language)
 
 
@@ -302,15 +300,11 @@ class DigestItemTranslation(models.Model):
         return f"{self.topic} [{self.language.code}]"
 
 
-# ── Item Pipeline (per-item stage tracking) ────────────────────
+# ── Item Pipeline (per-item telemetry) ────────────────────────
 
 
 class ItemPipeline(models.Model):
-    """Per-item pipeline state (cf. ArticlePipeline in feed app).
-
-    Each timestamp is NULL until that stage completes.
-    Intermediate data is stored as JSON for resume capability.
-    """
+    """Per-item pipeline state and telemetry."""
 
     item = models.OneToOneField(DigestItem, on_delete=models.CASCADE, related_name="pipeline")
 
@@ -320,11 +314,19 @@ class ItemPipeline(models.Model):
     search_queries = models.JSONField(default=list)
     refined_articles = models.JSONField(default=list)
 
-    # Stage timestamps (NULL = pending, timestamp = done)
+    # Timestamps
     analyzed_at = models.DateTimeField(null=True, blank=True)
     refined_at = models.DateTimeField(null=True, blank=True)
     generated_at = models.DateTimeField(null=True, blank=True)
     translated_at = models.DateTimeField(null=True, blank=True)
+
+    # Telemetry
+    input_tokens = models.PositiveIntegerField(default=0)
+    output_tokens = models.PositiveIntegerField(default=0)
+    cost_usd = models.DecimalField(max_digits=10, decimal_places=6, default=0)
+    generation_ms = models.PositiveIntegerField(default=0)
+    articles_in_context = models.PositiveIntegerField(default=0)
+    context_tokens = models.PositiveIntegerField(default=0)
 
     def __str__(self):
         return f"Pipeline: {self.story_label or self.item_id}"
@@ -334,11 +336,7 @@ class ItemPipeline(models.Model):
 
 
 class ArticleUse(models.Model):
-    """Tracks which articles have been used in digest items.
-
-    CASCADE from DigestItem ensures re-runs (delete+recreate digest)
-    automatically free articles for reuse.
-    """
+    """Tracks which articles have been used in digest items."""
 
     article = models.OneToOneField(
         "feed.Article", on_delete=models.CASCADE, related_name="digest_uses",

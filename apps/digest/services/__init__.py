@@ -1,1 +1,1 @@
-from .service import DigestService  # noqa: F401
+from .edition import EditionService  # noqa: F401

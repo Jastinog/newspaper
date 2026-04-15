@@ -15,6 +15,7 @@ class APIUsage(models.Model):
         ANALYZE = "analyze", "Analyze"
         REFINE = "refine", "Refine"
         GENERATE = "generate", "Generate"
+        PLAN = "plan", "Plan"
         HEADLINE = "headline", "Headline"
         TRANSLATE = "translate", "Translate"
 

@@ -166,7 +166,7 @@ class HarvestManager:
         self._ensure_pool_size(s)
 
         for stage, enabled, fn, args, kwargs in [
-            (STAGE_EMBED, s.enable_embedding,
+            (STAGE_EMBED, False,  # embedding disabled — Edition pipeline doesn't use it
              self._embed_one, (), {}),
             (STAGE_OG_IMG, s.enable_og_image_download,
              self._download_image, ("og-image", "og_images_at"),
