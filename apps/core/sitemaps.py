@@ -55,7 +55,7 @@ class StorySitemap(Sitemap):
     def items(self):
         return (
             DigestItem.objects
-            .order_by("-digest__date", "-importance")
+            .order_by("-digest__date", "-freshness")
             .only("id", "digest__date")
         )
 

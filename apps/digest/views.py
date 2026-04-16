@@ -148,7 +148,7 @@ def similar_items_api(request, item_id):
             ),
         )
         .distinct()
-        .order_by("-digest__date", "-importance")[:8]
+        .order_by("-digest__date", "-freshness")[:8]
     )
 
     items_data = []

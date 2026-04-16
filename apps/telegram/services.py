@@ -157,7 +157,7 @@ class TelegramService:
             .filter(digest=digest)
             .select_related("section", "image")
             .prefetch_related("translations", "translations__language", "articles")
-            .order_by("-importance", "-freshness")
+            .order_by("-freshness")
             [: self.channel.top_n]
         )
 
@@ -211,7 +211,7 @@ def publish_next_items() -> int:
             .exclude(id__in=already_sent)
             .select_related("section", "image")
             .prefetch_related("translations", "translations__language", "articles")
-            .order_by("-importance", "-freshness")
+            .order_by("-freshness")
             .first()
         )
 

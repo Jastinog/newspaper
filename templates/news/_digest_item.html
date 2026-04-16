@@ -1,20 +1,14 @@
 {% load news_extras markdown_extras i18n static %}
 {% with img_url=item.best_image_url|default_if_none:"" %}
 <div class="item-hero-card">
-    <div class="item-hero-card__blur" style="background-image: url('{% if img_url %}{{ img_url }}{% else %}{% static 'news/img/placeholder.webp' %}{% endif %}')"></div>
     <div class="item-top-bar">
         <span class="sources-wrap"><button class="sources-btn" type="button" data-sources-id="{{ item.id }}"><i class="far fa-newspaper"></i></button></span>
-        {% include "news/_importance_bar.html" %}
     </div>
     <a href="{% url 'story_detail' item.id %}"><img class="item-hero-card__img" src="{% if img_url %}{{ img_url }}{% else %}{% static 'news/img/placeholder.webp' %}{% endif %}" alt="" loading="lazy" onload="this.classList.add('loaded')"></a>
     <div class="item-top-bar item-bottom-bar">
-        <button class="similar-btn" data-item-id="{{ item.id }}" aria-label="{% trans 'Similar news' %}" title="{% trans 'Similar news' %}"><i class="fas fa-circle-nodes"></i></button>
         <button class="share-btn" data-url="{% url 'story_detail' item.id %}" data-title="{{ item.loc_topic }}" aria-label="{% trans 'Share' %}" title="{% trans 'Share' %}"><i class="fas fa-share-nodes"></i></button>
     </div>
 </div>
 {% endwith %}
 <a href="{% url 'story_detail' item.id %}" class="item-topic">{{ item.loc_topic }}</a>
 <div class="item-summary">{{ item.loc_summary|markdown }}</div>
-<span class="item-actions">
-    <a href="{% url 'research' item.id %}" class="research-hint research-link" data-item-id="{{ item.id }}">{% trans "research" %} &rarr;</a>
-</span>

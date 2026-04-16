@@ -18,9 +18,8 @@
     <div class="article-header">
         <h1>{{ topic }}</h1>
         <div class="meta">
-            {% include "news/_importance_bar.html" %}
-            {% if item.digest %}&middot; {{ item.digest.date|date:"j F Y" }}{% endif %}
-            &middot; {{ source_articles|length }} {% trans "sources" %}
+            {% if item.digest %}{{ item.digest.date|date:"j F Y" }} &middot; {% endif %}
+            {{ source_articles|length }} {% trans "sources" %}
         </div>
     </div>
 

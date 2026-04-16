@@ -248,31 +248,21 @@ a.item-topic:hover {
     color: var(--accent);
 }
 
-/* Top bar: sources + importance overlaid on image */
+/* Top bar: sources icon strip above image */
 .item-top-bar {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
+    position: relative;
     z-index: 2;
     display: flex;
     align-items: center;
     justify-content: space-between;
     height: 22px;
     padding: 0 0.5rem;
-    background: rgba(var(--bg-rgb), 0.75);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
 }
 .item-top-bar .sources-wrap,
-.item-top-bar .sources-btn,
-.item-top-bar .importance-icon {
+.item-top-bar .sources-btn {
     display: flex;
     align-items: center;
     line-height: 1;
-}
-.item-top-bar .importance-icon {
-    flex-shrink: 0;
 }
 
 /* Bottom actions: research only */
@@ -348,70 +338,12 @@ a.item-topic:hover {
     font-size: 0.9em;
 }
 
-/* Importance icon */
-.importance-icon {
-    display: inline-flex;
-    align-items: center;
-    font-size: 0.7rem;
-    position: relative;
-    cursor: default;
-}
-.importance-icon::after {
-    content: attr(data-label);
-    position: absolute;
-    bottom: calc(100% + 4px);
-    left: 50%;
-    transform: translateX(-50%);
-    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
-    font-size: 0.6rem;
-    font-weight: 600;
-    letter-spacing: 0.03em;
-    white-space: nowrap;
-    color: #fff;
-    background: rgba(0,0,0,0.75);
-    padding: 0.15rem 0.4rem;
-    border-radius: 3px;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.15s;
-}
-.importance-icon:hover::after {
-    opacity: 1;
-}
-.importance-icon.critical { color: #d32f2f; }
-.importance-icon.high     { color: #e65100; }
-.importance-icon.medium   { color: #e67e22; }
-.importance-icon.low      { color: #999; }
-
-/* === HERO CARD (blurred background + full-width image) === */
-.item-hero-card__blur {
-    position: absolute;
-    inset: -20px;
-    background-size: cover;
-    background-position: center;
-    filter: blur(20px) saturate(1.1);
-    z-index: 0;
-}
-
-/* Sandwich bars: override absolute positioning to flow in document order */
+/* === HERO CARD (full-width image with icon strips) === */
 .item-hero-card .item-top-bar,
 .item-hero-card .item-bottom-bar,
 .item-image-wrap .item-top-bar,
 .item-image-wrap .item-bottom-bar {
-    position: relative;
-    bottom: auto;
-    left: auto;
-    right: auto;
-    z-index: 2;
     width: 100%;
-    background: rgba(var(--bg-rgb), 0.65);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-}
-/* No blur background behind image-wrap, so bars need more opacity */
-.item-image-wrap .item-top-bar,
-.item-image-wrap .item-bottom-bar {
-    background: rgba(var(--bg-rgb), 0.75);
 }
 
 /* Bottom bar button styling (match sources-btn look) */

@@ -16,7 +16,6 @@ DEFAULT_PROMPT_PLANNER = (
     '- "label": brief story label (3-6 words, English)\n'
     '- "section": section slug from the list above\n'
     '- "article_ids": array of article IDs covering this story (1-3 articles)\n'
-    '- "importance": integer 1-9 (1-3=minor, 4-5=notable, 6=significant, 7-9=major/breaking)\n'
     '- "angle": one sentence — what the journalist should focus on when writing the summary\n\n'
     "Critical rules:\n"
     "- Produce many distinct stories — do NOT over-group. Only merge articles when they "
@@ -48,13 +47,10 @@ DEFAULT_PROMPT_WRITER = (
     "- Russian: natural Russian journalistic style, avoid calques from English\n"
     "- Ukrainian: native Ukrainian phrasing, not russisms or anglicisms\n"
     "- For any other language: write as a native journalist from that region would\n\n"
-    "Also provide:\n"
-    '- "importance": integer 1-9\n\n'
     "Keep technical terms and acronyms in Latin form (AI, NASA, GPT, OpenAI, etc.).\n\n"
     "CRITICAL: You MUST return ALL requested languages. Every language key MUST be present "
     "with non-empty \"topic\" and \"summary\".\n\n"
-    'Return JSON: {{"en": {{"topic": ..., "summary": ...}}, "ru": {{...}}, ..., '
-    '"importance": N}}'
+    'Return JSON: {{"en": {{"topic": ..., "summary": ...}}, "ru": {{...}}, ...}}'
 )
 
 
@@ -257,7 +253,6 @@ class DigestItem(models.Model):
     digest = models.ForeignKey(Digest, on_delete=models.CASCADE, related_name="items", null=True)
     section = models.ForeignKey(DigestSection, on_delete=models.PROTECT, related_name="items", null=True)
     order = models.PositiveIntegerField(default=0)
-    importance = models.PositiveSmallIntegerField(default=0)
     freshness = models.FloatField(default=0, db_index=True)
     image = models.ForeignKey(
         "feed.ArticleImage", on_delete=models.SET_NULL,

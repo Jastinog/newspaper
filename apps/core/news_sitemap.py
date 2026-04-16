@@ -25,7 +25,7 @@ def news_sitemap(request):
         .filter(digest_id__in=digests)
         .select_related("digest")
         .prefetch_related("translations", "translations__language")
-        .order_by("-digest__date", "-importance")
+        .order_by("-digest__date", "-freshness")
     )
 
     pub_name = escape(PUBLICATION_NAME)

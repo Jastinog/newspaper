@@ -146,7 +146,7 @@ def _build_digest_context(request, date=None, pinned_slugs=None):
     if digest and items:
         top_item = max(
             (i for i in items if i.image_id and getattr(i.image, "image", "")),
-            key=lambda i: i.importance,
+            key=lambda i: i.freshness,
             default=None,
         )
         if top_item and top_item.best_image_url:

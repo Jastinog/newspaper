@@ -12,10 +12,6 @@
     margin-bottom: 0.8rem;
 }
 
-.article-header .meta .importance-icon {
-    vertical-align: middle;
-}
-
 /* Story hero: add pixelated rendering on top of shared .story-hero from article.css */
 .story-hero img {
     image-rendering: pixelated;

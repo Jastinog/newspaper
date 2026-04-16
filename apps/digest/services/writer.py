@@ -19,9 +19,7 @@ def build_writer_schema(lang_codes: list[str]) -> dict:
         "required": ["topic", "summary"],
         "additionalProperties": False,
     }
-    properties = {"importance": {"type": "integer"}}
-    for code in lang_codes:
-        properties[code] = lang_obj
+    properties = {code: lang_obj for code in lang_codes}
     return {
         "type": "json_schema",
         "json_schema": {
@@ -30,7 +28,7 @@ def build_writer_schema(lang_codes: list[str]) -> dict:
             "schema": {
                 "type": "object",
                 "properties": properties,
-                "required": ["importance"] + list(lang_codes),
+                "required": list(lang_codes),
                 "additionalProperties": False,
             },
         },
@@ -46,18 +44,17 @@ class StoryWriter:
 
     def write(self, story_plan: dict, articles_by_id: dict,
               languages: list[tuple[str, str]],
-              schema: dict = None) -> tuple[dict, dict, dict]:
+              schema: dict = None) -> tuple[dict, dict]:
         """Write one story item in all languages.
 
         Args:
-            story_plan: {"label", "section", "article_ids", "importance", "angle"}
+            story_plan: {"label", "section", "article_ids", "angle"}
             articles_by_id: {id: Article} ORM objects with content
             languages: [(code, name), ...]
 
         Returns:
-            (by_lang, common, usage) where:
+            (by_lang, usage) where:
                 by_lang = {"en": {"topic": str, "summary": str}, ...}
-                common = {"importance": int}
         """
         cfg = self.config
         label = story_plan.get("label", "Unknown")
@@ -68,7 +65,7 @@ class StoryWriter:
 
         if not article_text:
             empty = {code: {"topic": label, "summary": ""} for code, _ in languages}
-            return empty, {"importance": 0}, {}
+            return empty, {}
 
         lang_codes = [code for code, _ in languages]
         lang_labels = ", ".join(f"{name} ({code})" for code, name in languages)
@@ -88,12 +85,11 @@ class StoryWriter:
 
         data = json.loads(content)
 
-        common = {"importance": data.get("importance", story_plan.get("importance", 0))}
         by_lang = {
             code: {"topic": data[code]["topic"], "summary": data[code]["summary"]}
             for code in lang_codes
         }
-        return by_lang, common, usage
+        return by_lang, usage
 
     def _build_article_context(self, article_ids: list[int],
                                articles_by_id: dict, cfg: DigestConfig) -> str:

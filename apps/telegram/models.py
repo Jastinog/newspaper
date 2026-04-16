@@ -30,7 +30,7 @@ class TelegramChannel(models.Model):
     )
     top_n = models.PositiveIntegerField(
         default=10,
-        help_text="Number of top news items to post (by importance)",
+        help_text="Number of top news items to post (by freshness)",
     )
     post_time = models.TimeField(
         help_text="Time of day to post the digest (server timezone)",

@@ -269,7 +269,7 @@ class EditionService:
                           label=story.get("label", "?"), reason="bad section")
                     return {"success": False, "input_tokens": 0, "output_tokens": 0}
 
-                by_lang, common, usage = self.writer.write(
+                by_lang, usage = self.writer.write(
                     story, articles_by_id, all_langs, schema=writer_schema,
                 )
 
@@ -282,11 +282,9 @@ class EditionService:
                     return {"success": False, "input_tokens": 0, "output_tokens": 0}
 
                 article_ids = story.get("article_ids", [])[:cfg.edition_max_articles_per_story]
-                common["article_ids"] = article_ids
 
                 item = self.saver.save_item(
-                    digest, section, story, by_lang, common,
-                    [{"id": aid} for aid in article_ids],
+                    digest, section, story, by_lang, article_ids,
                     default_lang, target_langs,
                 )
 

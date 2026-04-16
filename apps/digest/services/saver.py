@@ -16,22 +16,15 @@ class DigestSaver:
     """Saves digest data to database."""
 
     def save_item(self, digest: Digest, section, story: dict,
-                  by_lang: dict, common_data: dict,
-                  refined: list, default_lang, target_langs=None) -> DigestItem:
+                  by_lang: dict, article_ids: list,
+                  default_lang, target_langs=None) -> DigestItem:
         """Create a single DigestItem with all translations, pipeline, and linked articles.
 
         Args:
             by_lang: {"en": {"topic": str, "summary": str}, "ru": {...}, ...}
-            common_data: {"importance": int, "article_ids": [int]}
+            article_ids: list of Article IDs to link to this item
         """
-        try:
-            importance = max(0, min(9, int(common_data.get("importance", 0))))
-        except (TypeError, ValueError):
-            importance = 0
-
-        item = DigestItem.objects.create(
-            digest=digest, section=section, importance=importance,
-        )
+        item = DigestItem.objects.create(digest=digest, section=section)
 
         translations = []
         all_languages = [default_lang] + list(target_langs or [])
@@ -46,17 +39,14 @@ class DigestSaver:
         if translations:
             DigestItemTranslation.objects.bulk_create(translations)
 
-        self.link_articles(item, common_data.get("article_ids", []))
+        self.link_articles(item, article_ids)
 
         now = timezone.now()
         ItemPipeline.objects.create(
             item=item,
             story_label=story.get("label", ""),
             article_ids=story.get("article_ids", []),
-            search_queries=story.get("search_queries", []),
-            refined_articles=refined,
-            analyzed_at=now, refined_at=now,
-            generated_at=now, translated_at=now,
+            generated_at=now,
         )
         return item
 

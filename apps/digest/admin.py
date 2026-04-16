@@ -111,7 +111,7 @@ class DigestTranslationInline(TabularInline):
 class DigestItemInlineShort(TabularInline):
     model = DigestItem
     extra = 0
-    fields = ("section", "importance", "order", "item_image_preview")
+    fields = ("section", "order", "item_image_preview")
     readonly_fields = ("item_image_preview",)
 
     def get_queryset(self, request):
@@ -144,7 +144,7 @@ class DigestItemTranslationInline(TabularInline):
 
 @admin.register(DigestItem)
 class DigestItemAdmin(ModelAdmin):
-    list_display = ("id", "item_topic", "section", "importance", "digest")
+    list_display = ("id", "item_topic", "section", "digest")
     list_display_links = ("id", "item_topic")
     list_filter = ("section", "digest__date")
     raw_id_fields = ("digest", "image")

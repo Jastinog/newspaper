@@ -101,7 +101,7 @@ class Command(BaseCommand):
                 .filter(digest=digest)
                 .select_related("section", "image")
                 .prefetch_related("translations", "translations__language")
-                .order_by("-importance", "-freshness")
+                .order_by("-freshness")
                 [: channel.top_n]
             )
             for item in items:

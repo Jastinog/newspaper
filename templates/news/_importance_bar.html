@@ -1,5 +1,0 @@
-{% load i18n %}{% if item.importance >= 7 %}<span class="importance-icon critical" data-label="{% trans 'Breaking news' %}"><i class="fas fa-bolt"></i></span>
-{% elif item.importance >= 6 %}<span class="importance-icon high" data-label="{% trans 'Important' %}"><i class="fas fa-bolt"></i></span>
-{% elif item.importance >= 4 %}<span class="importance-icon medium" data-label="{% trans 'Worth noting' %}"><i class="fas fa-bolt"></i></span>
-{% else %}<span class="importance-icon low" data-label="{% trans 'For context' %}"><i class="fas fa-bolt"></i></span>
-{% endif %}

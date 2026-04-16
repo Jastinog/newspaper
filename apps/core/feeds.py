@@ -31,7 +31,7 @@ class DigestFeed(Feed):
                 "translations", "translations__language",
                 "section__translations", "section__translations__language",
             )
-            .order_by("-digest__date", "-importance")
+            .order_by("-digest__date", "-freshness")
         )
 
         # Filter out items without translation for current language
