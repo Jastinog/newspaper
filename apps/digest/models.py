@@ -255,7 +255,7 @@ class DigestItem(models.Model):
     """Single news story in digest. Language-specific text in DigestItemTranslation."""
 
     digest = models.ForeignKey(Digest, on_delete=models.CASCADE, related_name="items", null=True)
-    section = models.ForeignKey(DigestSection, on_delete=models.CASCADE, related_name="items", null=True)
+    section = models.ForeignKey(DigestSection, on_delete=models.PROTECT, related_name="items", null=True)
     order = models.PositiveIntegerField(default=0)
     importance = models.PositiveSmallIntegerField(default=0)
     freshness = models.FloatField(default=0, db_index=True)
