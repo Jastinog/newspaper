@@ -29,9 +29,10 @@ IDLE_SLEEP = 1        # seconds – quick re-check when no work found
 ERROR_SLEEP = 10
 FEED_INTERVAL_MINUTES = 10
 FEED_BATCH = 50       # feeds are cheap (RSS XML), process many per tick
-CANDIDATE_POOL = 30   # extraction/images are expensive, one per tick
+IMAGE_BATCH = 30      # images: batch with 30s deadline, domain throttle keeps it polite
+EXTRACT_BATCH = 30    # extraction: HTTP fetch + parse, same deadline/throttle pattern
 DAYS_LOOKBACK = 30
-DEFAULT_MAX_WORKERS = 2
+DEFAULT_MAX_WORKERS = 4
 DEFAULT_STAGE_DELAY = 0.5
 
 _instance: "HarvestManager | None" = None
@@ -64,7 +65,7 @@ def _run_stage(stage, fn, *args, **kwargs):
     try:
         result = fn(*args, **kwargs)
         if result:
-            article_id = result if isinstance(result, int) else None
+            article_id = result if isinstance(result, int) and not isinstance(result, bool) else None
             _record_event(stage, started_at, success=True, article_id=article_id)
         return result
     except Exception:
@@ -173,7 +174,7 @@ class HarvestManager:
              self._download_image, ("og-image", "og_images_at"),
              {"article__pipeline__content_extracted_at__isnull": False}),
             (STAGE_EXTRACT, s.enable_content_extraction,
-             self._extract_one, (), {}),
+             self._extract_articles, (), {}),
             (STAGE_RSS_IMG, s.enable_rss_image_download,
              self._download_image, ("rss-image", "rss_images_at"), {}),
             (STAGE_FEED, s.enable_feed_fetching,
@@ -252,33 +253,36 @@ class HarvestManager:
         return article.id
 
     # ------------------------------------------------------------------
-    # Stages 2 & 4: Download one image (OG or RSS)
+    # Stages 2 & 4: Download images (OG or RSS), batched
     # ------------------------------------------------------------------
 
     def _download_image(self, source_slug: str, pipeline_field: str,
                         **extra_filters) -> bool:
-        """Download one pending image for the given source type.
+        """Download pending images for the given source type.
 
         Args:
             source_slug: "og-image" or "rss-image".
             pipeline_field: ArticlePipeline field to timestamp on success.
             **extra_filters: additional queryset filters (e.g. content_extracted check).
         """
-        qs = ArticleImage.objects.filter(
-            downloaded=False,
-            source__slug=source_slug,
-            article__published__gte=_cutoff_days(),
-            **extra_filters,
-        )
-
         candidates = list(
-            qs.values_list("id", "source_url", "article_id")
-            .order_by("?")[:CANDIDATE_POOL]
+            ArticleImage.objects.filter(
+                downloaded=False,
+                source__slug=source_slug,
+                article__published__gte=_cutoff_days(),
+                **extra_filters,
+            )
+            .values_list("id", "source_url", "article_id")
+            .order_by("id")[:IMAGE_BATCH]
         )
         if not candidates:
             return False
 
+        downloaded = 0
+        deadline = time.monotonic() + 30
         for img_id, source_url, article_id in candidates:
+            if time.monotonic() > deadline:
+                break
             domain = get_domain(source_url)
             if not acquire_domain(domain):
                 continue
@@ -291,30 +295,34 @@ class HarvestManager:
                 ArticlePipeline.objects.filter(article_id=article_id).update(
                     **{pipeline_field: timezone.now()},
                 )
+                downloaded += 1
                 logger.info("Downloaded %s %s from %s", source_slug, img_id, domain)
             finally:
                 release_domain(domain)
-            return article_id
 
-        return False
+        return downloaded > 0
 
     # ------------------------------------------------------------------
-    # Stage 3: Extract content for one article
+    # Stage 3: Extract content, batched
     # ------------------------------------------------------------------
 
-    def _extract_one(self) -> bool:
+    def _extract_articles(self) -> bool:
         candidates = list(
             Article.objects
             .filter(pipeline__content_extracted_at__isnull=True)
             .filter(Q(published__gte=_cutoff_days()) | Q(published__isnull=True))
             .exclude(url="")
             .values_list("id", "url")
-            .order_by("?")[:CANDIDATE_POOL]
+            .order_by("id")[:EXTRACT_BATCH]
         )
         if not candidates:
             return False
 
+        extracted = 0
+        deadline = time.monotonic() + 30
         for aid, url in candidates:
+            if time.monotonic() > deadline:
+                break
             domain = get_domain(url)
             if not acquire_domain(domain):
                 continue
@@ -326,12 +334,12 @@ class HarvestManager:
                 self._save_extract_result(
                     article_id, clean_text, og_image, content_images,
                 )
+                extracted += 1
                 logger.info("Extracted article %s from %s", article_id, domain)
             finally:
                 release_domain(domain)
-            return aid
 
-        return False
+        return extracted > 0
 
     # ------------------------------------------------------------------
     # Stage 5 (lowest priority): Fetch one feed
