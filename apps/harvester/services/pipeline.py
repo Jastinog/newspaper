@@ -4,7 +4,7 @@ from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import timedelta
 
 from django.db import close_old_connections
-from django.db.models import Q
+from django.db.models import F, Q
 from django.utils import timezone
 
 from apps.billing.models import APIUsage
@@ -28,7 +28,8 @@ logger = logging.getLogger(__name__)
 IDLE_SLEEP = 1        # seconds – quick re-check when no work found
 ERROR_SLEEP = 10
 FEED_INTERVAL_MINUTES = 10
-CANDIDATE_POOL = 30
+FEED_BATCH = 50       # feeds are cheap (RSS XML), process many per tick
+CANDIDATE_POOL = 30   # extraction/images are expensive, one per tick
 DAYS_LOOKBACK = 30
 DEFAULT_MAX_WORKERS = 2
 DEFAULT_STAGE_DELAY = 0.5
@@ -176,7 +177,7 @@ class HarvestManager:
             (STAGE_RSS_IMG, s.enable_rss_image_download,
              self._download_image, ("rss-image", "rss_images_at"), {}),
             (STAGE_FEED, s.enable_feed_fetching,
-             self._fetch_one_feed, (), {}),
+             self._fetch_feeds, (), {}),
         ]:
             if not enabled or stage in self._running:
                 continue
@@ -336,19 +337,23 @@ class HarvestManager:
     # Stage 5 (lowest priority): Fetch one feed
     # ------------------------------------------------------------------
 
-    def _fetch_one_feed(self) -> bool:
+    def _fetch_feeds(self) -> bool:
         cutoff = timezone.now() - timedelta(minutes=FEED_INTERVAL_MINUTES)
         candidates = list(
             Feed.objects
             .filter(enabled=True)
             .filter(Q(last_fetched__lt=cutoff) | Q(last_fetched__isnull=True))
             .values_list("id", "url", "title")
-            .order_by("?")[:CANDIDATE_POOL]
+            .order_by(F("last_fetched").asc(nulls_first=True))[:FEED_BATCH]
         )
         if not candidates:
             return False
 
+        fetched = 0
+        deadline = time.monotonic() + 30
         for feed_id, url, title in candidates:
+            if time.monotonic() > deadline:
+                break
             domain = get_domain(url)
             if not acquire_domain(domain):
                 continue
@@ -374,11 +379,11 @@ class HarvestManager:
                     logger.info("Feed %s: %d new articles", title, new_count)
 
                 Feed.objects.filter(id=feed_id).update(last_fetched=now)
+                fetched += 1
             finally:
                 release_domain(domain)
-            return True
 
-        return False
+        return fetched > 0
 
     # ------------------------------------------------------------------
     # Helpers
