@@ -30,9 +30,7 @@ def get_translated_field(translations, field: str, language, fallback=""):
 
 def get_article_image_url(article) -> str:
     """Return the downloaded image URL for an article, or empty string."""
-    if article.image:
-        return article.image.url
-    return ""
+    return article.image.url if article.image else ""
 
 
 def deduplicate_queries(queries: list[str], limit: int) -> list[str]:

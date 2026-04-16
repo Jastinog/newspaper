@@ -32,8 +32,3 @@ def pick_from_rss_entry(entry) -> str:
 def pick_from_extraction(og_image: str, content_images: list[str]) -> str:
     """Fallback: OG image first, then first inline content <img>."""
     return og_image or (content_images[0] if content_images else "")
-
-
-def resolve(rss_image: str, og_image: str, content_images: list[str]) -> str:
-    """RSS > OG > first content image."""
-    return rss_image or pick_from_extraction(og_image, content_images)

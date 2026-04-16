@@ -5,8 +5,6 @@ import requests
 from markdownify import markdownify as md
 from readability import Document
 
-from .image_picker import pick_from_extraction
-
 logger = logging.getLogger(__name__)
 
 TIMEOUT = 20
@@ -125,8 +123,3 @@ def fetch_and_extract(article_id: int, url: str) -> tuple[int, str, str, list[st
     except Exception as e:
         category, message = _classify_error(e)
         return article_id, "", "", [], category, message
-
-
-def fallback_image_url(og_image: str, content_images: list[str]) -> str:
-    """Pick image URL from extraction result."""
-    return pick_from_extraction(og_image, content_images)

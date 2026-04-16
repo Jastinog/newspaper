@@ -6,14 +6,11 @@ from django.utils.translation import get_language
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
+from apps.core.services.utils import get_article_image_url
 from apps.feed.models import Article, ArticleChunk
 from apps.research.services.search import SimilaritySearch
 
 from .models import DigestItem, DigestItemTranslation, DigestSectionTranslation
-
-
-def _article_image_url(article):
-    return article.image.url if article.image else ""
 
 
 # ── Sources API ──────────────────────────────────────────
@@ -35,7 +32,7 @@ def item_sources_api(request, item_id):
             "url": article.url,
             "feed_title": article.feed.title if article.feed else "",
             "feed_website": article.feed.website or article.feed.url if article.feed else "",
-            "image_url": _article_image_url(article),
+            "image_url": get_article_image_url(article),
         }
         for article in articles
     ]
@@ -55,7 +52,7 @@ def _serialize_article(article, score=0):
         "feed": article.feed.title if article.feed else "",
         "score": score,
         "date": article.published.isoformat() if article.published else "",
-        "image_url": _article_image_url(article),
+        "image_url": get_article_image_url(article),
     }
 
 

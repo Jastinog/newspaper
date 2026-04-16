@@ -14,9 +14,10 @@ from apps.harvester.models import (
 )
 
 from .downloader import download_article_image
-from .extractor import fallback_image_url, fetch_and_extract
+from .extractor import fetch_and_extract
 from .fetcher import fetch_single_feed, save_articles
 from .http import get_domain
+from .image_picker import pick_from_extraction
 from .throttle import acquire_domain, release_domain
 
 logger = logging.getLogger(__name__)
@@ -239,7 +240,7 @@ class HarvestManager:
             if clean_text:
                 updates["content"] = clean_text
             if not current_image_url:
-                picked = fallback_image_url(og_image, content_images)
+                picked = pick_from_extraction(og_image, content_images)
                 if picked:
                     updates["image_url"] = picked[:2000]
 

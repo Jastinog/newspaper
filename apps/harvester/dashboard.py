@@ -107,16 +107,9 @@ def build_harvester_context(request):
 
     error_filter = Q(status="error", started_at__gte=twenty_four_hours_ago)
     total_filter = Q(started_at__gte=twenty_four_hours_ago)
-    errors_24h = sum([
-        HarvesterFeed.objects.filter(error_filter).count(),
-        HarvesterContent.objects.filter(error_filter).count(),
-        HarvesterImage.objects.filter(error_filter).count(),
-    ])
-    total_24h = sum([
-        HarvesterFeed.objects.filter(total_filter).count(),
-        HarvesterContent.objects.filter(total_filter).count(),
-        HarvesterImage.objects.filter(total_filter).count(),
-    ])
+    run_models = (HarvesterFeed, HarvesterContent, HarvesterImage)
+    errors_24h = sum(m.objects.filter(error_filter).count() for m in run_models)
+    total_24h = sum(m.objects.filter(total_filter).count() for m in run_models)
     error_rate_24h = (
         f"{errors_24h / total_24h * 100:.1f}%" if total_24h > 0 else "—"
     )
