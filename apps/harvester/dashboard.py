@@ -6,7 +6,6 @@ from django.db.models.functions import TruncDate, TruncMinute
 from django.urls import reverse
 from django.utils import timezone
 
-from apps.digest.models import ArticleUse, DigestConfig
 from apps.feed.models import Article, ArticlePipeline, Feed
 from apps.harvester.models import (
     PipelineSettings, PipelineEvent, STAGE_FIELDS,
@@ -18,14 +17,11 @@ from apps.harvester.models import (
 
 # ── Color palette ─────────────────────────────────────────
 GREEN = ("rgb(34, 197, 94)", "rgba(34, 197, 94, 0.5)")
-GREEN_FILL = ("rgb(34, 197, 94)", "rgba(34, 197, 94, 0.1)")
 RED = ("rgb(239, 68, 68)", "rgba(239, 68, 68, 0.5)")
 INDIGO = ("rgb(99, 102, 241)", "rgba(99, 102, 241, 0.5)")
-INDIGO_FILL = ("rgb(99, 102, 241)", "rgba(99, 102, 241, 0.1)")
 YELLOW = ("rgb(234, 179, 8)", "rgba(234, 179, 8, 0.5)")
-YELLOW_FILL = ("rgb(234, 179, 8)", "rgba(234, 179, 8, 0.1)")
 GRAY = ("rgb(156, 163, 175)", "rgba(156, 163, 175, 0.5)")
-PURPLE_FILL = ("rgb(168, 85, 247)", "rgba(168, 85, 247, 0.1)")
+EMERALD = "rgb(16, 185, 129)"
 
 
 # ── Helpers ───────────────────────────────────────────────
@@ -57,15 +53,6 @@ def _bar_ds(label, data, color, stack=None, border_width=1):
     if stack:
         ds["stack"] = stack
     return ds
-
-
-def _line_ds(label, data, color):
-    border, bg = color
-    return {
-        "label": label, "data": data,
-        "borderColor": border, "backgroundColor": bg,
-        "borderWidth": 2, "fill": True, "tension": 0.3,
-    }
 
 
 def _chart(labels, datasets):
@@ -118,20 +105,6 @@ def build_harvester_context(request):
         .aggregate(n=Sum("new_articles"))["n"] or 0
     )
 
-    pending_extraction = ArticlePipeline.objects.filter(
-        content_extracted_at__isnull=True,
-    ).count()
-
-    pending_embedding = (
-        ArticlePipeline.objects
-        .filter(content_extracted_at__isnull=False, embedded_at__isnull=True)
-        .exclude(article__content="")
-        .count()
-    )
-
-    completed_total = ArticlePipeline.objects.filter(
-        completed_at__isnull=False,
-    ).count()
 
     error_filter = Q(status="error", started_at__gte=twenty_four_hours_ago)
     total_filter = Q(started_at__gte=twenty_four_hours_ago)
@@ -220,22 +193,6 @@ def build_harvester_context(request):
         _bar_ds("Failed", _series(extraction_min_map, minute_keys, "failed"), RED, stack="extraction"),
     ])
 
-    # Pipeline completions per minute
-    completion_min_qs = (
-        ArticlePipeline.objects
-        .filter(completed_at__gte=sixty_minutes_ago)
-        .annotate(minute=TruncMinute("completed_at"))
-        .values("minute")
-        .annotate(completed=Count("id"))
-        .order_by("minute")
-    )
-    completion_min_map = {
-        r["minute"].strftime("%Y-%m-%d %H:%M"): {"completed": r["completed"]}
-        for r in completion_min_qs
-    }
-    completion_min_chart = _chart(minute_display, [
-        _line_ds("Completed", _series(completion_min_map, minute_keys, "completed"), GREEN_FILL),
-    ])
 
     # ── Daily data (last 30 days) ────────────────────────────
 
@@ -319,59 +276,6 @@ def build_harvester_context(request):
         _bar_ds("Downloaded", _series(images_map, day_keys, "downloaded"), INDIGO, stack="images"),
         _bar_ds("Skipped", _series(images_map, day_keys, "skipped"), GRAY, stack="images"),
     ])
-
-    # Embeddings
-    embeddings_daily = (
-        HarvesterEmbedding.objects
-        .filter(started_at__gte=thirty_days_ago)
-        .annotate(day=TruncDate("started_at"))
-        .values("day")
-        .annotate(
-            embedded=Sum("articles_embedded"),
-            chunks=Sum("chunks_created"),
-        )
-        .order_by("day")
-    )
-    embeddings_map = {
-        str(r["day"]): {
-            "embedded": r["embedded"] or 0,
-            "chunks": r["chunks"] or 0,
-        }
-        for r in embeddings_daily
-    }
-    embeddings_chart = _chart(day_display, [
-        _line_ds("Articles Embedded", _series(embeddings_map, day_keys, "embedded"), INDIGO_FILL),
-        _line_ds("Chunks Created", _series(embeddings_map, day_keys, "chunks"), PURPLE_FILL),
-    ])
-
-    # Embedding tokens
-    tokens_daily = (
-        HarvesterEmbedding.objects
-        .filter(started_at__gte=thirty_days_ago)
-        .annotate(day=TruncDate("started_at"))
-        .values("day")
-        .annotate(tokens=Sum("tokens_used"))
-        .order_by("day")
-    )
-    tokens_map = {str(r["day"]): {"tokens": r["tokens"] or 0} for r in tokens_daily}
-    tokens_chart = _chart(day_display, [
-        _line_ds("Tokens Used", _series(tokens_map, day_keys, "tokens"), YELLOW_FILL),
-    ])
-
-    # Pipeline completion rate
-    completion_daily = (
-        ArticlePipeline.objects
-        .filter(completed_at__gte=thirty_days_ago)
-        .annotate(day=TruncDate("completed_at"))
-        .values("day")
-        .annotate(completed=Count("id"))
-        .order_by("day")
-    )
-    completion_map = {str(r["day"]): {"completed": r["completed"]} for r in completion_daily}
-    completion_chart = _chart(day_display, [
-        _line_ds("Completed", _series(completion_map, day_keys, "completed"), GREEN_FILL),
-    ])
-
     # ── Table: Problem feeds (last 7 days) ───────────────────
     problem_feeds_qs = (
         HarvesterFeed.objects
@@ -400,7 +304,7 @@ def build_harvester_context(request):
         (HarvesterFeed, "Feed Fetch"),
         (HarvesterContent, "Extraction"),
         (HarvesterImage, "Image DL"),
-        (HarvesterEmbedding, "Embedding"),
+        (HarvesterEmbedding, "Embedding"),  # kept for historical error visibility
     ]:
         for run in Model.objects.filter(status="error").order_by("-started_at")[:5]:
             recent_errors.append((run.started_at, {
@@ -415,78 +319,38 @@ def build_harvester_context(request):
     # ── Total articles in DB ─────────────────────────────────
     total_articles = Article.objects.count()
 
-    # ── Digest readiness ─────────────────────────────────────
-    digest_cfg = DigestConfig.get()
-    digest_hours = digest_cfg.hours_lookback
-    digest_cutoff = now - timedelta(hours=digest_hours)
+    def _pct(n, total):
+        return round(n / total * 100, 1) if total > 0 else 0
 
-    window_total = Article.objects.filter(published__gte=digest_cutoff).count()
-
-    window_pipelines = ArticlePipeline.objects.filter(
-        article__published__gte=digest_cutoff,
-    )
-    digest_ready = (
-        window_pipelines
-        .filter(embedded_at__isnull=False)
-        .exclude(article__content="")
-        .count()
-    )
-    digest_pending_extract = window_pipelines.filter(
-        content_extracted_at__isnull=True,
-    ).count()
-    digest_pending_embed = (
-        window_pipelines
-        .filter(content_extracted_at__isnull=False, embedded_at__isnull=True)
-        .exclude(article__content="")
-        .count()
-    )
-    digest_failed = window_pipelines.filter(
-        content_extracted_at__isnull=False, article__content="",
-    ).count()
-
-    # Articles without a pipeline record yet (just fetched)
-    digest_no_pipeline = (
-        Article.objects
-        .filter(published__gte=digest_cutoff, pipeline__isnull=True)
-        .count()
-    )
-
-    digest_used = (
-        ArticleUse.objects
-        .filter(article__published__gte=digest_cutoff)
-        .values("article_id")
-        .distinct()
-        .count()
-    )
-    digest_available = digest_ready - digest_used
-
-    digest_processing = digest_no_pipeline + digest_pending_extract + digest_pending_embed
-    digest_pct = round(digest_ready / window_total * 100) if window_total > 0 else 0
-
-    # ── Processing queue (per-stage progress) ──────────────────
-    cutoff_30d = now - timedelta(days=30)
+    # ── Processing queue (per-stage progress, single query) ───
     pipe_qs = ArticlePipeline.objects.filter(
-        article__published__gte=cutoff_30d,
+        article__published__gte=thirty_days_ago,
     )
-    pipe_total = pipe_qs.count()
+    pipe_agg = pipe_qs.aggregate(
+        total=Count("id"),
+        rss=Count("id", filter=Q(rss_images_at__isnull=False)),
+        extract=Count("id", filter=Q(content_extracted_at__isnull=False)),
+        og=Count("id", filter=Q(og_images_at__isnull=False)),
+        done=Count("id", filter=Q(
+            rss_images_at__isnull=False,
+            content_extracted_at__isnull=False,
+            og_images_at__isnull=False,
+        )),
+    )
+    pipe_total = pipe_agg["total"]
 
-    def _pct(done):
-        return round(done / pipe_total * 100) if pipe_total else 0
-
-    stage_defs = [
-        ("RSS Images",  "rss_images_at",       YELLOW[0]),
-        ("Extraction",  "content_extracted_at", RED[0]),
-        ("OG Images",   "og_images_at",         INDIGO[0]),
-        ("Embedding",   "embedded_at",          GREEN[0]),
-        ("Completed",   "completed_at",         "rgb(16, 185, 129)"),
-    ]
     queue_stages = []
-    for label, field, color in stage_defs:
-        done = pipe_qs.filter(**{f"{field}__isnull": False}).count()
+    for label, agg_key, color in [
+        ("RSS Images",  "rss",     YELLOW[0]),
+        ("Extraction",  "extract", RED[0]),
+        ("OG Images",   "og",      INDIGO[0]),
+        ("Completed",   "done",    EMERALD),
+    ]:
+        done = pipe_agg[agg_key]
         queue_stages.append({
             "label": label,
             "done": done,
-            "pct": _pct(done),
+            "pct": round(_pct(done, pipe_total)),
             "color": color,
         })
 
@@ -505,9 +369,8 @@ def build_harvester_context(request):
         "stage_toggles_on": [name for name, _ in STAGE_FIELDS if getattr(ps, name)],
         # KPI
         "articles_today": f"{articles_today:,}",
-        "pending_extraction": f"{pending_extraction:,}",
-        "pending_embedding": f"{pending_embedding:,}",
-        "completed_total": f"{completed_total:,}",
+        "pending_extraction": f"{pipe_total - pipe_agg['extract']:,}",
+        "completed_total": f"{pipe_agg['done']:,}",
         "error_rate_24h": error_rate_24h,
         "errors_24h": errors_24h,
         "total_runs_24h": total_24h,
@@ -518,15 +381,11 @@ def build_harvester_context(request):
         "new_articles_min_chart": new_articles_min_chart,
         "feed_fetches_min_chart": feed_fetches_min_chart,
         "extraction_min_chart": extraction_min_chart,
-        "completion_min_chart": completion_min_chart,
         # Daily charts
         "new_articles_chart": new_articles_chart,
         "feed_fetches_chart": feed_fetches_chart,
         "extraction_chart": extraction_chart,
         "images_chart": images_chart,
-        "embeddings_chart": embeddings_chart,
-        "tokens_chart": tokens_chart,
-        "completion_chart": completion_chart,
         # Tables
         "problem_feeds": problem_feeds,
         "recent_errors": recent_errors,
@@ -534,17 +393,5 @@ def build_harvester_context(request):
         "queue_stages": queue_stages,
         "queue_total": pipe_total,
         # Timeline
-        "timeline_data": _build_timeline_data(now),
-        # Digest readiness
-        "digest_hours": digest_hours,
-        "digest_window_total": window_total,
-        "digest_ready": digest_ready,
-        "digest_pending_extract": digest_pending_extract,
-        "digest_pending_embed": digest_pending_embed,
-        "digest_failed": digest_failed,
-        "digest_no_pipeline": digest_no_pipeline,
-        "digest_used": digest_used,
-        "digest_available": digest_available,
-        "digest_processing": digest_processing,
-        "digest_pct": digest_pct,
+        "timeline_data": _build_timeline_data(now, minutes=10),
     }

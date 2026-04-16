@@ -307,24 +307,23 @@ class HarvestManager:
             .filter(pipeline__content_extracted_at__isnull=True)
             .filter(Q(published__gte=_cutoff_days()) | Q(published__isnull=True))
             .exclude(url="")
-            .values_list("id", "url", "rss_content")
+            .values_list("id", "url")
             .order_by("?")[:CANDIDATE_POOL]
         )
         if not candidates:
             return False
 
-        for aid, url, rss_content in candidates:
+        for aid, url in candidates:
             domain = get_domain(url)
             if not acquire_domain(domain):
                 continue
 
             try:
-                article_id, clean_text, og_image, content_images, err_cat, _err_msg = (
+                article_id, clean_text, og_image, content_images, _err_cat, _err_msg = (
                     fetch_and_extract(aid, url)
                 )
                 self._save_extract_result(
                     article_id, clean_text, og_image, content_images,
-                    err_cat, rss_content,
                 )
                 logger.info("Extracted article %s from %s", article_id, domain)
             finally:
@@ -392,8 +391,7 @@ class HarvestManager:
             )
         return self._og_source
 
-    def _save_extract_result(self, article_id, clean_text, og_image, content_images,
-                             err_cat, rss_content):
+    def _save_extract_result(self, article_id, clean_text, og_image, content_images):
         if og_image:
             ArticleImage.objects.get_or_create(
                 article_id=article_id,
@@ -408,11 +406,7 @@ class HarvestManager:
                     source_url=img_url[:2000],
                 )
 
-        if err_cat:
-            use_fallback = rss_content and len(rss_content) >= 50
-            content = rss_content if use_fallback else ""
-            Article.objects.filter(id=article_id).update(content=content)
-        else:
+        if clean_text:
             Article.objects.filter(id=article_id).update(content=clean_text)
 
         ArticlePipeline.objects.filter(article_id=article_id).update(

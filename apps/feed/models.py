@@ -69,7 +69,6 @@ class Article(models.Model):
     title = models.CharField(max_length=1000)
     slug = models.SlugField(max_length=300, blank=True, default="")
     url = models.URLField(max_length=2000, unique=True)
-    rss_content = models.TextField(blank=True, default="")
     content = models.TextField(blank=True, default="")
     published = models.DateTimeField(null=True, blank=True, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)

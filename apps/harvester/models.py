@@ -165,7 +165,6 @@ STAGE_FIELDS = [
     ("enable_rss_image_download", "RSS Images"),
     ("enable_content_extraction", "Extraction"),
     ("enable_og_image_download", "OG Images"),
-    ("enable_embedding", "Embedding"),
 ]
 STAGE_FIELD_NAMES = frozenset(name for name, _ in STAGE_FIELDS)
 

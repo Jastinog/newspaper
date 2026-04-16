@@ -170,13 +170,13 @@ class ContentExtractor:
             )
         return self._og_source
 
-    def extract_new(self, batch_size: int = 0) -> tuple[int, int, int, list[str]]:
+    def extract_new(self, batch_size: int = 0) -> tuple[int, int, list[str]]:
         """Extract content for articles not yet fetched.
 
         Only processes articles from the last self.days days (or with no date).
         Uses domain-based scheduling to avoid hammering any single host.
 
-        Returns (total, extracted, fallback_count, errors).
+        Returns (total, extracted, errors).
         """
         cutoff = django_tz.now() - timedelta(days=self.days)
         qs = (
@@ -184,7 +184,7 @@ class ContentExtractor:
             .filter(Q(published__gte=cutoff) | Q(published__isnull=True))
             .exclude(url="")
             .order_by("?")
-            .values_list("id", "url", "rss_content")
+            .values_list("id", "url")
         )
         if batch_size:
             qs = qs[:batch_size]
@@ -192,24 +192,21 @@ class ContentExtractor:
 
         if not articles:
             self._write("No articles to extract.\n")
-            return 0, 0, 0, []
+            return 0, 0, []
 
         self._write(f"Extracting content for {len(articles)} articles...\n")
 
         # Group articles by domain
         domain_queues: dict[str, deque] = defaultdict(deque)
-        rss_lookup: dict[int, str] = {}
-        for aid, url, rss_content in articles:
+        for aid, url in articles:
             domain = get_domain(url)
             domain_queues[domain].append((aid, url))
-            rss_lookup[aid] = rss_content
 
         domains = list(domain_queues.keys())
         random.shuffle(domains)
         self._write(f"  {len(domains)} domains, {len(articles)} articles\n")
 
         extracted = 0
-        fallback_count = 0
         errors: list[str] = []
         error_counts: Counter = Counter()
         done_count = 0
@@ -239,11 +236,8 @@ class ContentExtractor:
                     release_domain(domain)
 
                     article_id, clean_text, og_image, content_images, err_category, err_message = future.result()
-                    rss_content = rss_lookup.get(article_id, "")
                     done_count += 1
 
-                    # Create ArticleImage for discovered image URLs
-                    # Use og:image first; fall back to content images only if no sources exist
                     if og_image:
                         ArticleImage.objects.get_or_create(
                             article_id=article_id,
@@ -258,21 +252,9 @@ class ContentExtractor:
                                 source_url=img_url[:2000],
                             )
 
-                    # Determine content and error fields
                     if err_category:
-                        use_fallback = rss_content and len(rss_content) >= 50
-                        if use_fallback:
-                            content = _html_to_markdown(rss_content)
-                            error_msg = f"[{err_category}] {err_message} (rss fallback)"[:500]
-                            extracted += 1
-                            fallback_count += 1
-                        else:
-                            content = ""
-                            error_msg = f"[{err_category}] {err_message}"[:500]
-                            errors.append(f"[{err_category}] {err_message}")
-                            error_counts[err_category] += 1
-
-                        Article.objects.filter(id=article_id).update(content=content)
+                        errors.append(f"[{err_category}] {err_message}")
+                        error_counts[err_category] += 1
                     else:
                         Article.objects.filter(id=article_id).update(content=clean_text)
                         extracted += 1
@@ -292,11 +274,7 @@ class ContentExtractor:
                 if not finished:
                     time.sleep(0.1)
 
-        self._write(
-            f"Done: {extracted}/{len(articles)} extracted"
-        )
-        if fallback_count:
-            self._write(f" ({fallback_count} from RSS fallback)")
+        self._write(f"Done: {extracted}/{len(articles)} extracted")
         if errors:
             self._write(f" ({len(errors)} failed)")
         self._write("\n")
@@ -306,4 +284,4 @@ class ContentExtractor:
             for cat, count in error_counts.most_common():
                 self._write(f"  {cat}: {count}\n")
 
-        return len(articles), extracted, fallback_count, errors
+        return len(articles), extracted, errors

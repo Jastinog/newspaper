@@ -164,7 +164,7 @@ class EditionService:
         qs = (
             Article.objects
             .select_related("feed")
-            .defer("content", "rss_content")
+            .defer("content")
             .filter(
                 published__gte=cutoff,
                 published__lte=end_of_day,

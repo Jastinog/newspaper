@@ -41,12 +41,11 @@ def extract_content():
     run = HarvesterContent.objects.create(status=RunStatus.SUCCESS)
 
     try:
-        total, extracted, fallback_count, errors = ContentExtractor().extract_new(
+        total, extracted, errors = ContentExtractor().extract_new(
             batch_size=EXTRACT_BATCH_SIZE,
         )
         run.articles_found = total
         run.articles_extracted = extracted
-        run.articles_fallback = fallback_count
         run.articles_failed = total - extracted
         if errors:
             run.error_message = "; ".join(errors[:10])

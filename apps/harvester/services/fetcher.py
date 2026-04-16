@@ -96,7 +96,7 @@ def _parse_published(entry):
     return None
 
 
-def _extract_rss_content(entry) -> str:
+def _extract_entry_text(entry) -> str:
     """Grab RSS description/summary as fallback article content."""
     for field in ("summary", "description", "content"):
         val = getattr(entry, field, None)
@@ -111,7 +111,7 @@ class _Candidate(NamedTuple):
     url: str
     title: str
     published: datetime
-    rss_content: str
+    content: str
     image_url: str
 
 
@@ -156,7 +156,7 @@ def save_articles(feed_id, entries) -> tuple[int, list[int]]:
             url=link[:2000],
             title=(getattr(entry, "title", "") or "")[:1000],
             published=published,
-            rss_content=_extract_rss_content(entry),
+            content=_extract_entry_text(entry),
             image_url=_extract_rss_image(entry),
         ))
 
@@ -188,7 +188,7 @@ def save_articles(feed_id, entries) -> tuple[int, list[int]]:
             slug=slugify(c.title, allow_unicode=True)[:300],
             url=c.url,
             published=c.published,
-            rss_content=c.rss_content,
+            content=c.content,
         )
         for c in to_insert
     ]

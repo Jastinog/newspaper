@@ -26,13 +26,12 @@ class Command(BaseCommand):
             days=options["days"],
             stdout=self.stdout,
         )
-        total, extracted, fallback_count, errors = extractor.extract_new(
+        total, extracted, errors = extractor.extract_new(
             batch_size=options["batch"],
         )
 
         self.stdout.write(self.style.SUCCESS(
-            f"Found {total}, extracted {extracted}, fallback {fallback_count}, "
-            f"failed {total - extracted}"
+            f"Found {total}, extracted {extracted}, failed {total - extracted}"
         ))
 
         if errors:
