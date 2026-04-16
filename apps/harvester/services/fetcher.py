@@ -199,8 +199,18 @@ def save_articles(feed_id, entries) -> tuple[int, list[int]]:
             Article.objects.filter(url__in=candidate_urls)
             .values_list("url", "id")
         )
+        # Articles without an RSS image skip the RSS download stage entirely —
+        # mark rss_images_at now so they can eventually reach "completed".
+        urls_with_image = {c.url for c in to_insert if c.image_url}
+        now = django_tz.now()
         ArticlePipeline.objects.bulk_create(
-            [ArticlePipeline(article_id=aid) for aid in by_url.values()],
+            [
+                ArticlePipeline(
+                    article_id=aid,
+                    rss_images_at=None if url in urls_with_image else now,
+                )
+                for url, aid in by_url.items()
+            ],
             ignore_conflicts=True,
         )
         image_rows = [

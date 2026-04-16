@@ -405,12 +405,14 @@ class HarvestManager:
         return self._og_source
 
     def _save_extract_result(self, article_id, clean_text, og_image, content_images):
+        og_queued = False
         if og_image:
             ArticleImage.objects.get_or_create(
                 article_id=article_id,
                 source_url=og_image[:2000],
                 defaults={"source": self._get_og_source()},
             )
+            og_queued = True
 
         if not ArticleImage.objects.filter(article_id=article_id).exists():
             for img_url in content_images:
@@ -422,6 +424,10 @@ class HarvestManager:
         if clean_text:
             Article.objects.filter(id=article_id).update(content=clean_text)
 
-        ArticlePipeline.objects.filter(article_id=article_id).update(
-            content_extracted_at=timezone.now(),
-        )
+        # If no og-image was queued for download, the OG stage has nothing to do —
+        # mark og_images_at now so the article can reach "completed".
+        now = timezone.now()
+        update_fields = {"content_extracted_at": now}
+        if not og_queued:
+            update_fields["og_images_at"] = now
+        ArticlePipeline.objects.filter(article_id=article_id).update(**update_fields)
