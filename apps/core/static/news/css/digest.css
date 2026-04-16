@@ -255,22 +255,16 @@ a.item-topic:hover {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    height: 22px;
-    padding: 0 0.5rem;
+    height: 24px;
+    padding: 0 0.55rem;
+    background: var(--border-faint);
+    border-bottom: 1px solid var(--border-light);
 }
 .item-top-bar .sources-wrap,
 .item-top-bar .sources-btn {
     display: flex;
     align-items: center;
     line-height: 1;
-}
-
-/* Bottom actions: research only */
-.item-actions {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    margin-top: 0.3rem;
 }
 
 /* Shared card container layout (hero card + no-image placeholder) */
@@ -338,16 +332,14 @@ a.item-topic:hover {
     font-size: 0.9em;
 }
 
-/* === HERO CARD (full-width image with icon strips) === */
+/* === HERO CARD (full-width image with icon strip above) === */
 .item-hero-card .item-top-bar,
-.item-hero-card .item-bottom-bar,
-.item-image-wrap .item-top-bar,
-.item-image-wrap .item-bottom-bar {
+.item-image-wrap .item-top-bar {
     width: 100%;
 }
 
-/* Bottom bar button styling (match sources-btn look) */
-.item-bottom-bar button {
+/* Top bar button styling (match sources-btn look) */
+.item-top-bar button {
     background: none;
     border: none;
     cursor: pointer;
@@ -363,7 +355,7 @@ a.item-topic:hover {
     line-height: 1;
 }
 
-.item-bottom-bar button:hover {
+.item-top-bar button:hover {
     color: var(--accent);
 }
 
