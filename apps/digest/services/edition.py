@@ -171,7 +171,7 @@ class EditionService:
                 feed__enabled=True,
             )
             .exclude(content="")
-            .exclude(digest_uses__isnull=False)
+            .filter(used_in_digest=False)
             .order_by("-published")
         )
 

@@ -327,19 +327,3 @@ class ItemPipeline(models.Model):
         return f"Pipeline: {self.story_label or self.item_id}"
 
 
-# ── Article Usage Tracking ──────────────────────────────────────
-
-
-class ArticleUse(models.Model):
-    """Tracks which articles have been used in digest items."""
-
-    article = models.OneToOneField(
-        "feed.Article", on_delete=models.CASCADE, related_name="digest_uses",
-    )
-    item = models.ForeignKey(
-        DigestItem, on_delete=models.CASCADE, related_name="article_uses",
-    )
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"Article {self.article_id} -> Item {self.item_id}"

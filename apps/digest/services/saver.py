@@ -6,7 +6,7 @@ from django.utils import timezone
 from apps.core.models import Language
 from apps.feed.models import Article
 from apps.digest.models import (
-    ArticleUse, Digest, DigestItem, DigestItemTranslation, ItemPipeline,
+    Digest, DigestItem, DigestItemTranslation, ItemPipeline,
 )
 
 logger = logging.getLogger(__name__)
@@ -59,11 +59,7 @@ class DigestSaver:
             return []
 
         item.articles.set(valid_ids)
-
-        ArticleUse.objects.bulk_create(
-            [ArticleUse(article_id=aid, item=item) for aid in valid_ids],
-            ignore_conflicts=True,
-        )
+        Article.objects.filter(id__in=valid_ids).update(used_in_digest=True)
 
         newest_published = (
             Article.objects

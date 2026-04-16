@@ -3,7 +3,7 @@ from django.utils.html import format_html
 from unfold.admin import ModelAdmin, TabularInline
 
 from .models import (
-    ArticleUse, Digest, DigestConfig, DigestItem, DigestItemTranslation,
+    Digest, DigestConfig, DigestItem, DigestItemTranslation,
     DigestRun, DigestSection, DigestSectionTranslation, DigestTranslation,
     ItemPipeline,
 )
@@ -199,12 +199,3 @@ class ItemPipelineAdmin(ModelAdmin):
     )
 
 
-# ── ArticleUse ─────────────────────────────────────────────────
-
-
-@admin.register(ArticleUse)
-class ArticleUseAdmin(ModelAdmin):
-    list_display = ("id", "article", "item", "created_at")
-    list_display_links = ("id",)
-    list_filter = ("item__digest__date",)
-    raw_id_fields = ("article", "item")
