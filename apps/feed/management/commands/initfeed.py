@@ -4,12 +4,7 @@ from django.conf import settings
 from django.core.management.base import BaseCommand
 
 from apps.core.models import Language
-from apps.feed.models import ArticleImageSource, Category, Feed
-
-DEFAULT_IMAGE_SOURCES = [
-    {"slug": "rss-image", "name": "RSS Image"},
-    {"slug": "og-image", "name": "OG Image"},
-]
+from apps.feed.models import Category, Feed
 
 DEFAULT_CATEGORIES = [
     {"slug": "world", "name": "World News", "order": 0},
@@ -49,7 +44,6 @@ class Command(BaseCommand):
         entries = data["feeds"]
         self.stdout.write(f"Loading {len(entries)} feeds from {json_path.name}...")
 
-        self._seed_image_sources()
         cat_map = self._seed_categories()
         countries = {c.code: c for c in Country.objects.all()}
         languages = {l.code: l for l in Language.objects.all()}
@@ -81,13 +75,6 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(
             f"Feeds: {len(to_create)} new, {len(to_update)} updated ({len(entries)} total)"
         ))
-
-    def _seed_image_sources(self):
-        for entry in DEFAULT_IMAGE_SOURCES:
-            ArticleImageSource.objects.get_or_create(
-                slug=entry["slug"],
-                defaults={"name": entry["name"]},
-            )
 
     def _seed_categories(self):
         cat_map = {}

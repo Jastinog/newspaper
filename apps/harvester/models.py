@@ -87,18 +87,6 @@ class DomainThrottle(models.Model):
         return self.domain
 
 
-class HarvesterEmbedding(HarvesterRun):
-    """Tracks an embedding batch run."""
-
-    articles_found = models.PositiveIntegerField(default=0)
-    articles_embedded = models.PositiveIntegerField(default=0)
-    chunks_created = models.PositiveIntegerField(default=0)
-    tokens_used = models.PositiveIntegerField(default=0)
-
-    def __str__(self):
-        return f"Embed {self.status} ({self.started_at:%Y-%m-%d %H:%M})"
-
-
 class PipelineSettings(models.Model):
     """Singleton (pk=1): controls the entire harvester pipeline."""
 
@@ -114,10 +102,8 @@ class PipelineSettings(models.Model):
         help_text="Pause between pipeline ticks (0.05–60s). Higher = less CPU load.",
     )
     enable_feed_fetching = models.BooleanField(default=True, verbose_name="Feed fetching")
-    enable_rss_image_download = models.BooleanField(default=True, verbose_name="RSS image download")
     enable_content_extraction = models.BooleanField(default=True, verbose_name="Content extraction")
-    enable_og_image_download = models.BooleanField(default=True, verbose_name="OG image download")
-    enable_embedding = models.BooleanField(default=True, verbose_name="Embedding")
+    enable_image_download = models.BooleanField(default=True, verbose_name="Image download")
     updated_at = models.DateTimeField(auto_now=True)
 
     _thread_local = threading.local()
@@ -162,19 +148,16 @@ class PipelineSettings(models.Model):
 
 STAGE_FIELDS = [
     ("enable_feed_fetching", "Feed Fetching"),
-    ("enable_rss_image_download", "RSS Images"),
     ("enable_content_extraction", "Extraction"),
-    ("enable_og_image_download", "OG Images"),
+    ("enable_image_download", "Image Download"),
 ]
 STAGE_FIELD_NAMES = frozenset(name for name, _ in STAGE_FIELDS)
 
 
 # Pipeline event stage keys — single source of truth for Python side.
 STAGE_FEED = "feed"
-STAGE_RSS_IMG = "rss_img"
 STAGE_EXTRACT = "extract"
-STAGE_OG_IMG = "og_img"
-STAGE_EMBED = "embed"
+STAGE_DOWNLOAD = "download"
 
 
 class PipelineEvent(models.Model):

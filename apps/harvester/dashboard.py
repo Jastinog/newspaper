@@ -6,11 +6,10 @@ from django.db.models.functions import TruncDate, TruncMinute
 from django.urls import reverse
 from django.utils import timezone
 
-from apps.feed.models import Article, ArticlePipeline, Feed
+from apps.feed.models import Article, Feed
 from apps.harvester.models import (
     PipelineSettings, PipelineEvent, STAGE_FIELDS,
     HarvesterContent,
-    HarvesterEmbedding,
     HarvesterFeed,
     HarvesterImage,
 )
@@ -112,13 +111,11 @@ def build_harvester_context(request):
         HarvesterFeed.objects.filter(error_filter).count(),
         HarvesterContent.objects.filter(error_filter).count(),
         HarvesterImage.objects.filter(error_filter).count(),
-        HarvesterEmbedding.objects.filter(error_filter).count(),
     ])
     total_24h = sum([
         HarvesterFeed.objects.filter(total_filter).count(),
         HarvesterContent.objects.filter(total_filter).count(),
         HarvesterImage.objects.filter(total_filter).count(),
-        HarvesterEmbedding.objects.filter(total_filter).count(),
     ])
     error_rate_24h = (
         f"{errors_24h / total_24h * 100:.1f}%" if total_24h > 0 else "—"
@@ -304,7 +301,6 @@ def build_harvester_context(request):
         (HarvesterFeed, "Feed Fetch"),
         (HarvesterContent, "Extraction"),
         (HarvesterImage, "Image DL"),
-        (HarvesterEmbedding, "Embedding"),  # kept for historical error visibility
     ]:
         for run in Model.objects.filter(status="error").order_by("-started_at")[:5]:
             recent_errors.append((run.started_at, {
@@ -323,51 +319,45 @@ def build_harvester_context(request):
         return round(n / total * 100, 1) if total > 0 else 0
 
     # ── Processing queue (per-stage progress, single query) ───
-    pipe_qs = ArticlePipeline.objects.filter(
-        article__published__gte=thirty_days_ago,
-    )
-    _done_q = Q(
-        rss_images_at__isnull=False,
-        content_extracted_at__isnull=False,
-        og_images_at__isnull=False,
-    )
-    pipe_agg = pipe_qs.aggregate(
+    art_qs = Article.objects.filter(published__gte=thirty_days_ago)
+    status_agg = art_qs.aggregate(
         total=Count("id"),
-        rss=Count("id", filter=Q(rss_images_at__isnull=False)),
-        extract=Count("id", filter=Q(content_extracted_at__isnull=False)),
-        og=Count("id", filter=Q(og_images_at__isnull=False)),
-        done=Count("id", filter=_done_q),
+        extracted=Count("id", filter=Q(status__gte=Article.Status.EXTRACTED)),
+        completed=Count("id", filter=Q(status=Article.Status.COMPLETED)),
     )
-    pipe_total = pipe_agg["total"]
+    pipe_total = status_agg["total"]
 
-    queue_stages = []
-    for label, agg_key, color in [
-        ("RSS Images",  "rss",     YELLOW[0]),
-        ("Extraction",  "extract", RED[0]),
-        ("OG Images",   "og",      INDIGO[0]),
-        ("Completed",   "done",    EMERALD),
-    ]:
-        done = pipe_agg[agg_key]
-        queue_stages.append({
-            "label": label,
-            "done": done,
-            "pct": round(_pct(done, pipe_total)),
-            "color": color,
-        })
+    queue_stages = [
+        {
+            "label": "Extracted",
+            "done": status_agg["extracted"],
+            "pct": round(_pct(status_agg["extracted"], pipe_total)),
+            "color": RED[0],
+        },
+        {
+            "label": "Completed",
+            "done": status_agg["completed"],
+            "pct": round(_pct(status_agg["completed"], pipe_total)),
+            "color": EMERALD,
+        },
+    ]
 
     # ── Per-feed progress ────────────────────────────────────
     feed_progress = [
         {
-            "title": f["article__feed__title"],
+            "title": f["feed__title"],
             "total": f["total"],
             "done": f["done"],
             "pct": round(_pct(f["done"], f["total"])),
             "color": EMERALD,
         }
-        for f in pipe_qs
-        .values("article__feed__title")
-        .annotate(total=Count("id"), done=Count("id", filter=_done_q))
-        .order_by("article__feed__title")
+        for f in art_qs
+        .values("feed__title")
+        .annotate(
+            total=Count("id"),
+            done=Count("id", filter=Q(status=Article.Status.COMPLETED)),
+        )
+        .order_by("feed__title")
     ]
 
     # ── Pipeline state ────────────────────────────────────────
@@ -385,8 +375,8 @@ def build_harvester_context(request):
         "stage_toggles_on": [name for name, _ in STAGE_FIELDS if getattr(ps, name)],
         # KPI
         "articles_today": f"{articles_today:,}",
-        "pending_extraction": f"{pipe_total - pipe_agg['extract']:,}",
-        "completed_total": f"{pipe_agg['done']:,}",
+        "pending_extraction": f"{pipe_total - status_agg['extracted']:,}",
+        "completed_total": f"{status_agg['completed']:,}",
         "error_rate_24h": error_rate_24h,
         "errors_24h": errors_24h,
         "total_runs_24h": total_24h,

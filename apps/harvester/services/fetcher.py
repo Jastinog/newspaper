@@ -14,10 +14,11 @@ from django.db.models.functions import Greatest
 from django.utils import timezone as django_tz
 from django.utils.text import slugify
 
+from apps.feed.models import Article, Feed
 from apps.harvester.models import HarvesterFeed, RunStatus
 from apps.harvester.retention import ARTICLE_RETENTION_DAYS
-from apps.feed.models import Article, ArticleImage, ArticleImageSource, ArticlePipeline, Feed
 from .http import get_domain, random_headers
+from .image_picker import pick_from_rss_entry
 from .throttle import acquire_domain, release_domain
 
 logger = logging.getLogger(__name__)
@@ -26,42 +27,7 @@ TIMEOUT = 15
 MAX_WORKERS = 20
 
 
-def _extract_rss_image(entry) -> str:
-    """Extract the best image URL from a feedparser entry."""
-    # 1. media:content or media:thumbnail
-    for attr in ("media_content", "media_thumbnail"):
-        media = getattr(entry, attr, None)
-        if media and isinstance(media, list):
-            for m in media:
-                url = m.get("url", "")
-                if url:
-                    return url
-
-    # 2. <enclosure> with image type
-    image_extensions = (".jpg", ".jpeg", ".png", ".webp")
-    for enc in getattr(entry, "enclosures", []):
-        enc_type = enc.get("type", "")
-        url = enc.get("href", "") or enc.get("url", "")
-        if not url:
-            continue
-        if "image" in enc_type or url.lower().endswith(image_extensions):
-            return url
-
-    # 3. First <img> in RSS summary/description HTML
-    for field in ("summary", "description", "content"):
-        val = getattr(entry, field, None)
-        if isinstance(val, list):
-            val = val[0].get("value", "") if val else ""
-        if val:
-            match = re.search(r'<img[^>]+src=["\']([^"\']+)["\']', str(val), re.IGNORECASE)
-            if match:
-                return match.group(1)
-
-    return ""
-
-
 def _strip_html_basic(text: str) -> str:
-    """Strip HTML tags and decode entities from RSS content."""
     text = re.sub(r"<[^>]+>", "", text)
     text = unescape(text)
     text = re.sub(r"\s+", " ", text)
@@ -69,7 +35,6 @@ def _strip_html_basic(text: str) -> str:
 
 
 def fetch_single_feed(feed_id, url, title):
-    """Fetch and parse a single RSS feed. Runs in a thread."""
     try:
         resp = requests.get(url, timeout=TIMEOUT, headers=random_headers())
         resp.raise_for_status()
@@ -79,13 +44,7 @@ def fetch_single_feed(feed_id, url, title):
         return feed_id, [], f"{title}: {e}"
 
 
-def _get_rss_source():
-    src, _ = ArticleImageSource.objects.get_or_create(slug="rss-image", defaults={"name": "RSS Image"})
-    return src
-
-
 def _parse_published(entry):
-    """Extract a timezone-aware datetime from a feedparser entry, or None."""
     for date_field in ("published_parsed", "updated_parsed"):
         parsed_time = getattr(entry, date_field, None)
         if parsed_time:
@@ -97,7 +56,6 @@ def _parse_published(entry):
 
 
 def _extract_entry_text(entry) -> str:
-    """Grab RSS description/summary as fallback article content."""
     for field in ("summary", "description", "content"):
         val = getattr(entry, field, None)
         if isinstance(val, list):
@@ -116,16 +74,7 @@ class _Candidate(NamedTuple):
 
 
 def save_articles(feed_id, entries) -> tuple[int, list[int]]:
-    """Save new articles from parsed RSS entries. Returns (count, article_ids).
-
-    Dedup strategy:
-      1. In-memory filter: drop entries without `published`, older than HWM,
-         or outside the retention window. If nothing survives, 0 DB calls.
-      2. Bulk SELECT of surviving URLs to filter out already-stored articles.
-      3. Bulk INSERT with ignore_conflicts=True as a race-condition safety net.
-      4. Advance the feed's HWM to max(entry.published) so the next poll can
-         short-circuit even faster.
-    """
+    """Save new articles from parsed RSS entries. Returns (count, article_ids)."""
     if not entries:
         return 0, []
 
@@ -135,8 +84,6 @@ def save_articles(feed_id, entries) -> tuple[int, list[int]]:
         .get(pk=feed_id).last_entry_published
     )
 
-    # 1. In-memory filter. Extract everything we need from `entry` here so
-    # the parsed RSS payload can be GC'd before we hit the DB.
     candidates: list[_Candidate] = []
     max_entry_pub = None
     for entry in entries:
@@ -157,10 +104,9 @@ def save_articles(feed_id, entries) -> tuple[int, list[int]]:
             title=(getattr(entry, "title", "") or "")[:1000],
             published=published,
             content=_extract_entry_text(entry),
-            image_url=_extract_rss_image(entry),
+            image_url=pick_from_rss_entry(entry)[:2000],
         ))
 
-    # Advance HWM via Greatest() so concurrent writers can't rewind it.
     if max_entry_pub is not None and (hwm is None or max_entry_pub > hwm):
         Feed.objects.filter(pk=feed_id).update(
             last_entry_published=Greatest("last_entry_published", max_entry_pub),
@@ -169,7 +115,6 @@ def save_articles(feed_id, entries) -> tuple[int, list[int]]:
     if not candidates:
         return 0, []
 
-    # 2. Bulk dedup via one SELECT
     candidate_urls = [c.url for c in candidates]
     existing_urls = set(
         Article.objects.filter(url__in=candidate_urls).values_list("url", flat=True)
@@ -178,9 +123,6 @@ def save_articles(feed_id, entries) -> tuple[int, list[int]]:
     if not to_insert:
         return 0, []
 
-    # 3. Bulk INSERT with safety net for races. bulk_create bypasses
-    # Article.save(), so populate the slug explicitly here.
-    rss_source = _get_rss_source()
     articles = [
         Article(
             feed_id=feed_id,
@@ -189,42 +131,17 @@ def save_articles(feed_id, entries) -> tuple[int, list[int]]:
             url=c.url,
             published=c.published,
             content=c.content,
+            image_url=c.image_url,
+            status=Article.Status.PENDING,
         )
         for c in to_insert
     ]
     with transaction.atomic():
         Article.objects.bulk_create(articles, ignore_conflicts=True)
-        # ignore_conflicts on PG doesn't populate pks, so reload by URL.
         by_url = dict(
             Article.objects.filter(url__in=candidate_urls)
             .values_list("url", "id")
         )
-        # Articles without an RSS image skip the RSS download stage entirely —
-        # mark rss_images_at now so they can eventually reach "completed".
-        urls_with_image = {c.url for c in to_insert if c.image_url}
-        now = django_tz.now()
-        ArticlePipeline.objects.bulk_create(
-            [
-                ArticlePipeline(
-                    article_id=aid,
-                    rss_images_at=None if url in urls_with_image else now,
-                )
-                for url, aid in by_url.items()
-            ],
-            ignore_conflicts=True,
-        )
-        image_rows = [
-            ArticleImage(
-                article_id=by_url[c.url],
-                source=rss_source,
-                source_url=c.image_url[:2000],
-                is_primary=True,
-            )
-            for c in to_insert
-            if c.image_url and c.url in by_url
-        ]
-        if image_rows:
-            ArticleImage.objects.bulk_create(image_rows, ignore_conflicts=True)
 
     article_ids = [by_url[c.url] for c in to_insert if c.url in by_url]
     return len(article_ids), article_ids
@@ -242,17 +159,12 @@ class FeedFetcher:
             self.stdout.write(msg)
 
     def fetch_feeds(self, feeds: list[Feed]) -> list[HarvesterFeed]:
-        """Fetch specific feeds with per-domain throttling.
-
-        Returns list of HarvesterFeed objects.
-        """
         if not feeds:
             return []
 
         self._write(f"Fetching {len(feeds)} feeds...\n")
         runs = []
 
-        # Build domain queues
         feed_queue: list[Feed] = list(feeds)
         random.shuffle(feed_queue)
         domain_feeds: dict[str, list[Feed]] = {}
@@ -261,11 +173,10 @@ class FeedFetcher:
             domain_feeds.setdefault(domain, []).append(f)
 
         domains = list(domain_feeds.keys())
-        in_flight: dict = {}  # future -> (Feed, domain)
+        in_flight: dict = {}
 
         with ThreadPoolExecutor(max_workers=self.workers) as pool:
             while domain_feeds or in_flight:
-                # Submit new tasks for domains we can acquire
                 random.shuffle(domains)
                 for domain in domains:
                     if len(in_flight) >= self.workers:
@@ -280,7 +191,6 @@ class FeedFetcher:
                     future = pool.submit(fetch_single_feed, feed.id, feed.url, feed.title)
                     in_flight[future] = (feed, domain)
 
-                # Collect finished results (non-blocking)
                 finished = [f for f in in_flight if f.done()]
                 for future in finished:
                     feed, domain = in_flight.pop(future)
@@ -319,10 +229,6 @@ class FeedFetcher:
         return runs
 
     def fetch_all(self) -> tuple[int, int, list[str]]:
-        """Fetch all enabled feeds. Returns (feeds_count, new_articles, errors).
-
-        Legacy interface — delegates to fetch_feeds().
-        """
         feeds = list(Feed.objects.filter(enabled=True))
         if not feeds:
             return 0, 0, []

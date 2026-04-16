@@ -4,7 +4,7 @@ from django.db.models import Max
 from django.utils import timezone
 
 from apps.core.models import Language
-from apps.feed.models import Article, ArticleImage
+from apps.feed.models import Article
 from apps.digest.models import (
     ArticleUse, Digest, DigestItem, DigestItemTranslation, ItemPipeline,
 )
@@ -77,28 +77,28 @@ class DigestSaver:
 
         return valid_ids
 
-    def assign_image(self, item: DigestItem, used_image_ids: set | None = None,
+    def assign_image(self, item: DigestItem, used_article_ids: set | None = None,
                      article_ids: list[int] | None = None) -> int | None:
-        """Pick the best unused image for the item. Returns the chosen image ID or None."""
+        """Pick the cover article with a downloaded image. Returns the chosen Article ID or None."""
         if article_ids is None:
             article_ids = list(item.articles.values_list("id", flat=True))
         if not article_ids:
             return None
 
         qs = (
-            ArticleImage.objects
-            .filter(article_id__in=article_ids, downloaded=True)
+            Article.objects
+            .filter(id__in=article_ids)
             .exclude(image="")
-            .order_by("-is_primary", "-article__published")
+            .order_by("-published")
         )
-        if used_image_ids:
-            qs = qs.exclude(id__in=used_image_ids)
+        if used_article_ids:
+            qs = qs.exclude(id__in=used_article_ids)
 
-        local_image = qs.first()
-        if local_image:
-            item.image = local_image
-            item.save(update_fields=["image"])
-            return local_image.id
+        cover = qs.first()
+        if cover:
+            item.cover_article = cover
+            item.save(update_fields=["cover_article"])
+            return cover.id
         return None
 
     def save_translations(self, digest: Digest, language: Language,

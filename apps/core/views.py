@@ -15,7 +15,7 @@ from django.views.decorators.http import require_POST
 from apps.core.models import Language
 from apps.core.services.utils import get_article_image_url
 from apps.digest.models import Digest, DigestItem
-from apps.feed.models import Article, ArticleImage, Category, Feed
+from apps.feed.models import Article, Category, Feed
 from apps.feed.services.search import SearchService
 from apps.location.models import Country
 from apps.research.models import Research
@@ -268,11 +268,10 @@ def article_detail(request, pk, slug=""):
         "breadcrumbs": _breadcrumbs(request, *crumbs),
     }
 
-    hero_image = article.images.filter(is_primary=True).exclude(image="").first()
-    if hero_image and hero_image.image:
-        seo["og_image"] = request.build_absolute_uri(hero_image.image.url)
+    if article.image:
+        seo["og_image"] = request.build_absolute_uri(article.image.url)
 
-    response = render(request, "news/article.html", {"article": article, "seo": seo, "hero_image": hero_image})
+    response = render(request, "news/article.html", {"article": article, "seo": seo})
     cache.set(cache_key, (article.slug, response.content), 60 * 60)
     return response
 
@@ -545,15 +544,15 @@ def feeds_list(request):
     qs = qs.annotate(article_count=Count("articles")).order_by("category__order", "title")
     feeds = list(qs)
 
-    # Fetch the most recently downloaded image per feed
+    # Fetch the most recently downloaded article image per feed
     feed_ids = [f.pk for f in feeds]
     latest_images = (
-        ArticleImage.objects
-        .filter(article__feed_id__in=feed_ids)
+        Article.objects
+        .filter(feed_id__in=feed_ids)
         .exclude(image="")
-        .order_by("article__feed_id", "-created_at")
-        .distinct("article__feed_id")
-        .values_list("article__feed_id", "image")
+        .order_by("feed_id", "-published")
+        .distinct("feed_id")
+        .values_list("feed_id", "image")
     )
     feed_image_map = dict(latest_images)
     for feed in feeds:
@@ -602,13 +601,7 @@ def feed_detail(request, pk):
     feed = get_object_or_404(
         Feed.objects.select_related("category", "country", "language"), pk=pk,
     )
-    articles_qs = (
-        feed.articles
-        .prefetch_related(
-            Prefetch("images", queryset=ArticleImage.objects.filter(is_primary=True), to_attr="primary_images"),
-        )
-        .order_by("-published")
-    )
+    articles_qs = feed.articles.order_by("-published")
     paginator = Paginator(articles_qs, _ARTICLES_PER_PAGE)
     page = paginator.get_page(page_num)
 
@@ -645,13 +638,7 @@ def articles_list(request):
     if html is not None:
         return HttpResponse(html)
 
-    qs = (
-        Article.objects
-        .select_related("feed", "feed__category", "feed__country")
-        .prefetch_related(
-            Prefetch("images", queryset=ArticleImage.objects.filter(is_primary=True), to_attr="primary_images"),
-        )
-    )
+    qs = Article.objects.select_related("feed", "feed__category", "feed__country")
 
     if category_slug:
         qs = qs.filter(feed__category__slug=category_slug)

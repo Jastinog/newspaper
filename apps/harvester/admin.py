@@ -7,7 +7,6 @@ from unfold.admin import ModelAdmin, TabularInline
 from .models import (
     STAGE_FIELDS,
     HarvesterContent,
-    HarvesterEmbedding,
     HarvesterFeed,
     HarvesterImage,
     PipelineSettings,
@@ -101,28 +100,6 @@ class HarvesterImageAdmin(ModelAdmin):
     list_display = [
         "started_at", "status_display",
         "images_found", "images_downloaded", "images_skipped",
-        "duration_display",
-    ]
-    list_filter = ["status"]
-    date_hierarchy = "started_at"
-    list_per_page = 50
-
-    @admin.display(description="Status", ordering="status")
-    def status_display(self, obj):
-        return _status_display(obj)
-
-    @admin.display(description="Duration")
-    def duration_display(self, obj):
-        return _duration_display(obj)
-
-
-# --- Embed ---
-
-@admin.register(HarvesterEmbedding)
-class HarvesterEmbeddingAdmin(ModelAdmin):
-    list_display = [
-        "started_at", "status_display",
-        "articles_found", "articles_embedded", "chunks_created", "tokens_used",
         "duration_display",
     ]
     list_filter = ["status"]

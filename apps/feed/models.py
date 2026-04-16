@@ -65,6 +65,11 @@ class Feed(models.Model):
 
 
 class Article(models.Model):
+    class Status(models.IntegerChoices):
+        PENDING = 0, "Pending"
+        EXTRACTED = 1, "Extracted"
+        COMPLETED = 2, "Completed"
+
     feed = models.ForeignKey(Feed, on_delete=models.CASCADE, related_name="articles")
     title = models.CharField(max_length=1000)
     slug = models.SlugField(max_length=300, blank=True, default="")
@@ -72,6 +77,12 @@ class Article(models.Model):
     content = models.TextField(blank=True, default="")
     published = models.DateTimeField(null=True, blank=True, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    status = models.PositiveSmallIntegerField(
+        choices=Status.choices, default=Status.PENDING, db_index=True,
+    )
+    image_url = models.URLField(max_length=2000, blank=True, default="")
+    image = models.ImageField(upload_to="articles/%Y/%m/", blank=True)
 
     class Meta:
         ordering = ["-published"]
@@ -91,52 +102,6 @@ class Article(models.Model):
         if self.slug:
             return reverse("article_detail", kwargs={"pk": self.pk, "slug": self.slug})
         return reverse("article_detail_redirect", kwargs={"pk": self.pk})
-
-
-class ArticlePipeline(models.Model):
-    article = models.OneToOneField(Article, on_delete=models.CASCADE, related_name="pipeline")
-    rss_images_at = models.DateTimeField(null=True, blank=True)
-    content_extracted_at = models.DateTimeField(null=True, blank=True, db_index=True)
-    og_images_at = models.DateTimeField(null=True, blank=True)
-    embedded_at = models.DateTimeField(null=True, blank=True, db_index=True)
-    completed_at = models.DateTimeField(null=True, blank=True, db_index=True)
-
-    def __str__(self):
-        return f"Pipeline for {self.article_id}"
-
-
-class ArticleImageSource(models.Model):
-    slug = models.SlugField(max_length=50, unique=True)
-    name = models.CharField(max_length=100)
-
-    def __str__(self):
-        return self.name
-
-
-class ArticleImage(models.Model):
-    article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name="images")
-    source = models.ForeignKey(
-        ArticleImageSource, on_delete=models.SET_NULL,
-        null=True, blank=True, related_name="images",
-    )
-    source_url = models.URLField(max_length=2000)
-    image = models.ImageField(upload_to="articles/%Y/%m/", blank=True)
-    content_hash = models.CharField(max_length=64, blank=True, default="", db_index=True)
-    is_primary = models.BooleanField(default=False, db_index=True)
-    downloaded = models.BooleanField(default=False, db_index=True)
-    width = models.PositiveIntegerField(default=0)
-    height = models.PositiveIntegerField(default=0)
-    file_size = models.PositiveIntegerField(default=0)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        unique_together = [("article", "source_url")]
-        indexes = [
-            models.Index(fields=["is_primary", "downloaded"]),
-        ]
-
-    def __str__(self):
-        return f"Image for {self.article_id} ({'primary' if self.is_primary else 'alt'})"
 
 
 class ArticleChunk(models.Model):

@@ -31,8 +31,8 @@
                 {% with article=r.article score=r.score snippet=r.snippet %}
                 <div class="search-result">
                     <a href="{{ article.get_absolute_url }}" class="result-visual">
-                        {% if article.primary_images and article.primary_images.0.image %}
-                            <img class="result-image" src="{{ article.primary_images.0.image.url }}" alt="" loading="lazy">
+                        {% if article.image %}
+                            <img class="result-image" src="{{ article.image.url }}" alt="" loading="lazy">
                         {% else %}
                             <div class="result-placeholder">
                                 <span class="result-placeholder-letter">{{ article.title|first }}</span>

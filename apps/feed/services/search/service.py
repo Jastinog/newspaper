@@ -3,9 +3,7 @@ import logging
 import time
 from datetime import datetime, timezone
 
-from django.db.models import Prefetch
-
-from apps.feed.models import Article, ArticleChunk, ArticleImage
+from apps.feed.models import Article, ArticleChunk
 from apps.core.services.ai import (
     EmbeddingClient,
     OpenAIClient,
@@ -114,13 +112,7 @@ class SearchService:
 
         articles = Article.objects.filter(
             id__in=list(article_scores.keys()),
-        ).select_related("feed", "feed__category").prefetch_related(
-            Prefetch(
-                "images",
-                queryset=ArticleImage.objects.filter(is_primary=True),
-                to_attr="primary_images",
-            ),
-        )
+        ).select_related("feed", "feed__category")
         article_map = {a.id: a for a in articles}
 
         results = []

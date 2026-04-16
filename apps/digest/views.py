@@ -6,11 +6,14 @@ from django.utils.translation import get_language
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from apps.core.services.utils import get_article_image_url
-from apps.feed.models import Article, ArticleChunk, ArticleImage
+from apps.feed.models import Article, ArticleChunk
 from apps.research.services.search import SimilaritySearch
 
 from .models import DigestItem, DigestItemTranslation, DigestSectionTranslation
+
+
+def _article_image_url(article):
+    return article.image.url if article.image else ""
 
 
 # ── Sources API ──────────────────────────────────────────
@@ -25,23 +28,17 @@ def item_sources_api(request, item_id):
         return Response(cached)
 
     item = get_object_or_404(DigestItem, pk=item_id)
-    articles = (
-        item.articles
-        .select_related("feed")
-        .prefetch_related(_primary_image_prefetch())
-    )
-    data = []
-    for article in articles:
-        img = article._primary_imgs[0].image.url if article._primary_imgs else ""
-        if not img:
-            img = get_article_image_url(article)
-        data.append({
+    articles = item.articles.select_related("feed")
+    data = [
+        {
             "title": article.title,
             "url": article.url,
             "feed_title": article.feed.title if article.feed else "",
             "feed_website": article.feed.website or article.feed.url if article.feed else "",
-            "image_url": img,
-        })
+            "image_url": _article_image_url(article),
+        }
+        for article in articles
+    ]
     result = {"sources": data}
     cache.set(cache_key, result, 60 * 60)
     return Response(result)
@@ -50,17 +47,7 @@ def item_sources_api(request, item_id):
 # ── Similar Items API ─────────────────────────────────────
 
 
-def _primary_image_prefetch():
-    """Prefetch for fetching a single primary image per article."""
-    return Prefetch(
-        "images",
-        queryset=ArticleImage.objects.filter(is_primary=True, downloaded=True).exclude(image=""),
-        to_attr="_primary_imgs",
-    )
-
-
 def _serialize_article(article, score=0):
-    """Serialize an article with prefetched primary image for the similar-items API."""
     return {
         "id": article.id,
         "title": article.title,
@@ -68,7 +55,7 @@ def _serialize_article(article, score=0):
         "feed": article.feed.title if article.feed else "",
         "score": score,
         "date": article.published.isoformat() if article.published else "",
-        "image_url": article._primary_imgs[0].image.url if article._primary_imgs else "",
+        "image_url": _article_image_url(article),
     }
 
 
@@ -100,7 +87,6 @@ def similar_items_api(request, item_id):
     own_articles = list(
         item.articles
         .select_related("feed")
-        .prefetch_related(_primary_image_prefetch())
         .order_by("-published")
     )
     sources_data = [_serialize_article(a) for a in own_articles]
@@ -132,7 +118,7 @@ def similar_items_api(request, item_id):
             digest=item.digest,
         )
         .exclude(id=item.id)
-        .select_related("digest", "section", "image")
+        .select_related("digest", "section", "cover_article")
         .prefetch_related(
             Prefetch(
                 "translations",
@@ -144,7 +130,7 @@ def similar_items_api(request, item_id):
             ),
             Prefetch(
                 "articles",
-                queryset=Article.objects.select_related("feed").prefetch_related(_primary_image_prefetch()),
+                queryset=Article.objects.select_related("feed"),
             ),
         )
         .distinct()
@@ -180,7 +166,6 @@ def similar_items_api(request, item_id):
         orphans = (
             Article.objects.filter(id__in=orphan_ids)
             .select_related("feed")
-            .prefetch_related(_primary_image_prefetch())
             .order_by("-published")[:10]
         )
         articles_data = [
