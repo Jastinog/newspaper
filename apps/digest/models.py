@@ -325,5 +325,3 @@ class ItemPipeline(models.Model):
 
     def __str__(self):
         return f"Pipeline: {self.story_label or self.item_id}"
-
-

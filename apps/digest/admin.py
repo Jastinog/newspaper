@@ -197,5 +197,3 @@ class ItemPipelineAdmin(ModelAdmin):
         "input_tokens", "output_tokens", "cost_usd", "generation_ms",
         "articles_in_context", "context_tokens",
     )
-
-
