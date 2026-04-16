@@ -169,6 +169,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "harvester.cleanup",
         "schedule": timedelta(hours=1),
     },
+    "cleanup-analytics": {
+        "task": "analytics.cleanup",
+        "schedule": timedelta(minutes=1),
+    },
 }
 
 UNFOLD = {
