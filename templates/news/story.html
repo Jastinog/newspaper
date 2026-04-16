@@ -35,7 +35,6 @@
 
     <div class="story-item-actions">
         <button class="similar-btn" data-item-id="{{ item.id }}" aria-label="{% trans 'Similar news' %}" title="{% trans 'Similar news' %}"><i class="fas fa-circle-nodes"></i></button>
-        <a href="{% url 'research' item.id %}" class="research-hint research-link" data-item-id="{{ item.id }}">{% trans "research" %} &rarr;</a>
     </div>
 
     {% if source_articles %}
