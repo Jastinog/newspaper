@@ -110,7 +110,7 @@ def _build_digest_context(request, date=None, pinned_slugs=None):
         pinned_slugs = _parse_pinned_cookie(request)
 
     if digest:
-        items = list(digest.items.select_related("section", "image").prefetch_related(
+        items = list(digest.items.select_related("section", "cover_article").prefetch_related(
             "translations", "translations__language",
             "section__translations", "section__translations__language",
         ).all())
@@ -145,7 +145,7 @@ def _build_digest_context(request, date=None, pinned_slugs=None):
     og_image = ""
     if digest and items:
         top_item = max(
-            (i for i in items if i.image_id and getattr(i.image, "image", "")),
+            (i for i in items if i.cover_article_id and i.cover_article and i.cover_article.image),
             key=lambda i: i.freshness,
             default=None,
         )
@@ -328,7 +328,7 @@ def story_detail(request, item_id):
         return HttpResponse(html)
 
     item = get_object_or_404(
-        DigestItem.objects.select_related("digest", "section", "image")
+        DigestItem.objects.select_related("digest", "section", "cover_article")
         .prefetch_related(
             "translations", "translations__language",
             "section__translations", "section__translations__language",
@@ -363,7 +363,7 @@ def story_detail(request, item_id):
             DigestItem.objects
             .filter(digest=item.digest, section=item.section)
             .exclude(pk=item.pk)
-            .select_related("section", "image")
+            .select_related("section", "cover_article")
             .prefetch_related(
                 "translations", "translations__language",
                 "articles__feed", "articles__images",

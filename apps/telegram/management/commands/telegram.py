@@ -99,7 +99,7 @@ class Command(BaseCommand):
             items = (
                 DigestItem.objects
                 .filter(digest=digest)
-                .select_related("section", "image")
+                .select_related("section", "cover_article")
                 .prefetch_related("translations", "translations__language")
                 .order_by("-freshness")
                 [: channel.top_n]
