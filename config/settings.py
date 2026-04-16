@@ -238,16 +238,6 @@ UNFOLD = {
                         "icon": "segment",
                         "link": reverse_lazy("admin:feed_articlechunk_changelist"),
                     },
-                    {
-                        "title": _("Article images"),
-                        "icon": "image",
-                        "link": reverse_lazy("admin:feed_articleimage_changelist"),
-                    },
-                    {
-                        "title": _("Image sources"),
-                        "icon": "source",
-                        "link": reverse_lazy("admin:feed_articleimagesource_changelist"),
-                    },
                 ],
             },
             {
@@ -330,11 +320,6 @@ UNFOLD = {
                         "title": _("Image downloads"),
                         "icon": "download",
                         "link": reverse_lazy("admin:harvester_harvesterimage_changelist"),
-                    },
-                    {
-                        "title": _("Embeds"),
-                        "icon": "hub",
-                        "link": reverse_lazy("admin:harvester_harvesterembedding_changelist"),
                     },
                 ],
             },
