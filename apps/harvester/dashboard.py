@@ -326,16 +326,17 @@ def build_harvester_context(request):
     pipe_qs = ArticlePipeline.objects.filter(
         article__published__gte=thirty_days_ago,
     )
+    _done_q = Q(
+        rss_images_at__isnull=False,
+        content_extracted_at__isnull=False,
+        og_images_at__isnull=False,
+    )
     pipe_agg = pipe_qs.aggregate(
         total=Count("id"),
         rss=Count("id", filter=Q(rss_images_at__isnull=False)),
         extract=Count("id", filter=Q(content_extracted_at__isnull=False)),
         og=Count("id", filter=Q(og_images_at__isnull=False)),
-        done=Count("id", filter=Q(
-            rss_images_at__isnull=False,
-            content_extracted_at__isnull=False,
-            og_images_at__isnull=False,
-        )),
+        done=Count("id", filter=_done_q),
     )
     pipe_total = pipe_agg["total"]
 
@@ -353,6 +354,21 @@ def build_harvester_context(request):
             "pct": round(_pct(done, pipe_total)),
             "color": color,
         })
+
+    # ── Per-feed progress ────────────────────────────────────
+    feed_progress = [
+        {
+            "title": f["article__feed__title"],
+            "total": f["total"],
+            "done": f["done"],
+            "pct": round(_pct(f["done"], f["total"])),
+            "color": EMERALD,
+        }
+        for f in pipe_qs
+        .values("article__feed__title")
+        .annotate(total=Count("id"), done=Count("id", filter=_done_q))
+        .order_by("article__feed__title")
+    ]
 
     # ── Pipeline state ────────────────────────────────────────
     from apps.harvester.services.pipeline import get_manager
@@ -392,6 +408,7 @@ def build_harvester_context(request):
         # Queue
         "queue_stages": queue_stages,
         "queue_total": pipe_total,
+        "feed_progress": feed_progress,
         # Timeline
         "timeline_data": _build_timeline_data(now, minutes=10),
     }

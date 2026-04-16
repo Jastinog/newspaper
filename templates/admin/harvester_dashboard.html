@@ -207,6 +207,25 @@
     {% endcomponent %}
 </div>
 
+{# --- Per-Feed Progress --- #}
+<div class="mb-8">
+    {% component "unfold/components/card.html" with title="Feed Progress" %}
+    <div id="feed-progress-section" class="space-y-2">
+        {% for f in feed_progress %}
+        <div class="feed-prog-row">
+            <div class="flex items-center justify-between mb-0.5">
+                <span class="text-xs text-gray-600 dark:text-gray-400 truncate" style="max-width: 60%;" title="{{ f.title }}">{{ f.title }}</span>
+                <span class="text-xs text-gray-500 dark:text-gray-400"><span class="feed-pct font-semibold text-gray-800 dark:text-gray-200">{{ f.pct }}%</span> <span class="feed-detail">{{ f.done }}/{{ f.total }}</span></span>
+            </div>
+            <div class="w-full overflow-hidden" style="height: 6px; background: rgba(128,128,128,0.25);">
+                <div class="feed-bar h-full transition-all duration-500" style="width: {{ f.pct }}%; background: {{ f.color }};"></div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endcomponent %}
+</div>
+
 {# --- Pipeline Timeline --- #}
 <div class="mb-8">
     {% component "unfold/components/card.html" with title="Pipeline Timeline (last 10 minutes)" %}
@@ -619,6 +638,20 @@ function updatePipelineUI(active, running) {
                     if (bar) bar.style.width = s.pct + "%";
                     if (pct) pct.textContent = s.pct + "%";
                     if (detail) detail.textContent = s.done + " / " + data.queue_total;
+                });
+            }
+
+            // Feed progress bars
+            if (data.feed_progress) {
+                var fRows = document.querySelectorAll("#feed-progress-section .feed-prog-row");
+                data.feed_progress.forEach(function(f, i) {
+                    if (!fRows[i]) return;
+                    var bar = fRows[i].querySelector(".feed-bar");
+                    var pct = fRows[i].querySelector(".feed-pct");
+                    var detail = fRows[i].querySelector(".feed-detail");
+                    if (bar) bar.style.width = f.pct + "%";
+                    if (pct) pct.textContent = f.pct + "%";
+                    if (detail) detail.textContent = f.done + "/" + f.total;
                 });
             }
 
