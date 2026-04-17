@@ -332,7 +332,7 @@ def story_detail(request, item_id):
         .prefetch_related(
             "translations", "translations__language",
             "section__translations", "section__translations__language",
-            "articles__feed", "articles__images",
+            "articles__feed",
             Prefetch("researches", queryset=Research.objects.only("id"), to_attr="_researches"),
         ),
         pk=item_id,
@@ -366,7 +366,7 @@ def story_detail(request, item_id):
             .select_related("section", "cover_article")
             .prefetch_related(
                 "translations", "translations__language",
-                "articles__feed", "articles__images",
+                "articles__feed",
             )
         )
         for si in siblings:
@@ -426,7 +426,6 @@ def research(request, item_id):
 
     sources = list(
         dive.sources.select_related("article__feed")
-        .prefetch_related("article__images")
         .order_by("order")
     )
 
