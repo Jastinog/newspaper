@@ -173,7 +173,7 @@ class HarvestManager:
                 published__gte=_cutoff_days(),
             )
             .values_list("id", "image_url")
-            .order_by("id")[:DOWNLOAD_BATCH]
+            .order_by(F("published").desc(nulls_last=True))[:DOWNLOAD_BATCH]
         )
         if not candidates:
             return False
@@ -215,7 +215,7 @@ class HarvestManager:
             .filter(Q(published__gte=_cutoff_days()) | Q(published__isnull=True))
             .exclude(url="")
             .values_list("id", "url", "image_url")
-            .order_by("id")[:EXTRACT_BATCH]
+            .order_by(F("published").desc(nulls_last=True))[:EXTRACT_BATCH]
         )
         if not candidates:
             return False
