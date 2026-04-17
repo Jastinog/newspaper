@@ -134,10 +134,12 @@ class TelegramService:
 
         if self.channel.include_images:
             image_path = None
-            if item.cover_article and item.cover_article.image:
-                image_path = Path(settings.MEDIA_ROOT) / str(item.cover_article.image)
-                if not image_path.exists():
-                    image_path = None
+            for art in item.articles.all():
+                if art.image:
+                    candidate = Path(settings.MEDIA_ROOT) / str(art.image)
+                    if candidate.exists():
+                        image_path = candidate
+                        break
 
             if image_path is None:
                 image_path = self.PLACEHOLDER
@@ -155,7 +157,7 @@ class TelegramService:
         items = (
             DigestItem.objects
             .filter(digest=digest)
-            .select_related("section", "cover_article")
+            .select_related("section")
             .prefetch_related("translations", "translations__language", "articles")
             .order_by("-freshness")
             [: self.channel.top_n]
@@ -209,7 +211,7 @@ def publish_next_items() -> int:
             DigestItem.objects
             .filter(digest__date=today)
             .exclude(id__in=already_sent)
-            .select_related("section", "cover_article")
+            .select_related("section")
             .prefetch_related("translations", "translations__language", "articles")
             .order_by("-freshness")
             .first()

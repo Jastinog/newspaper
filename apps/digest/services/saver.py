@@ -73,30 +73,6 @@ class DigestSaver:
 
         return valid_ids
 
-    def assign_image(self, item: DigestItem, used_article_ids: set | None = None,
-                     article_ids: list[int] | None = None) -> int | None:
-        """Pick the cover article with a downloaded image. Returns the chosen Article ID or None."""
-        if article_ids is None:
-            article_ids = list(item.articles.values_list("id", flat=True))
-        if not article_ids:
-            return None
-
-        qs = (
-            Article.objects
-            .filter(id__in=article_ids)
-            .exclude(image="")
-            .order_by("-published")
-        )
-        if used_article_ids:
-            qs = qs.exclude(id__in=used_article_ids)
-
-        cover = qs.first()
-        if cover:
-            item.cover_article = cover
-            item.save(update_fields=["cover_article"])
-            return cover.id
-        return None
-
     def save_translations(self, digest: Digest, language: Language,
                           item_translations: list):
         """Save translations for an existing digest."""

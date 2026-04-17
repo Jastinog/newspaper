@@ -26,7 +26,7 @@ class DigestFeed(Feed):
         items = (
             DigestItem.objects
             .filter(digest_id__in=digest_ids)
-            .select_related("digest", "section", "cover_article")
+            .select_related("digest", "section")
             .prefetch_related(
                 "translations", "translations__language",
                 "section__translations", "section__translations__language",

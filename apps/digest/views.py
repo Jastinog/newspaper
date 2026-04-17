@@ -115,7 +115,7 @@ def similar_items_api(request, item_id):
             digest=item.digest,
         )
         .exclude(id=item.id)
-        .select_related("digest", "section", "cover_article")
+        .select_related("digest", "section")
         .prefetch_related(
             Prefetch(
                 "translations",

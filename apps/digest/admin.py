@@ -115,7 +115,7 @@ class DigestItemInlineShort(TabularInline):
     readonly_fields = ("item_image_preview",)
 
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related("cover_article", "section")
+        return super().get_queryset(request).select_related("section").prefetch_related("articles")
 
     @admin.display(description="Image")
     def item_image_preview(self, obj):
@@ -147,7 +147,7 @@ class DigestItemAdmin(ModelAdmin):
     list_display = ("id", "item_topic", "section", "digest")
     list_display_links = ("id", "item_topic")
     list_filter = ("section", "digest__date")
-    raw_id_fields = ("digest", "cover_article")
+    raw_id_fields = ("digest",)
     inlines = [DigestItemTranslationInline]
 
     def get_queryset(self, request):

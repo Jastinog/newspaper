@@ -247,8 +247,6 @@ class EditionService:
                         default_lang, target_langs, all_langs, writer_schema,
                         cfg, emit) -> list[dict]:
         """Write all stories in parallel using ThreadPoolExecutor."""
-        used_article_ids = set()
-        image_lock = threading.Lock()
         emit_lock = threading.Lock()
         cost_lock = threading.Lock()
         running_in = [0]
@@ -287,12 +285,6 @@ class EditionService:
                     digest, section, story, by_lang, article_ids,
                     default_lang, target_langs,
                 )
-
-                # Assign cover — DB query outside lock, only lock the set update
-                cover_id = self.saver.assign_image(item, used_article_ids, article_ids)
-                if cover_id:
-                    with image_lock:
-                        used_article_ids.add(cover_id)
 
                 # Update ItemPipeline with per-item telemetry
                 input_tok = usage.get("prompt_tokens", 0)

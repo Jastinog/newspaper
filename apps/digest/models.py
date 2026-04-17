@@ -254,10 +254,6 @@ class DigestItem(models.Model):
     section = models.ForeignKey(DigestSection, on_delete=models.PROTECT, related_name="items", null=True)
     order = models.PositiveIntegerField(default=0)
     freshness = models.FloatField(default=0, db_index=True)
-    cover_article = models.ForeignKey(
-        "feed.Article", on_delete=models.SET_NULL,
-        null=True, blank=True, related_name="digest_covers",
-    )
     articles = models.ManyToManyField("feed.Article", blank=True, related_name="digest_items")
 
     class Meta:
@@ -271,8 +267,9 @@ class DigestItem(models.Model):
 
     @property
     def best_image_url(self):
-        if self.cover_article and self.cover_article.image:
-            return self.cover_article.image.url
+        for art in self.articles.all():
+            if art.image:
+                return art.image.url
         return ""
 
     def get_topic(self, language):
