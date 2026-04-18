@@ -2,7 +2,7 @@ import logging
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import date, datetime, timedelta, timezone as tz
+from datetime import date, timedelta
 
 from django.db import close_old_connections
 from django.utils import timezone
@@ -157,8 +157,8 @@ class EditionService:
         Adaptive snippet sizing: adjusts snippet length so all collected
         articles fit within the planner token budget.
         """
-        end_of_day = datetime.combine(digest_date, datetime.max.time(), tzinfo=tz.utc)
-        cutoff = end_of_day - timedelta(hours=cfg.hours_lookback)
+        now = timezone.now()
+        cutoff = now - timedelta(hours=cfg.hours_lookback)
 
         # Defer content — only ordered articles need it for snippets
         qs = (
@@ -167,7 +167,7 @@ class EditionService:
             .defer("content")
             .filter(
                 published__gte=cutoff,
-                published__lte=end_of_day,
+                published__lte=now,
                 feed__enabled=True,
             )
             .exclude(content="")
