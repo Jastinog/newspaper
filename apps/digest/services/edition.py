@@ -171,6 +171,7 @@ class EditionService:
                 feed__enabled=True,
             )
             .exclude(content="")
+            .exclude(image="")
             .filter(used_in_digest=False, status=Article.Status.COMPLETED)
             .order_by("-published")
         )
