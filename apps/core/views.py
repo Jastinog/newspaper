@@ -297,6 +297,7 @@ def category_detail(request, slug):
     articles_qs = (
         Article.objects
         .filter(feed__category=category)
+        .exclude(image="")
         .select_related("feed")
         .order_by("-published")
     )
@@ -601,7 +602,7 @@ def feed_detail(request, pk):
     feed = get_object_or_404(
         Feed.objects.select_related("category", "country", "language"), pk=pk,
     )
-    articles_qs = feed.articles.order_by("-published")
+    articles_qs = feed.articles.exclude(image="").order_by("-published")
     paginator = Paginator(articles_qs, _ARTICLES_PER_PAGE)
     page = paginator.get_page(page_num)
 
@@ -638,7 +639,7 @@ def articles_list(request):
     if html is not None:
         return HttpResponse(html)
 
-    qs = Article.objects.select_related("feed", "feed__category", "feed__country")
+    qs = Article.objects.select_related("feed", "feed__category", "feed__country").exclude(image="")
 
     if category_slug:
         qs = qs.filter(feed__category__slug=category_slug)

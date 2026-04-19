@@ -118,6 +118,7 @@ class ArticleSitemap(Sitemap):
             Article.objects
             .filter(published__isnull=False)
             .exclude(slug="")
+            .exclude(image="")
             .order_by("-published")
             .only("pk", "slug", "published")
         )
