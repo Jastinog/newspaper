@@ -41,7 +41,7 @@ class DigestConfigAdmin(ModelAdmin):
                 ("edition_items_per_section", "edition_max_workers"),
                 ("edition_article_card_tokens", "edition_article_body_tokens"),
                 ("edition_max_articles_per_story", "edition_writer_budget_tokens"),
-                ("edition_planner_budget_tokens", "edition_max_planner_articles"),
+                "edition_planner_budget_tokens",
             ),
         }),
         ("Prompts", {

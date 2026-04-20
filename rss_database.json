@@ -3,7 +3,7 @@
   "version": "1.2.0",
   "generated": "2026-03-25",
   "description": "Curated database of RSS feeds from around the world",
-  "total_feeds": 283,
+  "total_feeds": 241,
   "feeds": [
     {
       "id": "africanews",
@@ -259,17 +259,6 @@
       "reliability": 4
     },
     {
-      "id": "korea-herald",
-      "name": "Korea Herald",
-      "url": "https://www.koreaherald.com/common/rss_xml.php",
-      "website": "https://www.koreaherald.com",
-      "description": "South Korea's premier English-language daily",
-      "country_id": "KR",
-      "language_id": "en",
-      "category": "asia",
-      "reliability": 4
-    },
-    {
       "id": "korea-times",
       "name": "Korea Times",
       "url": "https://www.koreatimes.co.kr/www/rss/rss.xml",
@@ -279,17 +268,6 @@
       "language_id": "en",
       "category": "asia",
       "reliability": 3
-    },
-    {
-      "id": "nhk-world",
-      "name": "NHK World",
-      "url": "https://www3.nhk.or.jp/rss/news/cat0.xml",
-      "website": "https://www3.nhk.or.jp",
-      "description": "Japan's public broadcaster — main news",
-      "country_id": "JP",
-      "language_id": "ja",
-      "category": "asia",
-      "reliability": 5
     },
     {
       "id": "nz-herald",
@@ -361,17 +339,6 @@
       "id": "a-list-apart",
       "name": "A List Apart",
       "url": "https://alistapart.com/main/feed/",
-      "website": "",
-      "description": "",
-      "country_id": "",
-      "language_id": "en",
-      "category": "design",
-      "reliability": 3
-    },
-    {
-      "id": "css-tricks",
-      "name": "CSS-Tricks",
-      "url": "https://css-tricks.com/feed/",
       "website": "",
       "description": "",
       "country_id": "",
@@ -776,17 +743,6 @@
       "reliability": 3
     },
     {
-      "id": "dw-deutsch",
-      "name": "Deutsche Welle - Deutsch",
-      "url": "https://rss.dw.com/rdf/rss-de-all",
-      "website": "https://www.dw.com",
-      "description": "Deutsche Welle — German edition",
-      "country_id": "DE",
-      "language_id": "de",
-      "category": "europe",
-      "reliability": 5
-    },
-    {
       "id": "dutch-news",
       "name": "Dutch News",
       "url": "https://www.dutchnews.nl/feed/",
@@ -796,17 +752,6 @@
       "language_id": "en",
       "category": "europe",
       "reliability": 4
-    },
-    {
-      "id": "elpais-es",
-      "name": "El País",
-      "url": "https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/portada",
-      "website": "https://elpais.com",
-      "description": "Spain's most-read daily newspaper",
-      "country_id": "ES",
-      "language_id": "es",
-      "category": "europe",
-      "reliability": 5
     },
     {
       "id": "elpais-en",
@@ -820,50 +765,6 @@
       "reliability": 5
     },
     {
-      "id": "euractiv",
-      "name": "EurActiv",
-      "url": "https://www.euractiv.com/feed/",
-      "website": "",
-      "description": "",
-      "country_id": "BE",
-      "language_id": "en",
-      "category": "europe",
-      "reliability": 3
-    },
-    {
-      "id": "euronews-english",
-      "name": "Euronews English",
-      "url": "https://www.euronews.com/rss?format=mrss&level=theme&name=news",
-      "website": "",
-      "description": "",
-      "country_id": "FR",
-      "language_id": "en",
-      "category": "europe",
-      "reliability": 3
-    },
-    {
-      "id": "la-repubblica",
-      "name": "La Repubblica",
-      "url": "https://www.repubblica.it/rss/homepage/rss2.0.xml",
-      "website": "https://www.repubblica.it",
-      "description": "Italy's leading newspaper",
-      "country_id": "IT",
-      "language_id": "it",
-      "category": "europe",
-      "reliability": 4
-    },
-    {
-      "id": "le-monde",
-      "name": "Le Monde",
-      "url": "https://www.lemonde.fr/rss/une.xml",
-      "website": "https://www.lemonde.fr",
-      "description": "France's newspaper of record",
-      "country_id": "FR",
-      "language_id": "fr",
-      "category": "europe",
-      "reliability": 5
-    },
-    {
       "id": "le-monde-english",
       "name": "Le Monde English",
       "url": "https://www.lemonde.fr/en/rss/une.xml",
@@ -873,28 +774,6 @@
       "language_id": "en",
       "category": "europe",
       "reliability": 3
-    },
-    {
-      "id": "nos-nl",
-      "name": "NOS Nieuws",
-      "url": "https://feeds.nos.nl/nosnieuwsalgemeen",
-      "website": "https://nos.nl",
-      "description": "Dutch public broadcaster — main news feed",
-      "country_id": "NL",
-      "language_id": "nl",
-      "category": "europe",
-      "reliability": 5
-    },
-    {
-      "id": "nrk",
-      "name": "NRK",
-      "url": "https://www.nrk.no/toppsaker.rss",
-      "website": "https://www.nrk.no",
-      "description": "Norwegian public broadcaster — top stories",
-      "country_id": "NO",
-      "language_id": "no",
-      "category": "europe",
-      "reliability": 5
     },
     {
       "id": "notes-from-poland",
@@ -930,17 +809,6 @@
       "reliability": 5
     },
     {
-      "id": "svt-nyheter",
-      "name": "SVT Nyheter",
-      "url": "https://www.svt.se/nyheter/rss.xml",
-      "website": "https://www.svt.se",
-      "description": "Swedish public television — news feed",
-      "country_id": "SE",
-      "language_id": "sv",
-      "category": "europe",
-      "reliability": 5
-    },
-    {
       "id": "spiegel-international",
       "name": "Spiegel International",
       "url": "https://www.spiegel.de/international/index.rss",
@@ -950,39 +818,6 @@
       "language_id": "en",
       "category": "europe",
       "reliability": 3
-    },
-    {
-      "id": "spiegel",
-      "name": "Spiegel Online",
-      "url": "https://www.spiegel.de/schlagzeilen/index.rss",
-      "website": "https://www.spiegel.de",
-      "description": "Germany's leading news magazine — headlines",
-      "country_id": "DE",
-      "language_id": "de",
-      "category": "europe",
-      "reliability": 5
-    },
-    {
-      "id": "tvn24",
-      "name": "TVN24",
-      "url": "https://tvn24.pl/najnowsze.xml",
-      "website": "https://tvn24.pl",
-      "description": "Poland's leading 24-hour news channel",
-      "country_id": "PL",
-      "language_id": "pl",
-      "category": "europe",
-      "reliability": 4
-    },
-    {
-      "id": "tagesschau",
-      "name": "Tagesschau",
-      "url": "https://www.tagesschau.de/index~rss2.xml",
-      "website": "https://www.tagesschau.de",
-      "description": "Germany's most-watched TV news broadcast",
-      "country_id": "DE",
-      "language_id": "de",
-      "category": "europe",
-      "reliability": 5
     },
     {
       "id": "the-guardian-europe",
@@ -1025,28 +860,6 @@
       "description": "Ukraine's national news agency — English service",
       "country_id": "UA",
       "language_id": "en",
-      "category": "europe",
-      "reliability": 5
-    },
-    {
-      "id": "yle-fi",
-      "name": "YLE News",
-      "url": "https://feeds.yle.fi/uutiset/v1/recent.rss?publisherIds=YLE_UUTISET",
-      "website": "https://yle.fi",
-      "description": "Finnish public broadcaster",
-      "country_id": "FI",
-      "language_id": "fi",
-      "category": "europe",
-      "reliability": 5
-    },
-    {
-      "id": "ukrainska-pravda",
-      "name": "Українська правда",
-      "url": "https://www.pravda.com.ua/rss/",
-      "website": "https://www.pravda.com.ua",
-      "description": "Ukraine's leading independent online news outlet",
-      "country_id": "UA",
-      "language_id": "uk",
       "category": "europe",
       "reliability": 5
     },
@@ -1247,17 +1060,6 @@
       "language_id": "en",
       "category": "latam",
       "reliability": 4
-    },
-    {
-      "id": "folha-br",
-      "name": "Folha de S.Paulo",
-      "url": "https://feeds.folha.uol.com.br/emcimadahora/rss091.xml",
-      "website": "https://www.folha.uol.com.br",
-      "description": "Brazil's largest-circulation quality newspaper",
-      "country_id": "BR",
-      "language_id": "pt",
-      "category": "latam",
-      "reliability": 5
     },
     {
       "id": "global-voices",
@@ -1513,61 +1315,6 @@
       "reliability": 4
     },
     {
-      "id": "3dnews",
-      "name": "3DNews",
-      "url": "https://3dnews.ru/breaking/rss/",
-      "website": "",
-      "description": "",
-      "country_id": "RU",
-      "language_id": "ru",
-      "category": "ru",
-      "reliability": 3
-    },
-    {
-      "id": "n-1",
-      "name": "N+1",
-      "url": "https://nplus1.ru/rss",
-      "website": "",
-      "description": "",
-      "country_id": "RU",
-      "language_id": "ru",
-      "category": "ru",
-      "reliability": 3
-    },
-    {
-      "id": "opennet",
-      "name": "OpenNET",
-      "url": "https://www.opennet.ru/opennews/opennews_all_utf.rss",
-      "website": "",
-      "description": "",
-      "country_id": "RU",
-      "language_id": "ru",
-      "category": "ru",
-      "reliability": 3
-    },
-    {
-      "id": "ixbt",
-      "name": "iXBT",
-      "url": "https://www.ixbt.com/export/news.rss",
-      "website": "",
-      "description": "",
-      "country_id": "RU",
-      "language_id": "ru",
-      "category": "ru",
-      "reliability": 3
-    },
-    {
-      "id": "",
-      "name": "Хабр",
-      "url": "https://habr.com/ru/rss/articles/?fl=ru",
-      "website": "",
-      "description": "",
-      "country_id": "RU",
-      "language_id": "ru",
-      "category": "ru",
-      "reliability": 3
-    },
-    {
       "id": "aeon",
       "name": "Aeon",
       "url": "https://aeon.co/feed.rss",
@@ -1720,28 +1467,6 @@
       "language_id": "en",
       "category": "science",
       "reliability": 3
-    },
-    {
-      "id": "arxiv-cs-ai",
-      "name": "arXiv - CS.AI",
-      "url": "https://rss.arxiv.org/rss/cs.AI",
-      "website": "https://arxiv.org",
-      "description": "Cornell preprint archive — Artificial Intelligence papers",
-      "country_id": "INT",
-      "language_id": "en",
-      "category": "science",
-      "reliability": 5
-    },
-    {
-      "id": "arxiv-physics",
-      "name": "arXiv - Physics",
-      "url": "https://rss.arxiv.org/rss/physics",
-      "website": "https://arxiv.org",
-      "description": "Cornell preprint archive — Physics papers",
-      "country_id": "INT",
-      "language_id": "en",
-      "category": "science",
-      "reliability": 5
     },
     {
       "id": "bleeping-computer",
@@ -2635,17 +2360,6 @@
       "reliability": 4
     },
     {
-      "id": "lapresse",
-      "name": "La Presse",
-      "url": "https://www.lapresse.ca/actualites/rss",
-      "website": "https://www.lapresse.ca",
-      "description": "Quebec's leading French-language daily",
-      "country_id": "CA",
-      "language_id": "fr",
-      "category": "world",
-      "reliability": 4
-    },
-    {
       "id": "daily-mail",
       "name": "Daily Mail",
       "url": "https://www.dailymail.co.uk/home/index.rss",
@@ -2657,50 +2371,6 @@
       "reliability": 2
     },
     {
-      "id": "zeit-online",
-      "name": "Zeit Online",
-      "url": "http://newsfeed.zeit.de/index",
-      "website": "https://www.zeit.de",
-      "description": "Germany's respected liberal weekly newspaper",
-      "country_id": "DE",
-      "language_id": "de",
-      "category": "world",
-      "reliability": 5
-    },
-    {
-      "id": "faz",
-      "name": "Frankfurter Allgemeine Zeitung",
-      "url": "https://www.faz.net/rss/aktuell/",
-      "website": "https://www.faz.net",
-      "description": "Germany's leading conservative broadsheet",
-      "country_id": "DE",
-      "language_id": "de",
-      "category": "world",
-      "reliability": 5
-    },
-    {
-      "id": "el-confidencial",
-      "name": "El Confidencial",
-      "url": "https://rss.elconfidencial.com/espana/",
-      "website": "https://www.elconfidencial.com",
-      "description": "Leading Spanish digital newspaper",
-      "country_id": "ES",
-      "language_id": "es",
-      "category": "world",
-      "reliability": 4
-    },
-    {
-      "id": "eldiario-es",
-      "name": "elDiario.es",
-      "url": "https://www.eldiario.es/rss/",
-      "website": "https://www.eldiario.es",
-      "description": "Spanish progressive digital newspaper",
-      "country_id": "ES",
-      "language_id": "es",
-      "category": "world",
-      "reliability": 4
-    },
-    {
       "id": "the-local-es",
       "name": "The Local - Spain",
       "url": "https://feeds.thelocal.com/rss/es",
@@ -2710,61 +2380,6 @@
       "language_id": "en",
       "category": "world",
       "reliability": 3
-    },
-    {
-      "id": "mediapart",
-      "name": "Mediapart",
-      "url": "https://www.mediapart.fr/articles/feed",
-      "website": "https://www.mediapart.fr",
-      "description": "French investigative journalism outlet",
-      "country_id": "FR",
-      "language_id": "fr",
-      "category": "world",
-      "reliability": 5
-    },
-    {
-      "id": "lobs",
-      "name": "L'Obs",
-      "url": "https://www.nouvelobs.com/a-la-une/rss.xml",
-      "website": "https://www.nouvelobs.com",
-      "description": "Major French newsweekly",
-      "country_id": "FR",
-      "language_id": "fr",
-      "category": "world",
-      "reliability": 4
-    },
-    {
-      "id": "franceinfo",
-      "name": "Franceinfo",
-      "url": "https://www.francetvinfo.fr/titres.rss",
-      "website": "https://www.francetvinfo.fr",
-      "description": "French public broadcaster — headline news",
-      "country_id": "FR",
-      "language_id": "fr",
-      "category": "world",
-      "reliability": 5
-    },
-    {
-      "id": "ouest-france",
-      "name": "Ouest-France",
-      "url": "https://www.ouest-france.fr/rss-en-continu.xml",
-      "website": "https://www.ouest-france.fr",
-      "description": "France's highest-circulation daily newspaper",
-      "country_id": "FR",
-      "language_id": "fr",
-      "category": "world",
-      "reliability": 4
-    },
-    {
-      "id": "ansa-it",
-      "name": "ANSA",
-      "url": "https://www.ansa.it/sito/ansait_rss.xml",
-      "website": "https://www.ansa.it",
-      "description": "Italy's leading wire service and news agency",
-      "country_id": "IT",
-      "language_id": "it",
-      "category": "world",
-      "reliability": 5
     },
     {
       "id": "the-local-it",
@@ -2800,28 +2415,6 @@
       "reliability": 4
     },
     {
-      "id": "rzeczpospolita",
-      "name": "Rzeczpospolita",
-      "url": "https://www.rp.pl/rss/1019",
-      "website": "https://www.rp.pl",
-      "description": "Poland's leading broadsheet newspaper",
-      "country_id": "PL",
-      "language_id": "pl",
-      "category": "world",
-      "reliability": 4
-    },
-    {
-      "id": "gazeta-prawna",
-      "name": "Gazeta Prawna",
-      "url": "http://rss.gazetaprawna.pl/GazetaPrawna",
-      "website": "https://www.gazetaprawna.pl",
-      "description": "Polish business and legal daily",
-      "country_id": "PL",
-      "language_id": "pl",
-      "category": "finance",
-      "reliability": 4
-    },
-    {
       "id": "moscow-times",
       "name": "The Moscow Times",
       "url": "https://www.themoscowtimes.com/rss/news",
@@ -2829,7 +2422,7 @@
       "description": "Independent English-language coverage of Russia",
       "country_id": "RU",
       "language_id": "en",
-      "category": "ru",
+      "category": "world",
       "reliability": 4
     },
     {
@@ -2840,7 +2433,7 @@
       "description": "Russian state news agency (state-affiliated)",
       "country_id": "RU",
       "language_id": "en",
-      "category": "ru",
+      "category": "world",
       "reliability": 2
     },
     {
@@ -2866,33 +2459,11 @@
       "reliability": 4
     },
     {
-      "id": "asahi-shimbun",
-      "name": "Asahi Shimbun",
-      "url": "http://rss.asahi.com/rss/asahi/newsheadlines.rdf",
-      "website": "https://www.asahi.com",
-      "description": "One of Japan's five national newspapers",
-      "country_id": "JP",
-      "language_id": "ja",
-      "category": "world",
-      "reliability": 5
-    },
-    {
       "id": "india-today",
       "name": "India Today",
       "url": "https://www.indiatoday.in/rss/home",
       "website": "https://www.indiatoday.in",
       "description": "India's leading English newsmagazine",
-      "country_id": "IN",
-      "language_id": "en",
-      "category": "world",
-      "reliability": 4
-    },
-    {
-      "id": "indian-express",
-      "name": "Indian Express",
-      "url": "http://indianexpress.com/print/front-page/feed/",
-      "website": "https://indianexpress.com",
-      "description": "Indian English-language broadsheet — front page",
       "country_id": "IN",
       "language_id": "en",
       "category": "world",
@@ -2921,17 +2492,6 @@
       "reliability": 4
     },
     {
-      "id": "theprint-in",
-      "name": "ThePrint",
-      "url": "https://theprint.in/feed/",
-      "website": "https://theprint.in",
-      "description": "Indian digital media focused on politics and policy",
-      "country_id": "IN",
-      "language_id": "en",
-      "category": "world",
-      "reliability": 4
-    },
-    {
       "id": "express-tribune-pk",
       "name": "Express Tribune",
       "url": "https://tribune.com.pk/feed/home",
@@ -2954,17 +2514,6 @@
       "reliability": 4
     },
     {
-      "id": "tribunnews-id",
-      "name": "Tribunnews",
-      "url": "https://www.tribunnews.com/rss",
-      "website": "https://www.tribunnews.com",
-      "description": "Indonesia's most-read online news portal",
-      "country_id": "ID",
-      "language_id": "id",
-      "category": "world",
-      "reliability": 3
-    },
-    {
       "id": "inquirer-ph",
       "name": "Philippine Daily Inquirer",
       "url": "https://www.inquirer.net/fullfeed",
@@ -2985,17 +2534,6 @@
       "language_id": "en",
       "category": "world",
       "reliability": 4
-    },
-    {
-      "id": "isna-ir",
-      "name": "ISNA News Agency",
-      "url": "https://www.isna.ir/rss",
-      "website": "https://www.isna.ir",
-      "description": "Iranian Students' News Agency",
-      "country_id": "IR",
-      "language_id": "fa",
-      "category": "world",
-      "reliability": 3
     },
     {
       "id": "the-age",

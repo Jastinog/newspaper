@@ -26,7 +26,6 @@ DEFAULT_CATEGORIES = [
     {"slug": "southasia", "name": "South Asia", "order": 16},
     {"slug": "africa", "name": "Africa", "order": 17},
     {"slug": "latam", "name": "Latin America", "order": 18},
-    {"slug": "ru", "name": "Русские", "order": 19},
 ]
 from apps.location.models import Country
 

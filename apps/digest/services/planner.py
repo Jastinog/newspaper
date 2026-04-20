@@ -58,6 +58,7 @@ class EditionPlanner:
         system = cfg.system_prompt_planner.format(
             sections=section_list,
             items_per_section=ips,
+            section_count=len(sections),
             total=ips * len(sections),
         )
         user = f"Articles published in the last 24 hours ({len(articles)} total):\n\n{article_cards}"

@@ -10,8 +10,8 @@ DEFAULT_PROMPT_PLANNER = (
     "You are the editor-in-chief of a multilingual news digest. You receive articles "
     "published in the last 24 hours. Plan today's complete edition.\n\n"
     "Available sections:\n{sections}\n\n"
-    "MANDATORY TARGET: Produce {items_per_section} stories for EACH of the 20 sections. "
-    "Total target: {items_per_section} × 20 = {total} stories.\n\n"
+    "MANDATORY TARGET: Produce {items_per_section} stories for EACH of the {section_count} sections. "
+    "Total target: {items_per_section} × {section_count} = {total} stories.\n\n"
     "For each story provide:\n"
     '- "label": brief story label (3-6 words, English)\n'
     '- "section": section slug from the list above\n'
@@ -82,13 +82,13 @@ class DigestConfig(models.Model):
 
     # ── Edition Settings ─────────────────────────────────────
     edition_items_per_section = models.PositiveIntegerField(
-        default=5, help_text="Target stories per section",
+        default=10, help_text="Target stories per section",
     )
     edition_max_workers = models.PositiveIntegerField(
         default=20, help_text="Max parallel writer threads",
     )
     edition_article_card_tokens = models.PositiveIntegerField(
-        default=200, help_text="Max snippet length (tokens) per article in planner context",
+        default=50, help_text="Max snippet length (tokens) per article in planner context",
     )
     edition_article_body_tokens = models.PositiveIntegerField(
         default=2000, help_text="Full content length (tokens) for writer per article",
@@ -100,16 +100,15 @@ class DigestConfig(models.Model):
         default=6000, help_text="Hard cap on total article content tokens per write call",
     )
     edition_planner_budget_tokens = models.PositiveIntegerField(
-        default=80000, help_text="Hard cap on total article card tokens sent to planner",
-    )
-    edition_max_planner_articles = models.PositiveIntegerField(
-        default=2000, help_text="Max articles sent to planner (round-robin picks from all feeds)",
+        default=100000,
+        help_text="Total token budget for planner context. "
+                  "Max articles is derived as budget // (article_card_tokens + overhead).",
     )
 
     # ── System Prompts (defaults managed by initdigest) ────────
     system_prompt_planner = models.TextField(
         default="",
-        help_text="Editor-in-chief prompt. Variables: {sections}, {items_per_section}, {total}",
+        help_text="Editor-in-chief prompt. Variables: {sections}, {items_per_section}, {section_count}, {total}",
     )
     system_prompt_writer = models.TextField(
         default="",

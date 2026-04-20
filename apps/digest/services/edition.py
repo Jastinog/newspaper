@@ -23,6 +23,10 @@ from .writer import StoryWriter, build_writer_schema
 
 logger = logging.getLogger(__name__)
 
+# Fixed token cost per article card structure (ID + source + title + timestamps).
+# Added to the snippet budget when deriving how many articles fit into the planner.
+CARD_OVERHEAD_TOKENS = 25
+
 
 class EditionService:
     """Edition pipeline: collect (SQL) -> plan (one LLM) -> write (parallel LLM) -> save."""
@@ -152,11 +156,7 @@ class EditionService:
     # ── Step 1: Collect ─────────────────────────────────────────
 
     def _collect(self, cfg, digest_date, emit) -> tuple[list[dict], dict]:
-        """Collect articles via round-robin across feeds.
-
-        Adaptive snippet sizing: adjusts snippet length so all collected
-        articles fit within the planner token budget.
-        """
+        """Collect articles via round-robin across feeds, capped by planner token budget."""
         now = timezone.now()
         cutoff = now - timedelta(hours=cfg.hours_lookback)
 
@@ -187,8 +187,11 @@ class EditionService:
             emit("collect", articles=0, snippet_tokens=0, feeds=0, total=0)
             return [], {}
 
+        # Derive max articles from token budget: budget / (snippet + card overhead)
+        snippet_tokens = cfg.edition_article_card_tokens
+        max_articles = cfg.edition_planner_budget_tokens // (snippet_tokens + CARD_OVERHEAD_TOKENS)
+
         # Round-robin: layer by layer across feeds
-        max_articles = cfg.edition_max_planner_articles
         ordered_ids = []
         feed_lists = list(by_feed.values())
         layer = 0
@@ -211,13 +214,6 @@ class EditionService:
             .select_related("feed")
             .filter(id__in=ordered_ids)
         }
-
-        # Adaptive snippet to fit within budget
-        article_count = len(ordered_ids)
-        budget = cfg.edition_planner_budget_tokens
-        overhead_per_card = 25
-        available = budget - (article_count * overhead_per_card)
-        snippet_tokens = min(cfg.edition_article_card_tokens, available // article_count) if available > 0 else 0
 
         # Build cards in round-robin order
         cards = []
