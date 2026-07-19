@@ -94,8 +94,11 @@
     }
 
     function updateButton(theme) {
-        var label = document.querySelector('#themeBtn .theme-btn-label');
-        if (label && IDS[theme]) label.textContent = IDS[theme].name;
+        // The label stays a fixed "Theme"; the swatch (.theme-btn-dot) tracks
+        // the palette via CSS var(--accent). Surface the active family name as
+        // the button's tooltip for context.
+        var btn = document.getElementById('themeBtn');
+        if (btn && IDS[theme]) btn.title = IDS[theme].name;
     }
 
     window.setTheme = function (id) {
