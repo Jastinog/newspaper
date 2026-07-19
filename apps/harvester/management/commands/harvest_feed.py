@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand
 
 from apps.harvester.models import RunStatus
-from apps.harvester.services.scheduler import FeedHarvester
+from apps.harvester.services.feeds import FeedHarvester
 
 
 class Command(BaseCommand):

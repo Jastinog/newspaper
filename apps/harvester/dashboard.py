@@ -354,9 +354,9 @@ def build_harvester_context(request):
     ]
 
     # ── Pipeline state ────────────────────────────────────────
-    from apps.harvester.services.pipeline import get_manager
+    from apps.harvester.services.pipeline import HarvestManager
     ps = PipelineSettings.load()
-    pipeline_running = get_manager() is not None
+    pipeline_running = HarvestManager.current() is not None
     pipeline_active = ps.is_active
 
     return {

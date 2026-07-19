@@ -8,7 +8,7 @@ from django.views.decorators.http import require_POST
 
 from apps.harvester.dashboard import build_harvester_context
 from apps.harvester.models import PipelineSettings, STAGE_FIELD_NAMES
-from apps.harvester.services.pipeline import get_manager
+from apps.harvester.services.pipeline import HarvestManager
 
 
 @staff_member_required
@@ -29,7 +29,7 @@ def harvester_toggle(request):
     settings = PipelineSettings.load()
     new_state = not settings.is_active
     PipelineSettings.set_field(is_active=new_state)
-    manager = get_manager()
+    manager = HarvestManager.current()
     return JsonResponse({"active": new_state, "running": manager is not None})
 
 
