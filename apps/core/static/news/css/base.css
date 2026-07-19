@@ -96,6 +96,9 @@
 
 html {
     font-size: 16px;
+    /* Always reserve the scrollbar's space so hiding it (modal-open) doesn't
+       shift the page sideways. No-ops for overlay scrollbars. */
+    scrollbar-gutter: stable;
 }
 @media (min-width: 1800px) {
     html { font-size: 18px; }
@@ -198,6 +201,17 @@ main {
     30%  { width: 50%; }
     60%  { width: 75%; }
     100% { width: 95%; }
+}
+
+/* Lock background scroll while a fullscreen modal is open */
+body.modal-open {
+    overflow: hidden;
+}
+
+/* Shared slide-up for fullscreen modals on mobile/tablet */
+@keyframes modal-slide-up {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
 }
 
 /* === RESPONSIVE === */

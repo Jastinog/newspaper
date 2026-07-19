@@ -145,14 +145,32 @@
     letter-spacing: 0.04em;
 }
 
-/* === MOBILE === */
-@media (max-width: 600px) {
+/* === MOBILE & TABLET: fullscreen === */
+@media (max-width: 1024px) {
+    .sources-modal-overlay {
+        padding: 0;
+        align-items: stretch;
+    }
     .sources-modal {
         width: 100%;
         max-width: none;
-        max-height: 90vh;
-        margin: 0 0.5rem;
+        max-height: none;
+        height: 100vh;
+        height: 100dvh;
+        border: none;
+        border-top: 3px solid var(--accent);
+        padding-bottom: env(safe-area-inset-bottom);
+        animation: modal-slide-up 0.26s cubic-bezier(0.22, 1, 0.36, 1);
     }
+    .sources-modal-header {
+        padding-top: calc(0.8rem + env(safe-area-inset-top));
+    }
+    .sources-modal-body {
+        flex: 1 1 auto;
+    }
+}
+
+@media (max-width: 600px) {
     .source-card-img {
         width: 64px;
         height: 44px;

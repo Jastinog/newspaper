@@ -454,6 +454,41 @@
 .sum-modal-btn-primary { background: var(--accent); color: var(--bg); border-color: var(--accent); }
 .sum-modal-btn-secondary { background: transparent; color: var(--fg-muted); border-color: var(--border); }
 
+/* Fullscreen on mobile & tablet */
+@media (max-width: 1024px) {
+    .sum-modal-overlay {
+        padding: 0;
+        align-items: stretch;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+    }
+    .sum-modal {
+        width: 100%;
+        max-width: none;
+        max-height: none;
+        height: 100vh;
+        height: 100dvh;
+        border: none;
+        border-top: 3px solid var(--accent);
+        padding-bottom: env(safe-area-inset-bottom);
+        animation: modal-slide-up 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .sum-modal-head {
+        padding-top: calc(0.9rem + env(safe-area-inset-top));
+    }
+    .sum-modal-image {
+        max-height: 34vh;
+    }
+    .sum-modal-content {
+        flex: 1 1 auto;
+    }
+    .sum-modal-close {
+        font-size: 1.3rem;
+        padding: 0.4rem;
+        margin: -0.3rem -0.4rem -0.3rem auto;
+    }
+}
+
 @media (max-width: 480px) {
     .sum-modal-actions { flex-direction: column-reverse; }
     .sum-modal-btn { width: 100%; text-align: center; }
