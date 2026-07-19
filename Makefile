@@ -1,9 +1,16 @@
-# Run project
+# Run project (WSGI/runserver — HTTP only, no WebSockets)
 run:
 	uv run python manage.py makemigrations
 	uv run python manage.py migrate
 	uv run python manage.py collectstatic --no-input --clear >> /dev/null
-	PIPELINE_WORKER=1 uv run python manage.py runserver 0.0.0.0:8002
+	PIPELINE_WORKER=1 uv run python manage.py runserver 0.0.0.0:8500
+
+# Run over ASGI (daphne) — serves HTTP + WebSockets (analytics, суть, research)
+# on a single port. Use this to work on real-time features locally.
+ws:
+	uv run python manage.py makemigrations
+	uv run python manage.py migrate
+	PIPELINE_WORKER=1 DJANGO_DEBUG=True uv run daphne -b 0.0.0.0 -p 8501 config.asgi:application
 
 # Initialize initial data
 init:

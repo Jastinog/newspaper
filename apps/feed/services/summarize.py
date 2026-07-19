@@ -7,6 +7,7 @@ import json
 import logging
 
 from django.conf import settings
+from django.core.cache import cache
 from django.utils.html import strip_tags
 
 from apps.billing.models import APIUsage
@@ -35,8 +36,50 @@ class SummaryError(Exception):
     pass
 
 
-def generate_summary(article, *, client: OpenAIClient = None) -> ArticleSummary:
-    """Call OpenAI, persist and return an ArticleSummary. Raises SummaryError."""
+# Cap how many *new* (paid) summaries can be triggered per hour, across every
+# transport (the HTTP endpoint and the WebSocket flow). Cached summaries are free
+# and never hit these counters. This is the single spend guard for the feature:
+#   - the per-peer key must be a trusted TCP peer (never a client-supplied
+#     forwarding header), so callers pass it in from their own request context;
+#   - the global ceiling uses no client input at all — an unspoofable hard bound.
+_RATE_MAX = 20
+_GLOBAL_MAX = 100
+_RATE_WINDOW = 60 * 60
+
+
+def _rate_incr(key, limit):
+    """Increment a windowed counter; return True while at/under the limit."""
+    cache.add(key, 0, _RATE_WINDOW)
+    try:
+        used = cache.incr(key)
+    except ValueError:
+        used = 1
+    return used <= limit
+
+
+def summary_rate_ok(peer):
+    """True while both the per-peer and global hourly budgets are under cap.
+
+    Increments both counters unconditionally so neither can be starved by the
+    other's short-circuit. `peer` is the caller's trusted TCP peer identifier.
+    """
+    peer = peer or "unknown"
+    peer_ok = _rate_incr(f"sumrl:{peer}", _RATE_MAX)
+    global_ok = _rate_incr("sumrl:global", _GLOBAL_MAX)
+    return peer_ok and global_ok
+
+
+def generate_summary(article, *, client: OpenAIClient = None, progress_callback=None) -> ArticleSummary:
+    """Call OpenAI, persist and return an ArticleSummary. Raises SummaryError.
+
+    progress_callback(step, total, label) — optional, invoked at each real stage
+    so a WebSocket consumer can stream honest progress to the browser.
+    """
+    def progress(step, label):
+        if progress_callback:
+            progress_callback(step, 3, label)
+
+    progress(1, "Читаю статью")
     source = strip_tags(article.content or "").strip()
     if not source:
         raise SummaryError("Article has no text to summarize.")
@@ -45,6 +88,7 @@ def generate_summary(article, *, client: OpenAIClient = None) -> ArticleSummary:
     source = trim_to_tokens(source, MAX_INPUT_TOKENS)
     user = f"Заголовок: {article.title}\n\nТекст новости:\n{source}"
 
+    progress(2, "Выделяю суть")
     client = client or OpenAIClient()
     try:
         content, usage = client.chat(
@@ -69,6 +113,7 @@ def generate_summary(article, *, client: OpenAIClient = None) -> ArticleSummary:
     if not summary_text:
         raise SummaryError("Model returned an empty summary.")
 
+    progress(3, "Сохраняю")
     usage_row = record_usage(usage, service=APIUsage.Service.SUMMARY,
                              api_type=APIUsage.APIType.CHAT, model=model, article=article)
 

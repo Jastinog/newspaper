@@ -1,8 +1,12 @@
 {% load i18n news_extras markdown_extras %}
-<article class="home-item">
-    <a href="{{ article.get_absolute_url }}" class="home-item-thumb">
+<article class="home-item{% if article.has_summary %} has-summary{% endif %}" data-article-id="{{ article.pk }}">
+    <button type="button" class="home-item-thumb" data-summary-trigger aria-label="Показать суть на русском">
         <img src="{{ article.image.url }}" alt="" loading="lazy">
-    </a>
+        <span class="home-item-badge">
+            <span class="home-item-badge-icon">✦</span>
+            <span class="home-item-badge-text">{% if article.has_summary %}Суть готова{% else %}Суть на русском{% endif %}</span>
+        </span>
+    </button>
     <div class="home-item-body">
         <a href="{{ article.get_absolute_url }}" class="home-item-title">{{ article.title }}</a>
         <p class="home-item-desc">{% if article.content %}{{ article.content|plain|truncatechars_word:220 }}{% endif %}</p>
@@ -10,16 +14,15 @@
             <a href="{% url 'feed_detail' article.feed.pk %}" class="home-item-source">{{ article.feed.title }}</a>
             <span class="home-item-date">{% if article.published %}{{ article.published|date:"j M Y, H:i" }}{% elif article.created_at %}{{ article.created_at|date:"j M Y, H:i" }}{% endif %}</span>
         </div>
-        <div class="home-item-sum" id="homesum-{{ article.pk }}">
-            <button class="home-sum-btn"
-                    hx-post="{% url 'article_summarize' article.pk %}" hx-vals='{"compact":"1"}'
-                    hx-target="#homesum-{{ article.pk }}" hx-swap="innerHTML"
-                    hx-trigger="click once" hx-disabled-elt="this"
-                    hx-indicator="#homesumspin-{{ article.pk }}">
+        <div class="home-item-actions">
+            <button type="button" class="home-sum-btn" data-summary-trigger>
                 <span class="home-sum-btn-icon">✦</span>
-                <span>Суть на русском</span>
-                <span id="homesumspin-{{ article.pk }}" class="home-sum-spin htmx-indicator">…</span>
+                <span class="home-sum-btn-label">{% if article.has_summary %}Читать суть{% else %}Суть на русском{% endif %}</span>
             </button>
+            <a class="home-orig-btn" href="{{ article.url }}" target="_blank" rel="noopener"
+               title="{% trans 'Open the original source' %}">
+                {% trans "Original" %}<span class="home-orig-arrow">↗</span>
+            </a>
         </div>
     </div>
 </article>

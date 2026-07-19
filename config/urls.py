@@ -21,4 +21,9 @@ urlpatterns += i18n_patterns(
 )
 
 if settings.DEBUG:
+    from django.contrib.staticfiles.urls import staticfiles_urlpatterns
+
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    # Serve static via the finders so an ASGI server (daphne, `make ws`) can
+    # serve them too — runserver's own static handler doesn't apply there.
+    urlpatterns += staticfiles_urlpatterns()

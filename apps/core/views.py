@@ -3,7 +3,7 @@ import re as _re
 from django.conf import settings
 from django.core.cache import cache
 from django.core.paginator import Paginator
-from django.db.models import Count, F, Prefetch, Q, Window
+from django.db.models import Count, Exists, F, OuterRef, Prefetch, Q, Window
 from django.db.models.functions import Coalesce, RowNumber
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -84,7 +84,10 @@ def home(request):
     qs = (
         Article.objects.select_related("feed")  # cards only render feed.title / feed.pk
         .exclude(image="")
-        .annotate(sort_date=Coalesce("published", "created_at"))
+        .annotate(
+            sort_date=Coalesce("published", "created_at"),
+            has_summary=Exists(ArticleSummary.objects.filter(article=OuterRef("pk"))),
+        )
         .filter(sort_date__lte=now)
         .order_by("-sort_date")
     )
@@ -339,56 +342,30 @@ def _invalidate_article_cache(pk):
     cache.delete_many(keys)
 
 
-# Cap how many *new* (paid) summaries can be triggered per hour. Cached summaries
-# don't count — repeat requests are free. This guards against bill inflation on
-# this public, unauthenticated endpoint.
-#   - per-peer limit keys off REMOTE_ADDR (the real TCP peer) only. We do NOT
-#     trust X-Forwarded-For: it's client-supplied and would let an attacker
-#     rotate the key to bypass the limit.
-#   - a global ceiling uses no client-controlled input at all, so it's an
-#     unspoofable hard bound on spend even if the per-peer key is shared/weak.
-_SUMMARY_RATE_MAX = 20
-_SUMMARY_GLOBAL_MAX = 100
-_SUMMARY_RATE_WINDOW = 60 * 60
-
-
-def _rate_ok(key, limit):
-    """Increment a windowed counter; return True while at/under the limit."""
-    cache.add(key, 0, _SUMMARY_RATE_WINDOW)
-    try:
-        used = cache.incr(key)
-    except ValueError:
-        used = 1
-    return used <= limit
-
-
 @csrf_exempt  # unauthenticated, stateless, idempotent (cached) endpoint — CSRF adds
 @require_POST  # no protection here; abuse is capped by the per-IP rate limit below.
 def article_summarize(request, pk):
     """Generate (or return the stored) Russian summary for an article — HTMX POST.
 
-    Rendered compactly for homepage cards when the request carries compact=1,
-    otherwise as the full panel on the article page.
+    Used by the full panel on the article page. The homepage cards use the
+    WebSocket flow (summary.generate) with a modal instead.
     """
-    from apps.feed.services.summarize import SummaryError, generate_summary
+    from apps.feed.services.summarize import SummaryError, generate_summary, summary_rate_ok
 
     article = get_object_or_404(Article, pk=pk)
-    template = "news/_home_summary.html" if request.POST.get("compact") else "news/_article_summary.html"
 
     def _render(**ctx):
-        return render(request, template, {"article": article, **ctx})
+        return render(request, "news/_article_summary.html", {"article": article, **ctx})
 
     # Serve an already-generated summary without touching the rate limit or the API.
     existing = ArticleSummary.objects.filter(article=article).first()
     if existing:
         return _render(summary=existing)
 
-    # A new summary means a paid API call — rate-limit it. Increment both counters
-    # (per-peer and global) so neither can be starved by the other's short-circuit.
+    # A new summary means a paid API call — rate-limit it. Use REMOTE_ADDR (the real
+    # TCP peer) only, never client-supplied forwarding headers.
     peer = request.META.get("REMOTE_ADDR") or "unknown"
-    peer_ok = _rate_ok(f"sumrl:{peer}", _SUMMARY_RATE_MAX)
-    global_ok = _rate_ok("sumrl:global", _SUMMARY_GLOBAL_MAX)
-    if not (peer_ok and global_ok):
+    if not summary_rate_ok(peer):
         return _render(summary_error=_("Too many requests. Please try again later."))
 
     try:

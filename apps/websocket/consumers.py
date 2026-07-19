@@ -13,6 +13,9 @@ logger = logging.getLogger(__name__)
 # In-progress research generations: (item_id, language) -> {event, url, error, waiters}
 _generations = {}
 
+# In-progress article-summary generations: article_id -> {event, data, error, waiters}
+_summaries = {}
+
 
 class SiteConsumer(AsyncWebsocketConsumer):
     """Single WebSocket endpoint for the entire site.
@@ -42,6 +45,8 @@ class SiteConsumer(AsyncWebsocketConsumer):
         "analytics.ping": "_on_analytics_ping",
         # Research
         "research.generate": "_on_research_generate",
+        # Article summaries ("суть на русском")
+        "summary.generate": "_on_summary_generate",
     }
 
     def __init__(self, *args, **kwargs):
@@ -77,6 +82,8 @@ class SiteConsumer(AsyncWebsocketConsumer):
 
     async def disconnect(self, code):
         for gen in _generations.values():
+            gen["waiters"].discard(self)
+        for gen in _summaries.values():
             gen["waiters"].discard(self)
         if self.analytics and self.analytics.is_active:
             await database_sync_to_async(self.analytics.close)()
@@ -214,6 +221,149 @@ class SiteConsumer(AsyncWebsocketConsumer):
                 "item_id": item_id,
                 "message": gen.get("error", "Unknown error"),
             }))
+
+    # ── Article summary actions ────────────────────
+
+    async def _on_summary_generate(self, data):
+        """Return a stored RU summary instantly, or generate one with progress.
+
+        Server -> Client:
+            {"type": "summary.generating", "article_id": 1}
+            {"type": "summary.progress",   "article_id": 1, "step": 2, "total_steps": 3, "label": "…"}
+            {"type": "summary.ready",      "article_id": 1, "summary": "…", "conclusion": "…", "cached": true}
+            {"type": "summary.error",      "article_id": 1, "message": "…"}
+        """
+        try:
+            article_id = int(data.get("article_id"))
+        except (TypeError, ValueError):
+            return
+
+        # Serve an already-generated summary immediately — no API call, no rate limit.
+        existing = await self._summary_get(article_id)
+        if existing:
+            await self.send(json.dumps({
+                "type": "summary.ready",
+                "article_id": article_id,
+                "summary": existing["summary"],
+                "conclusion": existing["conclusion"],
+                "cached": True,
+            }))
+            return
+
+        await self.send(json.dumps({"type": "summary.generating", "article_id": article_id}))
+
+        # Coalesce concurrent requests for the same article behind one generation.
+        if article_id not in _summaries:
+            _summaries[article_id] = {
+                "event": asyncio.Event(),
+                "data": None,
+                "error": None,
+                "waiters": set(),
+            }
+            asyncio.create_task(self._run_summary(article_id))
+
+        _summaries[article_id]["waiters"].add(self)
+        asyncio.create_task(self._await_summary(article_id))
+
+    async def _run_summary(self, article_id):
+        gen = _summaries[article_id]
+        loop = asyncio.get_running_loop()
+
+        def progress_callback(step, total, label):
+            msg = json.dumps({
+                "type": "summary.progress",
+                "article_id": article_id,
+                "step": step,
+                "total_steps": total,
+                "label": label,
+            })
+            asyncio.run_coroutine_threadsafe(
+                self._broadcast_summary(article_id, msg), loop
+            )
+
+        try:
+            gen["data"] = await self._do_summary_generate(article_id, progress_callback)
+        except Exception as e:
+            logger.exception("Summary generation failed for article %s", article_id)
+            gen["error"] = str(e)
+        finally:
+            gen["event"].set()
+            await asyncio.sleep(5)
+            _summaries.pop(article_id, None)
+
+    async def _broadcast_summary(self, article_id, msg):
+        gen = _summaries.get(article_id)
+        if not gen:
+            return
+        for consumer in list(gen["waiters"]):
+            try:
+                await consumer.send(msg)
+            except Exception:
+                pass
+
+    async def _await_summary(self, article_id):
+        gen = _summaries.get(article_id)
+        if not gen:
+            return
+        try:
+            await asyncio.wait_for(gen["event"].wait(), timeout=120)
+        except asyncio.TimeoutError:
+            await self.send(json.dumps({
+                "type": "summary.error",
+                "article_id": article_id,
+                "message": "Время ожидания истекло",
+            }))
+            return
+
+        if gen["data"]:
+            await self.send(json.dumps({
+                "type": "summary.ready",
+                "article_id": article_id,
+                "summary": gen["data"]["summary"],
+                "conclusion": gen["data"]["conclusion"],
+                "cached": False,
+            }))
+        else:
+            await self.send(json.dumps({
+                "type": "summary.error",
+                "article_id": article_id,
+                "message": gen.get("error") or "Не удалось сделать пересказ",
+            }))
+
+    # ── Article summary DB helpers ─────────────────
+
+    @database_sync_to_async
+    def _summary_get(self, article_id):
+        from apps.feed.models import ArticleSummary
+
+        s = ArticleSummary.objects.filter(article_id=article_id).first()
+        if not s:
+            return None
+        return {"summary": s.summary, "conclusion": s.conclusion}
+
+    @database_sync_to_async
+    def _do_summary_generate(self, article_id, progress_callback=None):
+        from apps.feed.models import Article, ArticleSummary
+        from apps.feed.services.summarize import SummaryError, generate_summary, summary_rate_ok
+
+        # A late request may find the summary already cached (another waiter won).
+        existing = ArticleSummary.objects.filter(article_id=article_id).first()
+        if existing:
+            return {"summary": existing.summary, "conclusion": existing.conclusion}
+
+        # A new summary is a paid API call — rate-limit before spending. The peer
+        # key uses the real TCP peer only (never client-supplied forwarding headers).
+        peer = self.scope.get("client", ["unknown"])[0] or "unknown"
+        if not summary_rate_ok(peer):
+            raise SummaryError("Слишком много запросов. Попробуйте позже.")
+
+        try:
+            article = Article.objects.get(pk=article_id)
+        except Article.DoesNotExist:
+            raise SummaryError("Статья не найдена.")
+
+        summary = generate_summary(article, progress_callback=progress_callback)
+        return {"summary": summary.summary, "conclusion": summary.conclusion}
 
     # ── Research DB helpers ────────────────────────
 

@@ -143,71 +143,308 @@
     .home-feed { grid-template-columns: 1fr; }
 }
 
-/* ── AI "Суть" on home cards ───────────────────────────────── */
-.home-item-sum { margin-top: 0.5rem; }
+/* ── Card thumb as a summary trigger ───────────────────────── */
+.home-item-thumb {
+    position: relative;
+    padding: 0;
+    border: 1px solid var(--border-faint);
+    background: var(--fill);
+    cursor: pointer;
+    font: inherit;
+    color: inherit;
+    width: 100%;
+    text-align: left;
+}
+.home-item-thumb img {
+    transition: transform 0.4s ease, opacity 0.2s ease;
+}
+.home-item-thumb:hover img { transform: scale(1.03); }
+
+/* "Суть" badge overlaid on the image — reveals on hover, always shown when ready */
+.home-item-badge {
+    position: absolute;
+    left: 0.5rem;
+    bottom: 0.5rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.28rem 0.5rem;
+    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #fff;
+    background: rgba(0, 0, 0, 0.62);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    opacity: 0;
+    transform: translateY(3px);
+    transition: opacity 0.18s ease, transform 0.18s ease;
+    pointer-events: none;
+}
+.home-item-thumb:hover .home-item-badge { opacity: 1; transform: translateY(0); }
+.home-item.has-summary .home-item-badge {
+    opacity: 1;
+    transform: translateY(0);
+    background: var(--accent);
+}
+.home-item-badge-icon { font-size: 0.7rem; line-height: 1; }
+
+/* ── Card actions row ──────────────────────────────────────── */
+.home-item-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    padding-top: 0.45rem;
+    border-top: 1px solid var(--border-faint);
+}
 
 .home-sum-btn {
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: 0.35rem;
     font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
     font-size: 0.68rem;
     font-weight: 600;
-    letter-spacing: 0.03em;
-    color: var(--accent);
-    background: transparent;
-    border: 1px solid var(--border-light);
-    padding: 0.3rem 0.55rem;
+    letter-spacing: 0.02em;
+    color: var(--bg);
+    background: var(--accent);
+    border: 1px solid var(--accent);
+    padding: 0.32rem 0.6rem;
     cursor: pointer;
-    transition: background 0.15s ease, color 0.15s ease;
+    transition: opacity 0.15s ease;
 }
-.home-sum-btn:hover { background: var(--accent); color: var(--bg); border-color: var(--accent); }
-.home-sum-btn[disabled] { opacity: 0.6; cursor: default; }
+.home-sum-btn:hover { opacity: 0.85; }
 .home-sum-btn-icon { font-size: 0.75rem; }
 
-.home-item-sum .htmx-indicator { display: none; }
-.home-item-sum .htmx-request .htmx-indicator,
-.home-item-sum .htmx-request.htmx-indicator { display: inline; }
-
-.home-sum {
-    margin-top: 0.4rem;
-    padding: 0.6rem 0.7rem;
-    border-left: 2px solid var(--accent);
-    background: var(--fill);
-}
-.home-sum-text {
-    font-family: "PT Serif", Georgia, serif;
-    font-size: 0.82rem;
-    line-height: 1.5;
-    color: var(--fg);
-}
-.home-sum-text p { margin: 0 0 0.5rem; }
-.home-sum-text p:last-child { margin-bottom: 0; }
-
-.home-sum-concl {
-    margin-top: 0.5rem;
-    padding-top: 0.45rem;
-    border-top: 1px dashed var(--border-light);
-    font-family: "PT Serif", Georgia, serif;
-    font-size: 0.8rem;
-    line-height: 1.45;
-    color: var(--fg-muted);
-}
-.home-sum-label {
-    font-family: -apple-system, system-ui, sans-serif;
-    font-size: 0.6rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
+.home-item.has-summary .home-sum-btn {
     color: var(--accent);
-    margin-right: 0.25rem;
+    background: transparent;
 }
 
-.home-sum-error {
+.home-orig-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    margin-left: auto;
+    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    font-size: 0.66rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--fg-muted);
+    text-decoration: none;
+    padding: 0.32rem 0.5rem;
+    border: 1px solid var(--border-light);
+    transition: color 0.15s ease, border-color 0.15s ease;
+}
+.home-orig-btn:hover { color: var(--fg); border-color: var(--border); }
+.home-orig-arrow { font-size: 0.72rem; }
+
+/* ── Summary modal ─────────────────────────────────────────── */
+.sum-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.2rem;
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    animation: sum-fade-in 0.16s ease;
+}
+@keyframes sum-fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+.sum-modal {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--accent);
+    width: 100%;
+    max-width: 540px;
+    max-height: 86vh;
     display: flex;
     flex-direction: column;
-    gap: 0.35rem;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.28);
+    animation: sum-rise 0.2s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+@keyframes sum-rise {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.sum-modal-head {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.9rem 1.3rem;
+    border-bottom: 1px solid var(--border-faint);
+}
+.sum-modal-badge {
     font-family: -apple-system, system-ui, sans-serif;
-    font-size: 0.72rem;
+    font-size: 0.58rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    color: var(--bg);
+    background: var(--accent);
+    padding: 0.15rem 0.35rem;
+}
+.sum-modal-kicker {
+    font-family: -apple-system, system-ui, sans-serif;
+    font-size: 0.66rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
     color: var(--fg-muted);
+}
+.sum-modal-close {
+    margin-left: auto;
+    background: transparent;
+    border: none;
+    color: var(--fg-faint);
+    font-size: 0.95rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0.2rem;
+    transition: color 0.15s ease;
+}
+.sum-modal-close:hover { color: var(--fg); }
+
+.sum-modal-title {
+    font-family: "PT Serif", Georgia, serif;
+    font-size: 1.08rem;
+    font-weight: 700;
+    line-height: 1.32;
+    color: var(--fg);
+    margin: 0;
+    padding: 1rem 1.3rem 0.4rem;
+}
+
+.sum-modal-content {
+    overflow-y: auto;
+    padding: 0.6rem 1.3rem 1.3rem;
+}
+
+/* Progress state */
+.sum-progress {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1.8rem 0 1.4rem;
+    text-align: center;
+}
+.sum-spinner {
+    width: 30px;
+    height: 30px;
+    border: 2.5px solid var(--border-light);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: sum-spin 0.8s linear infinite;
+}
+@keyframes sum-spin { to { transform: rotate(360deg); } }
+.sum-progress-label {
+    font-family: -apple-system, system-ui, sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--fg);
+}
+.sum-progress-track {
+    width: 100%;
+    max-width: 240px;
+    height: 3px;
+    background: var(--border-faint);
+    overflow: hidden;
+}
+.sum-progress-fill {
+    height: 100%;
+    background: var(--accent);
+    transition: width 0.4s ease;
+}
+.sum-progress-step {
+    font-family: -apple-system, system-ui, sans-serif;
+    font-size: 0.62rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--fg-faint);
+}
+
+/* Result state */
+.sum-result-body {
+    font-family: "PT Serif", Georgia, serif;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: var(--fg);
+}
+.sum-result-body p { margin: 0 0 0.7rem; }
+.sum-result-body p:last-child { margin-bottom: 0; }
+
+.sum-result-concl {
+    margin-top: 1rem;
+    padding: 0.8rem 0.9rem;
+    background: var(--fill);
+    border-left: 2px solid var(--accent);
+}
+.sum-result-concl-label {
+    display: block;
+    font-family: -apple-system, system-ui, sans-serif;
+    font-size: 0.6rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    margin-bottom: 0.3rem;
+}
+.sum-result-concl p {
+    margin: 0;
+    font-family: "PT Serif", Georgia, serif;
+    font-size: 0.86rem;
+    line-height: 1.5;
+    color: var(--fg-muted);
+}
+
+/* Error state */
+.sum-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 1.6rem 0 1rem;
+    text-align: center;
+}
+.sum-error-icon { font-size: 1.6rem; color: var(--accent); }
+.sum-error-msg {
+    font-family: -apple-system, system-ui, sans-serif;
+    font-size: 0.85rem;
+    color: var(--fg-muted);
+    max-width: 320px;
+}
+
+/* Modal actions */
+.sum-modal-actions {
+    display: flex;
+    gap: 0.6rem;
+    justify-content: flex-end;
+    margin-top: 1.3rem;
+}
+.sum-error .sum-modal-actions { margin-top: 0.4rem; }
+.sum-modal-btn {
+    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 0.5rem 1.2rem;
+    cursor: pointer;
+    text-decoration: none;
+    border: 1px solid transparent;
+    transition: opacity 0.15s ease;
+}
+.sum-modal-btn:hover { opacity: 0.85; }
+.sum-modal-btn-primary { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+.sum-modal-btn-secondary { background: transparent; color: var(--fg-muted); border-color: var(--border); }
+
+@media (max-width: 480px) {
+    .sum-modal-actions { flex-direction: column-reverse; }
+    .sum-modal-btn { width: 100%; text-align: center; }
 }
