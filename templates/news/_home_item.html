@@ -1,5 +1,5 @@
 {% load i18n news_extras markdown_extras %}
-<article class="home-item{% if article.has_summary %} has-summary{% endif %}" data-article-id="{{ article.pk }}">
+<article class="home-item{% if article.has_summary %} has-summary{% endif %}" data-article-id="{{ article.pk }}" data-summary-token="{% summary_token article.pk %}">
     <a href="{{ article.get_absolute_url }}" class="home-item-thumb">
         <img src="{{ article.image.url }}" alt="" loading="lazy">
         <span class="home-item-badge">

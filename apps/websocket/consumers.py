@@ -61,6 +61,16 @@ class SiteConsumer(AsyncWebsocketConsumer):
         self.analytics = SessionService(self.scope)
         qs = parse_qs(self.scope.get("query_string", b"").decode())
         self.language = qs.get("lang", ["en"])[0]
+
+        # Guards for the paid summary flow: same-origin + real client IP. Headers
+        # are (name, value) byte tuples; a name may repeat, but origin does not.
+        from apps.feed.services.summary_guard import origin_ok, trusted_peer
+        headers = {k: v for k, v in (self.scope.get("headers") or [])}
+        origin = headers.get(b"origin", b"").decode()
+        self.origin_ok = origin_ok(origin)
+        xff = headers.get(b"x-forwarded-for", b"").decode()
+        client = self.scope.get("client") or ("", 0)
+        self.peer = trusted_peer(xff, client[0] if client else "")
         state = await self._research_state(self.language)
         await self.send(json.dumps({
             "type": "research.state",
@@ -224,6 +234,13 @@ class SiteConsumer(AsyncWebsocketConsumer):
 
     # ── Article summary actions ────────────────────
 
+    async def _summary_error(self, article_id, message):
+        await self.send(json.dumps({
+            "type": "summary.error",
+            "article_id": article_id,
+            "message": message,
+        }))
+
     async def _on_summary_generate(self, data):
         """Return a stored summary for the current language instantly, or generate
         one with progress. Summaries are per (article, language): a summary in one
@@ -253,6 +270,20 @@ class SiteConsumer(AsyncWebsocketConsumer):
                 "conclusion": existing["conclusion"],
                 "cached": True,
             }))
+            return
+
+        # From here a new (paid) OpenAI call is possible — gate it so only a real
+        # browser on our own page can trigger it, and cap the spend per client.
+        from apps.feed.services.summary_guard import summary_token_ok
+        from apps.feed.services.summarize import summary_rate_ok
+
+        if not self.origin_ok or not summary_token_ok(data.get("token"), article_id):
+            await self._summary_error(article_id, "Запрос отклонён.")
+            return
+        if not await database_sync_to_async(summary_rate_ok)(self.peer):
+            await self._summary_error(
+                article_id, "Слишком много запросов. Попробуйте позже."
+            )
             return
 
         await self.send(json.dumps({"type": "summary.generating", "article_id": article_id}))

@@ -39,6 +39,7 @@
     var modal = null;     // current modal element
     var openId = null;    // article id the open modal belongs to
     var openCard = null;  // the <article> that opened it
+    var openToken = null; // page-issued summary token for the open article
 
     function closeModal() {
         if (overlay) overlay.remove();
@@ -46,6 +47,7 @@
         modal = null;
         openId = null;
         openCard = null;
+        openToken = null;
         document.removeEventListener('keydown', onKey);
     }
 
@@ -169,7 +171,9 @@
     function requestSummary(articleId) {
         renderProgress(0, 3, I18N.sending || 'Отправляю запрос…');
         var language = (window.WS && WS.getLanguage) ? WS.getLanguage() : 'en';
-        if (!WS.send('summary.generate', { article_id: articleId, language: language })) {
+        var payload = { article_id: articleId, language: language };
+        if (openToken) payload.token = openToken;
+        if (!WS.send('summary.generate', payload)) {
             renderError(articleId, I18N.noConnection || 'Нет соединения с сервером. Попробуйте ещё раз.');
         }
     }
@@ -187,6 +191,7 @@
         buildModal(title, imageSrc);
         openId = articleId;
         openCard = card;
+        openToken = card.dataset.summaryToken || null;
         requestSummary(articleId);
     }
 

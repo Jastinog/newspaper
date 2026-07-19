@@ -1,8 +1,16 @@
 from django import template
 
 from apps.core.services.utils import get_article_image_url
+from apps.feed.services.summary_guard import make_summary_token
 
 register = template.Library()
+
+
+@register.simple_tag
+def summary_token(article_id):
+    """Signed token embedded in an article card so the WS summary request can
+    prove the card was rendered by us for this article."""
+    return make_summary_token(article_id)
 
 
 @register.filter

@@ -339,6 +339,7 @@ def article_summarize(request, pk):
     WebSocket flow (summary.generate) with a modal instead.
     """
     from apps.feed.services.summarize import SummaryError, generate_summary, summary_rate_ok
+    from apps.feed.services.summary_guard import trusted_peer
 
     article = get_object_or_404(Article, pk=pk)
     lang = get_language() or "en"
@@ -352,9 +353,12 @@ def article_summarize(request, pk):
     if existing:
         return _render(summary=existing)
 
-    # A new summary means a paid API call — rate-limit it. Use REMOTE_ADDR (the real
-    # TCP peer) only, never client-supplied forwarding headers.
-    peer = request.META.get("REMOTE_ADDR") or "unknown"
+    # A new summary means a paid API call — rate-limit it per real client. Behind
+    # nginx REMOTE_ADDR is always the proxy, so use the last X-Forwarded-For hop
+    # (nginx-appended, unspoofable). CSRF already pins this POST to our own page.
+    peer = trusted_peer(
+        request.META.get("HTTP_X_FORWARDED_FOR"), request.META.get("REMOTE_ADDR")
+    )
     if not summary_rate_ok(peer):
         return _render(summary_error=_("Too many requests. Please try again later."))
 
