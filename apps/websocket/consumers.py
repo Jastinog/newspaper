@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 # In-progress research generations: (item_id, language) -> {event, url, error, waiters}
 _generations = {}
 
-# In-progress article-summary generations: article_id -> {event, data, error, waiters}
+# In-progress article-summary generations: (article_id, language) -> {event, data, error, waiters}
 _summaries = {}
 
 
@@ -225,7 +225,9 @@ class SiteConsumer(AsyncWebsocketConsumer):
     # ── Article summary actions ────────────────────
 
     async def _on_summary_generate(self, data):
-        """Return a stored RU summary instantly, or generate one with progress.
+        """Return a stored summary for the current language instantly, or generate
+        one with progress. Summaries are per (article, language): a summary in one
+        language does not satisfy a request for another.
 
         Server -> Client:
             {"type": "summary.generating", "article_id": 1}
@@ -238,8 +240,11 @@ class SiteConsumer(AsyncWebsocketConsumer):
         except (TypeError, ValueError):
             return
 
+        language = data.get("language") or self.language or "en"
+        gen_key = (article_id, language)
+
         # Serve an already-generated summary immediately — no API call, no rate limit.
-        existing = await self._summary_get(article_id)
+        existing = await self._summary_get(article_id, language)
         if existing:
             await self.send(json.dumps({
                 "type": "summary.ready",
@@ -252,47 +257,46 @@ class SiteConsumer(AsyncWebsocketConsumer):
 
         await self.send(json.dumps({"type": "summary.generating", "article_id": article_id}))
 
-        # Coalesce concurrent requests for the same article behind one generation.
-        if article_id not in _summaries:
-            _summaries[article_id] = {
+        # Coalesce concurrent requests for the same (article, language) behind one run.
+        if gen_key not in _summaries:
+            _summaries[gen_key] = {
                 "event": asyncio.Event(),
                 "data": None,
                 "error": None,
                 "waiters": set(),
             }
-            asyncio.create_task(self._run_summary(article_id))
+            asyncio.create_task(self._run_summary(article_id, language, gen_key))
 
-        _summaries[article_id]["waiters"].add(self)
-        asyncio.create_task(self._await_summary(article_id))
+        _summaries[gen_key]["waiters"].add(self)
+        asyncio.create_task(self._await_summary(article_id, gen_key))
 
-    async def _run_summary(self, article_id):
-        gen = _summaries[article_id]
+    async def _run_summary(self, article_id, language, gen_key):
+        gen = _summaries[gen_key]
         loop = asyncio.get_running_loop()
 
-        def progress_callback(step, total, label):
+        def progress_callback(step, total):
             msg = json.dumps({
                 "type": "summary.progress",
                 "article_id": article_id,
                 "step": step,
                 "total_steps": total,
-                "label": label,
             })
             asyncio.run_coroutine_threadsafe(
-                self._broadcast_summary(article_id, msg), loop
+                self._broadcast_summary(gen_key, msg), loop
             )
 
         try:
-            gen["data"] = await self._do_summary_generate(article_id, progress_callback)
+            gen["data"] = await self._do_summary_generate(article_id, language, progress_callback)
         except Exception as e:
-            logger.exception("Summary generation failed for article %s", article_id)
+            logger.exception("Summary generation failed for article %s [%s]", article_id, language)
             gen["error"] = str(e)
         finally:
             gen["event"].set()
             await asyncio.sleep(5)
-            _summaries.pop(article_id, None)
+            _summaries.pop(gen_key, None)
 
-    async def _broadcast_summary(self, article_id, msg):
-        gen = _summaries.get(article_id)
+    async def _broadcast_summary(self, gen_key, msg):
+        gen = _summaries.get(gen_key)
         if not gen:
             return
         for consumer in list(gen["waiters"]):
@@ -301,8 +305,8 @@ class SiteConsumer(AsyncWebsocketConsumer):
             except Exception:
                 pass
 
-    async def _await_summary(self, article_id):
-        gen = _summaries.get(article_id)
+    async def _await_summary(self, article_id, gen_key):
+        gen = _summaries.get(gen_key)
         if not gen:
             return
         try:
@@ -333,21 +337,24 @@ class SiteConsumer(AsyncWebsocketConsumer):
     # ── Article summary DB helpers ─────────────────
 
     @database_sync_to_async
-    def _summary_get(self, article_id):
+    def _summary_get(self, article_id, language):
+        from apps.core.models import Language
         from apps.feed.models import ArticleSummary
 
-        s = ArticleSummary.objects.filter(article_id=article_id).first()
+        s = ArticleSummary.get_for(article_id, Language.get_by_code_safe(language))
         if not s:
             return None
         return {"summary": s.summary, "conclusion": s.conclusion}
 
     @database_sync_to_async
-    def _do_summary_generate(self, article_id, progress_callback=None):
+    def _do_summary_generate(self, article_id, language, progress_callback=None):
+        from apps.core.models import Language
         from apps.feed.models import Article, ArticleSummary
         from apps.feed.services.summarize import SummaryError, generate_summary, summary_rate_ok
 
         # A late request may find the summary already cached (another waiter won).
-        existing = ArticleSummary.objects.filter(article_id=article_id).first()
+        lang_obj = Language.get_by_code_safe(language)
+        existing = ArticleSummary.get_for(article_id, lang_obj)
         if existing:
             return {"summary": existing.summary, "conclusion": existing.conclusion}
 
@@ -362,7 +369,7 @@ class SiteConsumer(AsyncWebsocketConsumer):
         except Article.DoesNotExist:
             raise SummaryError("Статья не найдена.")
 
-        summary = generate_summary(article, progress_callback=progress_callback)
+        summary = generate_summary(article, language=lang_obj, progress_callback=progress_callback)
         return {"summary": summary.summary, "conclusion": summary.conclusion}
 
     # ── Research DB helpers ────────────────────────

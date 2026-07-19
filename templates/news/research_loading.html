@@ -15,7 +15,7 @@
         <p class="generate-description">{% trans "AI-powered deep analysis of this topic based on collected sources." %}</p>
         <button class="generate-btn" id="generateBtn">{% trans "Generate analysis" %}</button>
         <p class="generate-note">{% trans "Uses AI tokens for generation" %}</p>
-        <a href="{% url 'index' %}" class="back-link">&larr; {% trans "Back to digest" %}</a>
+        <a href="{% url 'index' %}" class="back-link">&larr; {% trans "Back" %}</a>
     </div>
 
     <!-- Generation in progress state -->
@@ -31,7 +31,7 @@
     </div>
 
     <div class="loading-error" id="loadingError">
-        {% trans "Generation error." %} <a href="{% url 'index' %}">{% trans "Back to digest" %}</a>
+        {% trans "Generation error." %} <a href="{% url 'index' %}">{% trans "Back" %}</a>
     </div>
 </div>
 {% endblock %}

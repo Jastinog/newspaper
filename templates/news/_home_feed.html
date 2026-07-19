@@ -1,17 +1,17 @@
 {% load i18n %}
-{% for article in page %}
+{% for article in articles %}
     {% include "news/_home_item.html" %}
 {% empty %}
-{% if page.number == 1 %}
+{% if is_first %}
 <div class="home-empty">
     <p>{% trans "No news yet." %}</p>
 </div>
 {% endif %}
 {% endfor %}
-{% if page.has_next %}
+{% if next_cursor %}
 <div class="home-more"
-     hx-get="?page={{ page.next_page_number }}"
-     hx-trigger="revealed"
+     hx-get="?cursor={{ next_cursor|urlencode }}"
+     hx-trigger="intersect once root-margin:800px"
      hx-swap="outerHTML"
      hx-target="this">
     <span class="home-more-dot"></span>

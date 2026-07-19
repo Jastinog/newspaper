@@ -278,11 +278,19 @@
 
 /* ── AI Russian summary panel ─────────────────────────────── */
 .ai-summary {
-    margin: 1.5rem 0 2rem;
+    max-width: 680px;
+    margin: 1.5rem auto 2rem;
     padding: 1.1rem 1.2rem;
     border: 1px solid var(--border-light);
     border-left: 3px solid var(--accent);
     background: var(--fill);
+}
+
+/* Invitation state (button only) — no panel, just the button sitting inline. */
+.ai-summary--prompt {
+    padding: 0;
+    border: none;
+    background: transparent;
 }
 
 .ai-summary-head {
@@ -345,22 +353,25 @@
 .ai-summary-btn {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.55rem;
     font-family: -apple-system, system-ui, sans-serif;
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: var(--bg);
-    background: var(--accent);
-    border: none;
-    padding: 0.55rem 1rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    background: transparent;
+    border: 1px solid var(--accent);
+    padding: 0.62rem 1.15rem;
     cursor: pointer;
-    transition: opacity 0.15s ease;
+    transition: background 0.18s ease, color 0.18s ease;
 }
-.ai-summary-btn:hover { opacity: 0.88; }
-.ai-summary-btn[disabled] { opacity: 0.6; cursor: default; }
-.ai-summary-btn-icon { font-size: 0.9rem; }
+.ai-summary-btn:hover { background: var(--accent); color: var(--bg); }
+.ai-summary-btn[disabled] { opacity: 0.55; cursor: default; }
+.ai-summary-btn[disabled]:hover { background: transparent; color: var(--accent); }
+.ai-summary-btn-icon { font-size: 0.85rem; }
 
-.ai-summary-spin { color: var(--bg); opacity: 0.85; font-size: 0.8rem; }
+.ai-summary-spin { opacity: 0.85; font-size: 0.7rem; }
 /* htmx-indicator: hidden unless a request is in flight */
 .ai-summary .htmx-indicator { display: none; }
 .ai-summary .htmx-request .htmx-indicator,

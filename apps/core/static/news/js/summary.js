@@ -53,7 +53,7 @@
         if (e.key === 'Escape') closeModal();
     }
 
-    function buildModal(title) {
+    function buildModal(title, imageSrc) {
         overlay = el('div', 'sum-modal-overlay');
         modal = el('div', 'sum-modal');
 
@@ -66,6 +66,16 @@
         close.onclick = closeModal;
         head.appendChild(close);
         modal.appendChild(head);
+
+        if (imageSrc) {
+            var figure = el('div', 'sum-modal-image');
+            var img = el('img');
+            img.src = imageSrc;
+            img.alt = '';
+            img.loading = 'lazy';
+            figure.appendChild(img);
+            modal.appendChild(figure);
+        }
 
         if (title) modal.appendChild(el('h3', 'sum-modal-title', title));
 
@@ -158,7 +168,8 @@
 
     function requestSummary(articleId) {
         renderProgress(0, 3, I18N.sending || 'Отправляю запрос…');
-        if (!WS.send('summary.generate', { article_id: articleId })) {
+        var language = (window.WS && WS.getLanguage) ? WS.getLanguage() : 'en';
+        if (!WS.send('summary.generate', { article_id: articleId, language: language })) {
             renderError(articleId, I18N.noConnection || 'Нет соединения с сервером. Попробуйте ещё раз.');
         }
     }
@@ -170,7 +181,10 @@
         var titleEl = card.querySelector('.home-item-title');
         var title = titleEl ? titleEl.textContent.trim() : '';
 
-        buildModal(title);
+        var imgEl = card.querySelector('.home-item-thumb img');
+        var imageSrc = imgEl ? imgEl.currentSrc || imgEl.src : '';
+
+        buildModal(title, imageSrc);
         openId = articleId;
         openCard = card;
         requestSummary(articleId);
@@ -185,7 +199,8 @@
 
     WS.on('summary.progress', function (msg) {
         if (openId !== msg.article_id) return;
-        renderProgress(msg.step, msg.total_steps, msg.label || I18N.generating || 'Генерирую…');
+        // Progress labels are localized client-side (the server streams step numbers only).
+        renderProgress(msg.step, msg.total_steps, I18N.generating || 'Генерирую…');
     });
 
     WS.on('summary.ready', function (msg) {

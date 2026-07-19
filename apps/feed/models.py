@@ -106,11 +106,14 @@ class Article(models.Model):
 
 
 class ArticleSummary(models.Model):
-    """AI retelling of an article in Russian: the essence without fluff, staying
-    close to the original, plus a short conclusion. Generated once on demand and
-    cached here so we never spend tokens on the same article twice."""
+    """AI retelling of an article: the essence without fluff, staying close to the
+    original, plus a short conclusion. Generated once per (article, language) on
+    demand and cached here so we never spend tokens on the same pair twice."""
 
-    article = models.OneToOneField(Article, on_delete=models.CASCADE, related_name="ru_summary")
+    article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name="summaries")
+    language = models.ForeignKey(
+        "core.Language", on_delete=models.CASCADE, related_name="article_summaries", null=True
+    )
     summary = models.TextField()
     conclusion = models.TextField(blank=True, default="")
     model = models.CharField(max_length=100)
@@ -119,8 +122,20 @@ class ArticleSummary(models.Model):
     cost_usd = models.DecimalField(max_digits=10, decimal_places=6, default=0)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        unique_together = [("article", "language")]
+
+    @classmethod
+    def get_for(cls, article, language):
+        """Return the summary for (article, language), or None. `article` may be a
+        model instance or a pk; `language` a Language instance (None → no match)."""
+        if not language:
+            return None
+        return cls.objects.filter(article=article, language=language).first()
+
     def __str__(self):
-        return f"RU summary of article {self.article_id}"
+        code = self.language.code if self.language_id else "?"
+        return f"{code} summary of article {self.article_id}"
 
 
 class ArticleChunk(models.Model):

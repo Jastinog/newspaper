@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Newspaper 1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-19 10:32+0000\n"
+"POT-Creation-Date: 2026-07-19 12:09+0000\n"
 "PO-Revision-Date: 2026-03-18 18:00+0000\n"
 "Last-Translator: \n"
 "Language-Team: English\n"
@@ -16,428 +16,573 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
+#: apps/core/feeds.py:16 apps/core/views.py:26
 msgid "Daily AI-curated news digest from 100+ RSS sources worldwide"
 msgstr "Daily AI-curated news digest from 100+ RSS sources worldwide"
 
+#: apps/core/feeds.py:19 apps/core/views.py:245
 msgid "Daily News Digest"
 msgstr "Daily News Digest"
 
+#: apps/core/views.py:25 templates/news/base.html:57
+#: templates/news/base.html:81 templates/news/base_bot.html:13
+#: templates/news/base_bot.html:25
 msgid "Newspaper"
 msgstr "Newspaper"
 
+#: apps/core/views.py:350 apps/core/views.py:453 apps/core/views.py:810
+#: apps/core/views.py:814 config/settings.py:238 templates/news/articles.html:8
+#: templates/news/base.html:45 templates/news/base.html:60
+#: templates/news/base_bot.html:16
 #, fuzzy
 #| msgid "Top Articles"
 msgid "Articles"
 msgstr "Top Articles"
 
+#: apps/core/views.py:408
 msgid "Too many requests. Please try again later."
 msgstr ""
 
+#: apps/core/views.py:528 apps/core/views.py:586
 msgid "Digest"
 msgstr ""
 
+#: apps/core/views.py:608 apps/core/views.py:627
+#: templates/news/_search_bar.html:4 templates/news/base.html:62
+#: templates/news/base_bot.html:18
 #, fuzzy
 #| msgid "research"
 msgid "Search"
 msgstr "research"
 
+#: apps/core/views.py:628
 msgid "Search results for"
 msgstr ""
 
+#: apps/core/views.py:705 apps/core/views.py:709 apps/core/views.py:755
+#: templates/news/_sources.html:7 templates/news/base.html:61
+#: templates/news/base_bot.html:17 templates/news/feeds.html:8
+#: templates/news/research.html:37 templates/news/story.html:42
 msgid "Sources"
 msgstr "Sources"
 
+#: apps/core/views.py:706
 msgid "All news sources and RSS feeds"
 msgstr ""
 
+#: apps/core/views.py:750
 #, python-format
 msgid "Articles from %(title)s"
 msgstr ""
 
+#: apps/core/views.py:811
 #, fuzzy
 #| msgid "latest articles"
 msgid "Browse all news articles"
 msgstr "latest articles"
 
+#: apps/feed/models.py:26
 msgid "Left"
 msgstr "Left"
 
+#: apps/feed/models.py:27
 msgid "Center-Left"
 msgstr "Center-Left"
 
+#: apps/feed/models.py:28
 msgid "Center"
 msgstr "Center"
 
+#: apps/feed/models.py:29
 msgid "Center-Right"
 msgstr "Center-Right"
 
+#: apps/feed/models.py:30
 msgid "Right"
 msgstr "Right"
 
+#: config/settings.py:211
 msgid "Main"
 msgstr ""
 
+#: config/settings.py:216 config/settings.py:306 config/settings.py:338
 msgid "Dashboard"
 msgstr ""
 
+#: config/settings.py:223
 msgid "Content"
 msgstr "Content"
 
+#: config/settings.py:228
 msgid "Feeds"
 msgstr ""
 
+#: config/settings.py:233
 msgid "Categories"
 msgstr "Categories"
 
+#: config/settings.py:243
 #, fuzzy
 #| msgid "Top Articles"
 msgid "Article chunks"
 msgstr "Top Articles"
 
+#: config/settings.py:250 config/settings.py:255
 msgid "Digests"
 msgstr ""
 
+#: config/settings.py:260
 msgid "Sections"
 msgstr ""
 
+#: config/settings.py:265
 msgid "Config"
 msgstr ""
 
+#: config/settings.py:272 templates/news/research.html:13
 #, fuzzy
 #| msgid "research"
 msgid "Research"
 msgstr "research"
 
+#: config/settings.py:277
 #, fuzzy
 #| msgid "research"
 msgid "Researches"
 msgstr "research"
 
+#: config/settings.py:284
 msgid "Telegram"
 msgstr ""
 
+#: config/settings.py:289
 msgid "Channels"
 msgstr ""
 
+#: config/settings.py:294
 msgid "Post log"
 msgstr ""
 
+#: config/settings.py:301
 msgid "Harvester"
 msgstr ""
 
+#: config/settings.py:311
 msgid "Pipeline settings"
 msgstr ""
 
+#: config/settings.py:316
 msgid "Feed fetches"
 msgstr ""
 
+#: config/settings.py:321
 #, fuzzy
 #| msgid "Content"
 msgid "Content extracts"
 msgstr "Content"
 
+#: config/settings.py:326
 msgid "Image downloads"
 msgstr ""
 
+#: config/settings.py:333
 msgid "Analytics"
 msgstr "Analytics"
 
+#: config/settings.py:343
 msgid "Clients"
 msgstr ""
 
+#: config/settings.py:348
 msgid "Sessions"
 msgstr ""
 
+#: config/settings.py:353
 msgid "Activities"
 msgstr ""
 
+#: config/settings.py:360
 msgid "System"
 msgstr ""
 
+#: config/settings.py:365
 #, fuzzy
 #| msgid "Browsers"
 msgid "Users"
 msgstr "Browsers"
 
+#: config/settings.py:370
 msgid "Languages"
 msgstr ""
 
+#: config/settings.py:375
 msgid "Regions"
 msgstr ""
 
+#: config/settings.py:380
 msgid "Countries"
 msgstr "Countries"
 
+#: config/settings.py:385
 msgid "API usage"
 msgstr ""
 
+#: templates/news/_article_summary.html:6 templates/news/_home_item.html:7
+#: templates/news/_home_item.html:20 templates/news/home.html:15
 msgid "Gist"
 msgstr "Gist"
 
+#: templates/news/_article_summary.html:11 templates/news/home.html:18
 msgid "Takeaway"
 msgstr "Takeaway"
 
+#: templates/news/_article_summary.html:17
 msgid "Couldn't generate the summary:"
 msgstr "Couldn't generate the summary:"
 
+#: templates/news/_article_summary.html:22 templates/news/home.html:21
 msgid "Retry"
 msgstr "Retry"
 
+#: templates/news/_article_summary.html:32
 msgid "Get the gist"
 msgstr "Get the gist"
 
+#: templates/news/_article_summary.html:33
 msgid "generating…"
 msgstr "generating…"
 
+#: templates/news/_content_area.html:29
 msgid "No digest yet. Run the digest command to generate one."
 msgstr "No digest yet. Run the digest command to generate one."
 
+#: templates/news/_digest_item.html:6
 msgid "Share"
 msgstr ""
 
+#: templates/news/_home_feed.html:7
 #, fuzzy
 #| msgid "No articles yet."
 msgid "No news yet."
 msgstr "No articles yet."
 
-msgid "Show the gist"
-msgstr "Show the gist"
-
+#: templates/news/_home_item.html:7 templates/news/home.html:16
 msgid "Gist ready"
 msgstr "Gist ready"
 
+#: templates/news/_home_item.html:20 templates/news/home.html:17
 msgid "Read the gist"
 msgstr "Read the gist"
 
+#: templates/news/_home_item.html:23
 #, fuzzy
 #| msgid "Read on the original site"
 msgid "Open the original source"
 msgstr "Read on the original site"
 
+#: templates/news/_home_item.html:24 templates/news/article.html:32
+#: templates/news/home.html:19
 msgid "Original"
 msgstr "Original"
 
+#: templates/news/_pagination.html:5
 msgid "Previous"
 msgstr ""
 
+#: templates/news/_pagination.html:11
 msgid "Next"
 msgstr ""
 
+#: templates/news/_search_bar.html:3
 msgid "Search news..."
 msgstr ""
 
+#: templates/news/_section_block.html:8
 msgid "Unpin section"
 msgstr ""
 
+#: templates/news/_section_block.html:8
 msgid "Pin section"
 msgstr ""
 
+#: templates/news/_section_nav.html:11
 msgid "All"
 msgstr ""
 
-msgid "Back to digest"
-msgstr "Back to digest"
+#: templates/news/article.html:23 templates/news/research.html:10
+#: templates/news/research.html:60 templates/news/research_loading.html:18
+#: templates/news/research_loading.html:34 templates/news/story.html:10
+#: templates/news/story.html:72
+msgid "Back"
+msgstr "Back"
 
+#: templates/news/article.html:27
 msgid "(no title)"
 msgstr "(no title)"
 
+#: templates/news/article.html:31 templates/news/articles.html:59
+#: templates/news/category.html:20 templates/news/search.html:53
 msgid "ago"
 msgstr "ago"
 
+#: templates/news/article.html:53
 msgid "No content available."
 msgstr "No content available."
 
+#: templates/news/article.html:53
 msgid "Read on the original site"
 msgstr "Read on the original site"
 
+#: templates/news/article.html:58
 msgid "Read original"
 msgstr "Read original"
 
+#: templates/news/articles.html:9
 #, fuzzy
 #| msgid "Top Pages"
 msgid "Page"
 msgstr "Top Pages"
 
+#: templates/news/articles.html:9
 msgid "of"
 msgstr ""
 
+#: templates/news/articles.html:13
 msgid "Search by title..."
 msgstr ""
 
+#: templates/news/articles.html:17 templates/news/feeds.html:17
 #, fuzzy
 #| msgid "Categories"
 msgid "All categories"
 msgstr "Categories"
 
+#: templates/news/articles.html:24 templates/news/feeds.html:24
 #, fuzzy
 #| msgid "Countries"
 msgid "All countries"
 msgstr "Countries"
 
+#: templates/news/articles.html:31
 msgid "From"
 msgstr ""
 
+#: templates/news/articles.html:33
 msgid "To"
 msgstr ""
 
+#: templates/news/articles.html:36 templates/news/feeds.html:44
 msgid "Filter"
 msgstr ""
 
+#: templates/news/articles.html:38 templates/news/feeds.html:46
 msgid "Clear"
 msgstr ""
 
+#: templates/news/articles.html:76
 #, fuzzy
 #| msgid "No articles yet."
 msgid "No articles match your filters."
 msgstr "No articles yet."
 
+#: templates/news/base.html:45
 msgid "Generation error"
 msgstr "Generation error"
 
+#: templates/news/base.html:45
 msgid "Deep dive ready"
 msgstr "Deep dive ready"
 
+#: templates/news/base.html:45
 msgid "Read"
 msgstr "Read"
 
+#: templates/news/base.html:45 templates/news/home.html:20
 msgid "Close"
 msgstr "Close"
 
+#: templates/news/base.html:45 templates/news/story.html:37
 msgid "Similar news"
 msgstr ""
 
+#: templates/news/base.html:45
 msgid "No similar news found"
 msgstr ""
 
+#: templates/news/base.html:45
 #, fuzzy
 #| msgid "latest articles"
 msgid "Source articles"
 msgstr "latest articles"
 
+#: templates/news/base.html:45
 msgid "Current"
 msgstr ""
 
+#: templates/news/base.html:45
 msgid "Digest news"
 msgstr ""
 
+#: templates/news/base.html:45
 msgid "Loading…"
 msgstr ""
 
+#: templates/news/base.html:59 templates/news/base_bot.html:15
 msgid "Home"
 msgstr ""
 
+#: templates/news/base.html:65
 msgid "Broadsheet"
 msgstr ""
 
+#: templates/news/base.html:66
 msgid "Gazette"
 msgstr ""
 
+#: templates/news/base.html:67
 msgid "Evening"
 msgstr ""
 
+#: templates/news/base.html:68
 #, fuzzy
 #| msgid "Right"
 msgid "Midnight"
 msgstr "Right"
 
+#: templates/news/base.html:81 templates/news/base_bot.html:25
 msgid "RSS aggregator"
 msgstr "RSS aggregator"
 
+#: templates/news/category.html:11 templates/news/feeds.html:70
 #, fuzzy
 #| msgid "Top Articles"
 msgid "articles"
 msgstr "Top Articles"
 
+#: templates/news/category.html:24 templates/news/feed_detail.html:47
 msgid "No articles yet."
 msgstr "No articles yet."
 
+#: templates/news/feed_detail.html:7
 #, fuzzy
 #| msgid "sources"
 msgid "All sources"
 msgstr "sources"
 
+#: templates/news/feeds.html:9
 msgid "feeds"
 msgstr ""
 
+#: templates/news/feeds.html:13
 msgid "Search feeds..."
 msgstr ""
 
+#: templates/news/feeds.html:31
 msgid "All leanings"
 msgstr ""
 
+#: templates/news/feeds.html:38
 msgid "All factuality"
 msgstr ""
 
+#: templates/news/feeds.html:84
 msgid "No feeds match your filters."
 msgstr ""
 
+#: templates/news/home.html:22
 msgid "Generating the summary…"
 msgstr "Generating the summary…"
 
+#: templates/news/home.html:23
 msgid "Sending request…"
 msgstr "Sending request…"
 
+#: templates/news/home.html:24
 msgid "No server connection. Please try again."
 msgstr "No server connection. Please try again."
 
+#: templates/news/home.html:25
 msgid "Reading the article"
 msgstr "Reading the article"
 
+#: templates/news/home.html:26
 msgid "Generating…"
 msgstr "Generating…"
 
+#: templates/news/home.html:27
 msgid "Couldn't generate the summary."
 msgstr "Couldn't generate the summary."
 
+#: templates/news/research.html:21
 #, python-format
 msgid "Synthesized from %(num_sources)s source"
 msgid_plural "Synthesized from %(num_sources)s sources"
 msgstr[0] "Synthesized from %(num_sources)s source"
 msgstr[1] "Synthesized from %(num_sources)s sources"
 
+#: templates/news/research_loading.html:15
 msgid "AI-powered deep analysis of this topic based on collected sources."
 msgstr "AI-powered deep analysis of this topic based on collected sources."
 
+#: templates/news/research_loading.html:16
 msgid "Generate analysis"
 msgstr "Generate analysis"
 
+#: templates/news/research_loading.html:17
 msgid "Uses AI tokens for generation"
 msgstr "Uses AI tokens for generation"
 
+#: templates/news/research_loading.html:26
 msgid "Gathering information from sources..."
 msgstr "Gathering information from sources..."
 
+#: templates/news/research_loading.html:34
 msgid "Generation error."
 msgstr "Generation error."
 
+#: templates/news/search.html:20
 msgid "results"
 msgstr ""
 
+#: templates/news/search.html:20
 msgid "ms"
 msgstr ""
 
+#: templates/news/search.html:22
 msgid "New"
 msgstr ""
 
+#: templates/news/search.html:23
 msgid "Relevant"
 msgstr ""
 
+#: templates/news/search.html:69
 #, fuzzy
 #| msgid "No articles yet."
 msgid "No articles found for your query."
 msgstr "No articles yet."
 
+#: templates/news/search.html:70
 msgid "Try different keywords or a broader topic."
 msgstr ""
 
+#: templates/news/search.html:75
 msgid "Enter a topic to search across all news sources."
 msgstr ""
 
+#: templates/news/story.html:22
 msgid "sources"
 msgstr "sources"
 
+#: templates/news/story.html:62
 msgid "More from"
 msgstr ""
+
+#~ msgid "Show the gist"
+#~ msgstr "Show the gist"
+
+#~ msgid "Back to digest"
+#~ msgstr "Back to digest"
 
 #~ msgid "7 days"
 #~ msgstr "7 days"

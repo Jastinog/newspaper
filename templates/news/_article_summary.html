@@ -1,5 +1,5 @@
 {% load i18n %}
-<div id="articleSummary" class="ai-summary">
+<div id="articleSummary" class="ai-summary{% if not summary %} ai-summary--prompt{% endif %}">
 {% if summary %}
     <div class="ai-summary-head">
         <span class="ai-summary-badge">AI</span>

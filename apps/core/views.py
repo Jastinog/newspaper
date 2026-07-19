@@ -1,9 +1,10 @@
 import re as _re
+from datetime import datetime
 
 from django.conf import settings
 from django.core.cache import cache
 from django.core.paginator import Paginator
-from django.db.models import Count, Exists, F, OuterRef, Prefetch, Q, Window
+from django.db.models import BooleanField, Count, Exists, F, OuterRef, Prefetch, Q, Value, Window
 from django.db.models.functions import Coalesce, RowNumber
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -66,35 +67,76 @@ def _parse_pinned_cookie(request):
 _HOME_PER_PAGE = 30
 
 
+def _build_home_cursor(article):
+    """Encode an article's position as `<sort_date_iso>_<pk>` for keyset paging."""
+    return f"{article.sort_date.isoformat()}_{article.pk}"
+
+
+def _parse_home_cursor(cursor):
+    """Decode a home cursor back into (sort_date, pk); None if malformed."""
+    iso, sep, pk = cursor.rpartition("_")
+    if not sep:
+        return None
+    try:
+        return datetime.fromisoformat(iso), int(pk)
+    except ValueError:
+        return None
+
+
 def home(request):
-    """Homepage: infinite-scroll feed of the genuinely latest news, newest first."""
+    """Homepage: infinite-scroll feed of the genuinely latest news, newest first.
+
+    Paging is keyset (cursor) based, not offset (?page=N). New articles arrive
+    constantly at the top; an offset would shift every row down between requests
+    and re-serve rows the reader already saw. A cursor pins each batch to items
+    strictly older than the last one shown, so newer arrivals never cause dupes.
+    """
     is_htmx = request.headers.get("HX-Request") == "true" and not request.headers.get("HX-Boosted")
-    page_num = request.GET.get("page", "1")
+    cursor = request.GET.get("cursor", "")
     lang = get_language() or "en"
 
     variant = "p" if is_htmx else "f"
-    cache_key = f"home:{variant}:{page_num}:{lang}{_cache_suffix(request)}"
+    cache_key = f"home:{variant}:{cursor or 'first'}:{lang}{_cache_suffix(request)}"
     html = cache.get(cache_key)
     if html is not None:
         return HttpResponse(html)
 
     # Straight chronological order — the actual latest news first. Articles dated
     # in the future (feeds with bad timestamps) are not "latest", so keep them out.
+    # id is the tie-breaker so the (sort_date, id) sort key is strictly total.
     now = timezone.now()
+    # A card is "gist ready" only when a summary exists in the *current* language.
+    lang_obj = Language.get_by_code_safe(lang)
+    summary_exists = ArticleSummary.objects.filter(article=OuterRef("pk"), language=lang_obj)
     qs = (
         Article.objects.select_related("feed")  # cards only render feed.title / feed.pk
         .exclude(image="")
         .annotate(
             sort_date=Coalesce("published", "created_at"),
-            has_summary=Exists(ArticleSummary.objects.filter(article=OuterRef("pk"))),
+            has_summary=Exists(summary_exists) if lang_obj else Value(False, output_field=BooleanField()),
         )
         .filter(sort_date__lte=now)
-        .order_by("-sort_date")
+        .order_by("-sort_date", "-id")
     )
-    paginator = Paginator(qs, _HOME_PER_PAGE)
-    page = paginator.get_page(page_num)
 
-    context = {"page": page}
+    parsed = _parse_home_cursor(cursor)
+    if parsed:
+        cur_date, cur_id = parsed
+        qs = qs.filter(
+            Q(sort_date__lt=cur_date) | Q(sort_date=cur_date, id__lt=cur_id)
+        )
+
+    # Fetch one extra row to know whether a further batch exists.
+    articles = list(qs[: _HOME_PER_PAGE + 1])
+    has_next = len(articles) > _HOME_PER_PAGE
+    articles = articles[:_HOME_PER_PAGE]
+    next_cursor = _build_home_cursor(articles[-1]) if has_next and articles else ""
+
+    context = {
+        "articles": articles,
+        "next_cursor": next_cursor,
+        "is_first": not parsed,
+    }
     if is_htmx:
         template = "news/_home_feed.html"
     else:
@@ -326,7 +368,7 @@ def article_detail(request, pk, slug=""):
     if article.image:
         seo["og_image"] = request.build_absolute_uri(article.image.url)
 
-    summary = ArticleSummary.objects.filter(article=article).first()
+    summary = ArticleSummary.get_for(article, Language.get_by_code_safe(lang))
     response = render(request, "news/article.html", {"article": article, "seo": seo, "summary": summary})
     cache.set(cache_key, (article.slug, response.content), 60 * 60)
     return response
@@ -353,12 +395,14 @@ def article_summarize(request, pk):
     from apps.feed.services.summarize import SummaryError, generate_summary, summary_rate_ok
 
     article = get_object_or_404(Article, pk=pk)
+    lang = get_language() or "en"
+    lang_obj = Language.get_by_code_safe(lang)
 
     def _render(**ctx):
         return render(request, "news/_article_summary.html", {"article": article, **ctx})
 
-    # Serve an already-generated summary without touching the rate limit or the API.
-    existing = ArticleSummary.objects.filter(article=article).first()
+    # Serve an already-generated summary (in this language) without touching the API.
+    existing = ArticleSummary.get_for(article, lang_obj)
     if existing:
         return _render(summary=existing)
 
@@ -369,7 +413,7 @@ def article_summarize(request, pk):
         return _render(summary_error=_("Too many requests. Please try again later."))
 
     try:
-        summary = generate_summary(article)
+        summary = generate_summary(article, language=lang_obj)
     except SummaryError as e:
         return _render(summary_error=str(e))
 

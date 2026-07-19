@@ -32,3 +32,11 @@ class Language(models.Model):
             obj = cls.objects.get(code=code)
             cache.set(cache_key, obj, 3600)
         return obj
+
+    @classmethod
+    def get_by_code_safe(cls, code: str):
+        """Like get_by_code but returns None instead of raising for unknown codes."""
+        try:
+            return cls.get_by_code(code)
+        except cls.DoesNotExist:
+            return None

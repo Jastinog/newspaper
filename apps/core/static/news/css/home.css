@@ -309,6 +309,19 @@
 }
 .sum-modal-close:hover { color: var(--fg); }
 
+.sum-modal-image {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    background: var(--border-faint);
+}
+.sum-modal-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
 .sum-modal-title {
     font-family: "PT Serif", Georgia, serif;
     font-size: 1.08rem;

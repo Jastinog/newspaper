@@ -1,7 +1,9 @@
-"""On-demand Russian summary ("суть без воды" + вывод) for a single article.
+"""On-demand summary ("суть без воды" + вывод) for a single article, in the
+requested UI language.
 
-Reuses the shared OpenAIClient. The result is persisted in ArticleSummary so the
-same article is never summarized twice — tokens are spent once, on demand.
+Reuses the shared OpenAIClient. The result is persisted in ArticleSummary keyed
+by (article, language) so the same article/language pair is never summarized
+twice — tokens are spent once, on demand.
 """
 import json
 import logging
@@ -12,6 +14,7 @@ from django.utils.html import strip_tags
 
 from apps.billing.models import APIUsage
 from apps.billing.services import record_usage
+from apps.core.models import Language
 from apps.core.services.ai import OpenAIClient, fix_truncated_json, trim_to_tokens
 from apps.feed.models import ArticleSummary
 
@@ -20,16 +23,19 @@ logger = logging.getLogger(__name__)
 # Cap the article text we send so a huge page can't blow up the prompt cost.
 MAX_INPUT_TOKENS = 6000
 
-SYSTEM_PROMPT = (
-    "Ты — редактор новостей. Тебе дают заголовок и текст новости (на любом языке). "
-    "Твоя задача — пересказать СУТЬ новости на русском языке, без воды: только то, "
-    "что действительно важно (кто, что, где, когда, почему, что дальше). Держись близко "
-    "к оригиналу, не добавляй фактов, которых нет в тексте, не выдумывай и не оценивай "
-    "от себя. Пиши ясно и по делу.\n\n"
-    "Верни строго JSON без markdown-обёрток такого вида:\n"
-    '{"summary": "<пересказ сути в 1-3 абзацах>", '
-    '"conclusion": "<краткий вывод в 1-2 предложениях: главное значение/итог>"}'
-)
+
+def _system_prompt(language_name):
+    """Build the editor prompt that pins the output to `language_name`."""
+    return (
+        "You are a news editor. You are given a headline and the body of a news story "
+        "(in any language). Your task is to retell the ESSENCE of the story "
+        f"in {language_name}, with no fluff: only what truly matters (who, what, where, "
+        "when, why, what comes next). Stay close to the original, do not add facts that "
+        "are not in the text, do not invent or editorialize. Write clearly and to the point.\n\n"
+        "Return strictly JSON with no markdown wrappers, of this shape:\n"
+        f'{{"summary": "<the essence in 1-3 paragraphs, written in {language_name}>", '
+        f'"conclusion": "<a short takeaway in 1-2 sentences, written in {language_name}>"}}'
+    )
 
 
 class SummaryError(Exception):
@@ -69,30 +75,36 @@ def summary_rate_ok(peer):
     return peer_ok and global_ok
 
 
-def generate_summary(article, *, client: OpenAIClient = None, progress_callback=None) -> ArticleSummary:
-    """Call OpenAI, persist and return an ArticleSummary. Raises SummaryError.
+def generate_summary(article, *, language=None, client: OpenAIClient = None,
+                     progress_callback=None) -> ArticleSummary:
+    """Call OpenAI, persist and return an ArticleSummary written in `language`.
 
-    progress_callback(step, total, label) — optional, invoked at each real stage
-    so a WebSocket consumer can stream honest progress to the browser.
+    `language` is a resolved core.Language instance (callers already hold one);
+    it falls back to the default language when None. Raises SummaryError.
+
+    progress_callback(step, total) — optional, invoked at each real stage so a
+    WebSocket consumer can stream honest progress to the browser.
     """
-    def progress(step, label):
+    def progress(step):
         if progress_callback:
-            progress_callback(step, 3, label)
+            progress_callback(step, 3)
 
-    progress(1, "Читаю статью")
+    progress(1)
     source = strip_tags(article.content or "").strip()
     if not source:
         raise SummaryError("Article has no text to summarize.")
 
+    language = language or Language.default()
+    language_name = language.name if language else "English"
     model = settings.OPENAI_SUMMARY_MODEL
     source = trim_to_tokens(source, MAX_INPUT_TOKENS)
-    user = f"Заголовок: {article.title}\n\nТекст новости:\n{source}"
+    user = f"Headline: {article.title}\n\nArticle text:\n{source}"
 
-    progress(2, "Выделяю суть")
+    progress(2)
     client = client or OpenAIClient()
     try:
         content, usage = client.chat(
-            system=SYSTEM_PROMPT,
+            system=_system_prompt(language_name),
             user=user,
             model=model,
             max_tokens=1200,
@@ -113,12 +125,13 @@ def generate_summary(article, *, client: OpenAIClient = None, progress_callback=
     if not summary_text:
         raise SummaryError("Model returned an empty summary.")
 
-    progress(3, "Сохраняю")
+    progress(3)
     usage_row = record_usage(usage, service=APIUsage.Service.SUMMARY,
                              api_type=APIUsage.APIType.CHAT, model=model, article=article)
 
     summary, _ = ArticleSummary.objects.update_or_create(
         article=article,
+        language=language,
         defaults={
             "summary": summary_text,
             "conclusion": conclusion_text,

@@ -25,6 +25,9 @@ DEBUG = os.environ.get("DJANGO_DEBUG", "True").lower() in ("true", "1", "yes")
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "*").split(",")
 
 INSTALLED_APPS = [
+    # Must precede django.contrib.staticfiles so its ASGI-capable `runserver`
+    # (HTTP + WebSocket on one port) overrides the default WSGI one.
+    "daphne",
     "unfold",
     "unfold.contrib.filters",
     "django.contrib.admin",

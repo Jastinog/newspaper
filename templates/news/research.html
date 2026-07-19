@@ -7,7 +7,7 @@
 {% endblock %}
 
 {% block content %}
-<a href="{% url 'index' %}" class="back-link">&larr; {% trans "Back to digest" %}</a>
+<a href="{% url 'index' %}" class="back-link">&larr; {% trans "Back" %}</a>
 
 <article>
     <div class="research-badge">{% trans "Research" %}</div>
@@ -57,7 +57,7 @@
     {% endif %}
 
     <div class="article-actions">
-        <a href="{% url 'index' %}">&larr; {% trans "Back to digest" %}</a>
+        <a href="{% url 'index' %}">&larr; {% trans "Back" %}</a>
     </div>
 </article>
 {% endblock %}
