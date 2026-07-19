@@ -10,13 +10,14 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import get_language, gettext_lazy as _
+from django.contrib.admin.views.decorators import staff_member_required
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 from apps.core.models import Language
 from apps.core.services.utils import get_article_image_url
 from apps.digest.models import Digest, DigestItem
-from apps.feed.models import Article, ArticleSummary, Category, Feed
+from apps.feed.models import Article, ArticleSummary, Category, Feed, HiddenFeed
 from apps.feed.services.search import SearchService
 from apps.location.models import Country
 from apps.research.models import Research
@@ -102,6 +103,7 @@ def home(request):
     qs = (
         Article.objects.select_related("feed")  # cards only render feed.title / feed.pk
         .exclude(image="")
+        .filter(feed__hidden__isnull=True)  # drop sources a curator marked hidden site-wide
         .annotate(
             sort_date=Coalesce("published", "created_at"),
             has_summary=Exists(summary_exists) if lang_obj else Value(False, output_field=BooleanField()),
@@ -296,6 +298,22 @@ def toggle_pin(request, slug):
         max_age=_PINNED_MAX_AGE, samesite="Lax", path="/",
     )
     return response
+
+
+@staff_member_required
+@require_POST
+def hide_feed(request, pk):
+    """Hide a whole source from the home feed for every visitor (curator-only).
+
+    Global curation is a destructive action, so it's gated to staff via the same
+    decorator the admin dashboards use; the owner is already signed into /admin
+    and that session applies here too. Unhide via the admin. Real CSRF (no
+    @csrf_exempt) since this is an authenticated, stateful write. Note: this only
+    affects the home feed — the source stays reachable via its own page, search, etc.
+    """
+    feed = get_object_or_404(Feed, pk=pk)
+    HiddenFeed.objects.get_or_create(feed=feed)
+    return JsonResponse({"ok": True, "feed_id": feed.pk})
 
 
 def article_detail(request, pk, slug=""):

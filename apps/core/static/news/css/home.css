@@ -15,6 +15,7 @@
     flex-direction: column;
     min-width: 0;
     height: 100%;
+    position: relative; /* anchors the curator "⋯" menu over the thumb */
 }
 
 .home-item-thumb {
@@ -187,6 +188,65 @@
     background: var(--accent);
 }
 .home-item-badge-icon { font-size: 0.7rem; line-height: 1; }
+
+/* ── Curator "⋯" menu (staff only) ─────────────────────────── */
+.home-item-menu {
+    position: absolute;
+    top: 0.4rem;
+    right: 0.4rem;
+    z-index: 3;
+}
+.home-item-menu-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 0.5rem;
+    font-size: 1.15rem;
+    font-weight: 700;
+    line-height: 1;
+    color: #fff;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+    cursor: pointer;
+    transition: background 0.18s ease, transform 0.1s ease;
+}
+.home-item-menu-btn:hover { background: rgba(0, 0, 0, 0.82); }
+.home-item-menu-btn:active { transform: scale(0.94); }
+.home-item-menu-btn[aria-expanded="true"] { background: rgba(0, 0, 0, 0.88); }
+
+.home-item-menu-pop {
+    position: absolute;
+    top: calc(100% + 0.3rem);
+    right: 0;
+    min-width: 12rem;
+    padding: 0.3rem;
+    border: 1px solid var(--border-faint);
+    border-radius: 0.5rem;
+    background: var(--bg);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+.home-item-menu-btn[aria-expanded="false"] + .home-item-menu-pop { display: none; }
+.home-item-menu-action {
+    display: block;
+    width: 100%;
+    padding: 0.5rem 0.6rem;
+    border: none;
+    border-radius: 0.35rem;
+    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    font-size: 0.78rem;
+    font-weight: 500;
+    text-align: left;
+    color: var(--fg);
+    background: transparent;
+    cursor: pointer;
+}
+.home-item-menu-action:hover { background: var(--border-faint); }
 
 /* ── Card actions row ──────────────────────────────────────── */
 .home-item-actions {
