@@ -11,7 +11,7 @@
 {% if next_cursor %}
 <div class="home-more"
      hx-get="?cursor={{ next_cursor|urlencode }}"
-     hx-trigger="intersect once root-margin:800px"
+     hx-trigger="loadmore once"
      hx-swap="outerHTML"
      hx-target="this">
     <span class="home-more-dot"></span>
