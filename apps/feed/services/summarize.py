@@ -21,7 +21,7 @@ from apps.feed.models import ArticleSummary
 logger = logging.getLogger(__name__)
 
 # Cap the article text we send so a huge page can't blow up the prompt cost.
-MAX_INPUT_TOKENS = 6000
+MAX_INPUT_TOKENS = 1000
 
 
 def _system_prompt(language_name):
@@ -107,7 +107,7 @@ def generate_summary(article, *, language=None, client: OpenAIClient = None,
             system=_system_prompt(language_name),
             user=user,
             model=model,
-            max_tokens=1200,
+            max_tokens=1000,
             temperature=0.2,
             response_format={"type": "json_object"},
         )
