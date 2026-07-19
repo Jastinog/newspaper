@@ -129,7 +129,8 @@ class ArticleSitemap(Sitemap):
 
 sitemaps = {
     "static": StaticSitemap,
-    "digests": DigestSitemap,
+    # Digest temporarily disabled (route commented out in urls.py).
+    # "digests": DigestSitemap,
     "stories": StorySitemap,
     "categories": CategorySitemap,
     "research": ResearchSitemap,
