@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.utils.html import format_html
 from unfold.admin import ModelAdmin
 
-from .models import Article, ArticleChunk, Category, Feed
+from .models import Article, ArticleChunk, Category, Feed, HiddenFeed
 
 
 def _img_thumbnail(url, w=60, h=40):
@@ -65,3 +65,13 @@ class ArticleChunkAdmin(ModelAdmin):
     list_display_links = ("id",)
     list_filter = ("model",)
     raw_id_fields = ("article",)
+
+
+@admin.register(HiddenFeed)
+class HiddenFeedAdmin(ModelAdmin):
+    """Hidden sources. Delete a row here to bring a source back to the home feed."""
+
+    list_display = ("id", "feed", "created_at")
+    list_display_links = ("id", "feed")
+    search_fields = ("feed__title", "feed__url")
+    raw_id_fields = ("feed",)

@@ -1,5 +1,5 @@
 {% load i18n news_extras markdown_extras %}
-<article class="home-item{% if article.has_summary %} has-summary{% endif %}" data-article-id="{{ article.pk }}" data-summary-token="{% summary_token article.pk %}">
+<article class="home-item{% if article.has_summary %} has-summary{% endif %}" data-article-id="{{ article.pk }}" data-feed-id="{{ article.feed.pk }}" data-feed-title="{{ article.feed.title }}" data-summary-token="{% summary_token article.pk %}">
     <a href="{{ article.get_absolute_url }}" class="home-item-thumb">
         <img src="{{ article.image.url }}" alt="" loading="lazy">
         <span class="home-item-badge">
@@ -7,6 +7,18 @@
             <span class="home-item-badge-text">{% if article.has_summary %}{% trans "Gist ready" %}{% else %}{% trans "Gist" %}{% endif %}</span>
         </span>
     </a>
+    {% if user.is_staff %}
+    <div class="home-item-menu">
+        <button type="button" class="home-item-menu-btn" data-menu-trigger
+                aria-label="{% trans 'More' %}" aria-haspopup="true" aria-expanded="false">⋮</button>
+        <div class="home-item-menu-pop" role="menu">
+            <button type="button" class="home-item-menu-action" data-hide-feed
+                    data-hide-url="{% url 'hide_feed' article.feed.pk %}" role="menuitem">
+                {% trans "Hide this source" %}
+            </button>
+        </div>
+    </div>
+    {% endif %}
     <div class="home-item-body">
         <a href="{{ article.get_absolute_url }}" class="home-item-title">{{ article.title }}</a>
         <p class="home-item-desc">{% if article.content %}{{ article.content|teaser|truncatechars_word:220 }}{% endif %}</p>
