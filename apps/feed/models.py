@@ -105,6 +105,24 @@ class Article(models.Model):
         return reverse("article_detail_redirect", kwargs={"pk": self.pk})
 
 
+class ArticleSummary(models.Model):
+    """AI retelling of an article in Russian: the essence without fluff, staying
+    close to the original, plus a short conclusion. Generated once on demand and
+    cached here so we never spend tokens on the same article twice."""
+
+    article = models.OneToOneField(Article, on_delete=models.CASCADE, related_name="ru_summary")
+    summary = models.TextField()
+    conclusion = models.TextField(blank=True, default="")
+    model = models.CharField(max_length=100)
+    prompt_tokens = models.PositiveIntegerField(default=0)
+    completion_tokens = models.PositiveIntegerField(default=0)
+    cost_usd = models.DecimalField(max_digits=10, decimal_places=6, default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"RU summary of article {self.article_id}"
+
+
 class ArticleChunk(models.Model):
     article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name="chunks")
     chunk_index = models.PositiveIntegerField()

@@ -39,6 +39,8 @@
         </div>
     {% endif %}
 
+    {% include "news/_article_summary.html" %}
+
     {% if article.summary %}
         <div class="article-content article-summary"><p>{{ article.summary }}</p></div>
         <hr class="article-summary-sep">

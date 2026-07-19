@@ -8,6 +8,7 @@ from django.db.models.functions import Coalesce, RowNumber
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.translation import get_language, gettext_lazy as _
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
@@ -15,7 +16,7 @@ from django.views.decorators.http import require_POST
 from apps.core.models import Language
 from apps.core.services.utils import get_article_image_url
 from apps.digest.models import Digest, DigestItem
-from apps.feed.models import Article, Category, Feed
+from apps.feed.models import Article, ArticleSummary, Category, Feed
 from apps.feed.services.search import SearchService
 from apps.location.models import Country
 from apps.research.models import Research
@@ -61,6 +62,51 @@ def _parse_pinned_cookie(request):
 
 
 # ── Template Views ────────────────────────────────────────
+
+_HOME_PER_PAGE = 30
+
+
+def home(request):
+    """Homepage: infinite-scroll feed of the genuinely latest news, newest first."""
+    is_htmx = request.headers.get("HX-Request") == "true" and not request.headers.get("HX-Boosted")
+    page_num = request.GET.get("page", "1")
+    lang = get_language() or "en"
+
+    variant = "p" if is_htmx else "f"
+    cache_key = f"home:{variant}:{page_num}:{lang}{_cache_suffix(request)}"
+    html = cache.get(cache_key)
+    if html is not None:
+        return HttpResponse(html)
+
+    # Straight chronological order — the actual latest news first. Articles dated
+    # in the future (feeds with bad timestamps) are not "latest", so keep them out.
+    now = timezone.now()
+    qs = (
+        Article.objects.select_related("feed")  # cards only render feed.title / feed.pk
+        .exclude(image="")
+        .annotate(sort_date=Coalesce("published", "created_at"))
+        .filter(sort_date__lte=now)
+        .order_by("-sort_date")
+    )
+    paginator = Paginator(qs, _HOME_PER_PAGE)
+    page = paginator.get_page(page_num)
+
+    context = {"page": page}
+    if is_htmx:
+        template = "news/_home_feed.html"
+    else:
+        template = "news/home.html"
+        context["seo"] = {
+            "title": str(SITE_NAME),
+            "description": str(SITE_DESCRIPTION),
+            "canonical": request.build_absolute_uri("/"),
+            "og_type": "website",
+        }
+
+    response = render(request, template, context)
+    cache.set(cache_key, response.content, 60 * 5)
+    return response
+
 
 
 def _latest_digest(qs, date=None):
@@ -185,7 +231,7 @@ _HTMX_TEMPLATES = {
 }
 
 
-def index(request, date=None):
+def digest(request, date=None):
     is_htmx = request.headers.get("HX-Request") == "true" and not request.headers.get("HX-Boosted")
     has_pinned = bool(request.COOKIES.get(_PINNED_COOKIE, ""))
     has_section = bool(request.GET.get("section"))
@@ -236,9 +282,14 @@ def toggle_pin(request, slug):
     return response
 
 
+def _article_cache_key(pk, lang, *, bot=False):
+    """Single source of truth for the article-detail HTML cache key."""
+    return f"article:{pk}:{lang}{':bot' if bot else ''}"
+
+
 def article_detail(request, pk, slug=""):
     lang = get_language() or "en"
-    cache_key = f"article:{pk}:{lang}{_cache_suffix(request)}"
+    cache_key = _article_cache_key(pk, lang, bot=getattr(request, "is_bot", False))
     cached = cache.get(cache_key)
 
     if cached is not None:
@@ -272,9 +323,81 @@ def article_detail(request, pk, slug=""):
     if article.image:
         seo["og_image"] = request.build_absolute_uri(article.image.url)
 
-    response = render(request, "news/article.html", {"article": article, "seo": seo})
+    summary = ArticleSummary.objects.filter(article=article).first()
+    response = render(request, "news/article.html", {"article": article, "seo": seo, "summary": summary})
     cache.set(cache_key, (article.slug, response.content), 60 * 60)
     return response
+
+
+def _invalidate_article_cache(pk):
+    """Drop cached article HTML across all language/bot variants."""
+    keys = [
+        _article_cache_key(pk, code, bot=bot)
+        for code, _name in settings.LANGUAGES
+        for bot in (False, True)
+    ]
+    cache.delete_many(keys)
+
+
+# Cap how many *new* (paid) summaries can be triggered per hour. Cached summaries
+# don't count — repeat requests are free. This guards against bill inflation on
+# this public, unauthenticated endpoint.
+#   - per-peer limit keys off REMOTE_ADDR (the real TCP peer) only. We do NOT
+#     trust X-Forwarded-For: it's client-supplied and would let an attacker
+#     rotate the key to bypass the limit.
+#   - a global ceiling uses no client-controlled input at all, so it's an
+#     unspoofable hard bound on spend even if the per-peer key is shared/weak.
+_SUMMARY_RATE_MAX = 20
+_SUMMARY_GLOBAL_MAX = 100
+_SUMMARY_RATE_WINDOW = 60 * 60
+
+
+def _rate_ok(key, limit):
+    """Increment a windowed counter; return True while at/under the limit."""
+    cache.add(key, 0, _SUMMARY_RATE_WINDOW)
+    try:
+        used = cache.incr(key)
+    except ValueError:
+        used = 1
+    return used <= limit
+
+
+@csrf_exempt  # unauthenticated, stateless, idempotent (cached) endpoint — CSRF adds
+@require_POST  # no protection here; abuse is capped by the per-IP rate limit below.
+def article_summarize(request, pk):
+    """Generate (or return the stored) Russian summary for an article — HTMX POST.
+
+    Rendered compactly for homepage cards when the request carries compact=1,
+    otherwise as the full panel on the article page.
+    """
+    from apps.feed.services.summarize import SummaryError, generate_summary
+
+    article = get_object_or_404(Article, pk=pk)
+    template = "news/_home_summary.html" if request.POST.get("compact") else "news/_article_summary.html"
+
+    def _render(**ctx):
+        return render(request, template, {"article": article, **ctx})
+
+    # Serve an already-generated summary without touching the rate limit or the API.
+    existing = ArticleSummary.objects.filter(article=article).first()
+    if existing:
+        return _render(summary=existing)
+
+    # A new summary means a paid API call — rate-limit it. Increment both counters
+    # (per-peer and global) so neither can be starved by the other's short-circuit.
+    peer = request.META.get("REMOTE_ADDR") or "unknown"
+    peer_ok = _rate_ok(f"sumrl:{peer}", _SUMMARY_RATE_MAX)
+    global_ok = _rate_ok("sumrl:global", _SUMMARY_GLOBAL_MAX)
+    if not (peer_ok and global_ok):
+        return _render(summary_error=_("Too many requests. Please try again later."))
+
+    try:
+        summary = generate_summary(article)
+    except SummaryError as e:
+        return _render(summary_error=str(e))
+
+    _invalidate_article_cache(pk)
+    return _render(summary=summary)
 
 
 def article_detail_redirect(request, pk):

@@ -275,3 +275,99 @@
         margin-bottom: 1.5rem;
     }
 }
+
+/* ── AI Russian summary panel ─────────────────────────────── */
+.ai-summary {
+    margin: 1.5rem 0 2rem;
+    padding: 1.1rem 1.2rem;
+    border: 1px solid var(--border-light);
+    border-left: 3px solid var(--accent);
+    background: var(--fill);
+}
+
+.ai-summary-head {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.7rem;
+}
+.ai-summary-badge {
+    font-family: -apple-system, system-ui, sans-serif;
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--bg);
+    background: var(--accent);
+    padding: 0.12rem 0.4rem;
+    border-radius: 3px;
+}
+.ai-summary-title {
+    font-family: -apple-system, system-ui, sans-serif;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--fg-muted);
+    font-weight: 600;
+}
+
+.ai-summary-body {
+    font-family: "PT Serif", Georgia, serif;
+    font-size: 1rem;
+    line-height: 1.6;
+    color: var(--fg);
+}
+.ai-summary-body p { margin: 0 0 0.7rem; }
+.ai-summary-body p:last-child { margin-bottom: 0; }
+
+.ai-summary-conclusion {
+    margin-top: 1rem;
+    padding-top: 0.8rem;
+    border-top: 1px dashed var(--border-light);
+}
+.ai-summary-sub {
+    display: block;
+    font-family: -apple-system, system-ui, sans-serif;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    font-weight: 700;
+    margin-bottom: 0.35rem;
+}
+.ai-summary-conclusion p {
+    margin: 0;
+    font-family: "PT Serif", Georgia, serif;
+    font-size: 0.95rem;
+    line-height: 1.55;
+    color: var(--fg);
+}
+
+.ai-summary-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: -apple-system, system-ui, sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--bg);
+    background: var(--accent);
+    border: none;
+    padding: 0.55rem 1rem;
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+}
+.ai-summary-btn:hover { opacity: 0.88; }
+.ai-summary-btn[disabled] { opacity: 0.6; cursor: default; }
+.ai-summary-btn-icon { font-size: 0.9rem; }
+
+.ai-summary-spin { color: var(--bg); opacity: 0.85; font-size: 0.8rem; }
+/* htmx-indicator: hidden unless a request is in flight */
+.ai-summary .htmx-indicator { display: none; }
+.ai-summary .htmx-request .htmx-indicator,
+.ai-summary .htmx-request.htmx-indicator { display: inline; }
+
+.ai-summary-error p {
+    margin: 0 0 0.6rem;
+    color: var(--fg-muted);
+    font-size: 0.9rem;
+}

@@ -11,8 +11,11 @@ cached_sitemap_index = cache_page(86400)(sitemap_views.index)
 cached_sitemap_section = cache_page(86400)(sitemap_views.sitemap)
 
 urlpatterns = [
-    path("", views.index, name="index"),
-    path("digest/<str:date>/", views.index, name="digest_by_date"),
+    path("", views.home, name="index"),
+    path("digest/", views.digest, name="digest"),
+    path("digest/<str:date>/", views.digest, name="digest_by_date"),
+    # Must precede the <slug> route below — otherwise "summarize" matches as a slug.
+    path("article/<int:pk>/summarize/", views.article_summarize, name="article_summarize"),
     path("article/<int:pk>/<str:slug>/", views.article_detail, name="article_detail"),
     path("article/<int:pk>/", views.article_detail_redirect, name="article_detail_redirect"),
     path("search/", views.search, name="search"),

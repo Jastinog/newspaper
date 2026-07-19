@@ -5,6 +5,7 @@ class APIUsage(models.Model):
     class Service(models.TextChoices):
         DIGEST = "digest", "Digest Generation"
         RESEARCH = "research", "Research"
+        SUMMARY = "summary", "Article Summary"
         EMBEDDING = "embedding", "Article Embedding"
 
     class APIType(models.TextChoices):
@@ -37,6 +38,10 @@ class APIUsage(models.Model):
     )
     research = models.ForeignKey(
         "research.Research", on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="api_usages",
+    )
+    article = models.ForeignKey(
+        "feed.Article", on_delete=models.SET_NULL,
         null=True, blank=True, related_name="api_usages",
     )
     created_at = models.DateTimeField(auto_now_add=True)
