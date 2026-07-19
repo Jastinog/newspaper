@@ -22,8 +22,8 @@
         @keyframes spa-fade-in { from { opacity: 0; } }
     </style>
 
-    <!-- Prevent FOUC: apply saved theme before any rendering -->
-    <script>(function(){var M={light:'broadsheet',dark:'evening'},S={broadsheet:'light',gazette:'light',evening:'dark',midnight:'dark'},t=localStorage.getItem('newspaper-theme');if(M[t]){t=M[t];localStorage.setItem('newspaper-theme',t);}if(S[t]){document.documentElement.setAttribute('data-theme',t);document.documentElement.setAttribute('data-scheme',S[t]);}})()</script>
+    <!-- Prevent FOUC: apply saved theme + scheme before any rendering -->
+    <script>(function(){var d=document.documentElement,IDS={broadsheet:1,gazette:1,sepia:1,ink:1,forest:1,crimson:1,ocean:1,plum:1,amber:1,slate:1,rose:1,sky:1,indigo:1,mint:1,olive:1,rust:1,wine:1,graphite:1},MAP={light:['broadsheet','light'],dark:['amber','dark'],evening:['amber','dark'],midnight:['slate','dark']},t=localStorage.getItem('newspaper-theme'),s=localStorage.getItem('newspaper-scheme');if(t&&MAP[t]){var m=MAP[t];t=m[0];localStorage.setItem('newspaper-theme',t);if(!s){s=m[1];localStorage.setItem('newspaper-scheme',s);}}if(!IDS[t])t='broadsheet';if(s!=='light'&&s!=='dark'){s=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';}d.setAttribute('data-theme',t);d.setAttribute('data-scheme',s);})()</script>
 
     <!-- Critical styles (render-blocking) -->
     <link rel="stylesheet" href="{% static 'news/css/base.css' %}">
@@ -40,6 +40,7 @@
     <link rel="stylesheet" href="{% static 'news/css/similar-news.css' %}" media="print" onload="this.media='all'">
     <link rel="stylesheet" href="{% static 'news/css/browse.css' %}" media="print" onload="this.media='all'">
     <link rel="stylesheet" href="{% static 'news/css/search-results.css' %}" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="{% static 'news/css/theme-modal.css' %}" media="print" onload="this.media='all'">
     {% block extra_css %}{% endblock %}
 </head>
 <body data-lang-prefix="/{{ LANGUAGE_CODE }}" data-error-generation="{% trans "Generation error" %}" data-dd-ready="{% trans "Deep dive ready" %}" data-dd-read="{% trans "Read" %}" data-dd-close="{% trans "Close" %}" data-similar-label="{% trans "Similar news" %}" data-similar-empty="{% trans "No similar news found" %}" data-similar-sources="{% trans "Source articles" %}" data-similar-current="{% trans "Current" %}" data-similar-digest="{% trans "Digest news" %}" data-similar-articles="{% trans "Articles" %}" data-similar-loading="{% trans "Loading…" %}">
@@ -61,12 +62,15 @@
                     <a href="{% url 'feeds_list' %}" class="{% if request.resolver_match.url_name == 'feeds_list' or request.resolver_match.url_name == 'feed_detail' %}active{% endif %}">{% trans "Sources" %}</a>
                     <a href="{% url 'search' %}" class="{% if request.resolver_match.url_name == 'search' %}active{% endif %}">{% trans "Search" %}</a>
                 </nav>
-                <div class="theme-picker">
-                    <button data-theme-id="broadsheet" onclick="setTheme('broadsheet')" title="{% trans "Broadsheet" %}">BR</button>
-                    <button data-theme-id="gazette" onclick="setTheme('gazette')" title="{% trans "Gazette" %}">GZ</button>
-                    <button data-theme-id="evening" onclick="setTheme('evening')" title="{% trans "Evening" %}">EV</button>
-                    <button data-theme-id="midnight" onclick="setTheme('midnight')" title="{% trans "Midnight" %}">MN</button>
-                </div>
+                <button type="button" id="themeBtn" class="theme-btn" onclick="openThemeModal()"
+                        aria-label="{% trans "Theme" %}"
+                        data-l-theme="{% trans "Theme" %}"
+                        data-l-appearance="{% trans "Appearance" %}"
+                        data-l-light="{% trans "Light" %}"
+                        data-l-dark="{% trans "Dark" %}"
+                        data-l-close="{% trans "Close" %}">
+                    <span class="theme-btn-label">Broadsheet</span>
+                </button>
             </div>
         </div>
         <div class="masthead-rule-bottom"></div>

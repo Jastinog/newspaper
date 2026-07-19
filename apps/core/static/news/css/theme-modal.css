@@ -1,0 +1,266 @@
+/* === THEME PICKER MODAL ===
+ *
+ * Built in theme.js, appended to <body>. Follows the shared modal convention
+ * (fixed overlay at z-index 10000, fullscreen on mobile/tablet). The modal
+ * chrome uses the *active* theme's palette; each card previews *its own*
+ * palette as a miniature front page via its data-theme + data-scheme attrs.
+ */
+.theme-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.2rem;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    animation: theme-fade-in 0.16s ease;
+}
+@keyframes theme-fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+.theme-modal {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--accent);
+    width: 100%;
+    max-width: 620px;
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.32);
+    animation: theme-rise 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes theme-rise {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Header ────────────────────────────────────────────────── */
+.theme-modal-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 1.1rem 1.4rem 0.9rem;
+}
+.theme-modal-title {
+    font-family: "Libre Baskerville", Georgia, serif;
+    font-size: 1.15rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    color: var(--fg);
+    margin: 0;
+}
+.theme-modal-close {
+    align-self: flex-start;
+    background: none;
+    border: none;
+    font-size: 1.15rem;
+    line-height: 1;
+    color: var(--fg-faint);
+    cursor: pointer;
+    padding: 0.2rem 0.1rem;
+    transition: color 0.15s ease;
+}
+.theme-modal-close:hover { color: var(--fg); }
+
+/* ── Light / dark segmented toggle ─────────────────────────── */
+.theme-scheme-toggle {
+    position: relative;
+    display: flex;
+    margin: 0 1.4rem;
+    padding: 3px;
+    border-radius: 999px;
+    background: rgba(var(--fg-rgb), 0.06);
+    border: 1px solid var(--border-faint);
+    flex: none;
+}
+.theme-scheme-thumb {
+    position: absolute;
+    top: 3px;
+    bottom: 3px;
+    left: 3px;
+    width: calc(50% - 3px);
+    border-radius: 999px;
+    background: var(--fg);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+    transition: transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.theme-scheme-toggle[data-active="dark"] .theme-scheme-thumb {
+    transform: translateX(100%);
+}
+.theme-scheme-btn {
+    position: relative;
+    z-index: 1;
+    flex: 1 1 0;
+    background: none;
+    border: none;
+    padding: 0.42rem 0.75rem;
+    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+.theme-scheme-btn.active { color: var(--bg); }
+
+/* ── Theme grid ────────────────────────────────────────────── */
+.theme-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 0.85rem;
+    padding: 1.1rem 1.4rem 1.4rem;
+    overflow-y: auto;
+}
+.theme-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.55rem 0.55rem 0.5rem;
+    cursor: pointer;
+    text-align: left;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease;
+}
+.theme-card:hover {
+    border-color: var(--border-heavy);
+    transform: translateY(-2px);
+}
+.theme-card.active {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent);
+}
+
+/* Miniature front page — colours come from the card's own theme vars */
+.tp-preview {
+    display: flex;
+    flex-direction: column;
+    gap: 0.34rem;
+    aspect-ratio: 5 / 4;
+    padding: 0.5rem 0.55rem;
+    border-radius: 3px;
+    background: var(--bg);
+    border: 1px solid var(--border-faint);
+    overflow: hidden;
+}
+.tp-plate {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+.tp-plate-rule { flex: 1 1 0; height: 1px; background: var(--border-heavy); opacity: 0.6; }
+.tp-plate-word { width: 38%; height: 5px; border-radius: 1px; background: var(--fg); }
+.tp-hr {
+    height: 0;
+    border-top: 3px double var(--border-heavy);
+    opacity: 0.75;
+}
+.tp-headline {
+    height: 8px;
+    width: 92%;
+    border-radius: 1px;
+    background: var(--fg);
+}
+.tp-lede {
+    display: flex;
+    gap: 0.4rem;
+    align-items: stretch;
+}
+.tp-fig {
+    flex: none;
+    width: 40%;
+    border-radius: 2px;
+    background: var(--accent);
+    align-self: stretch;
+    min-height: 26px;
+}
+.tp-lines {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.28rem;
+    flex: 1 1 0;
+}
+.tp-line { height: 3px; border-radius: 1px; background: var(--fg-muted); }
+.tp-lines .tp-line:nth-child(1) { width: 100%; }
+.tp-lines .tp-line:nth-child(2) { width: 92%; }
+.tp-lines .tp-line:nth-child(3) { width: 64%; }
+.tp-line-wide { background: var(--fg-faint); }
+.tp-line-wide:last-child { width: 78%; }
+
+/* Card footer */
+.theme-card-foot {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0 0.15rem;
+}
+.theme-card-dot {
+    width: 0.62rem;
+    height: 0.62rem;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 1px solid rgba(var(--fg-rgb), 0.2);
+    flex: none;
+}
+.theme-card-name {
+    font-family: "Libre Baskerville", Georgia, serif;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--fg);
+    flex: 1 1 auto;
+    line-height: 1.1;
+}
+.theme-card-check {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--accent);
+    opacity: 0;
+    transform: scale(0.6);
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    flex: none;
+}
+.theme-card.active .theme-card-check { opacity: 1; transform: scale(1); }
+
+/* ── Fullscreen on mobile & tablet ─────────────────────────── */
+@media (max-width: 1024px) {
+    .theme-modal-overlay {
+        padding: 0;
+        align-items: stretch;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+    }
+    .theme-modal {
+        width: 100%;
+        max-width: none;
+        max-height: none;
+        height: 100vh;
+        height: 100dvh;
+        border: none;
+        border-top: 3px solid var(--accent);
+        padding-bottom: env(safe-area-inset-bottom);
+        animation: modal-slide-up 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .theme-modal-head {
+        padding-top: calc(1.1rem + env(safe-area-inset-top));
+    }
+    .theme-grid {
+        flex: 1 1 auto;
+        align-content: start;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .theme-modal-overlay,
+    .theme-modal { animation: none; }
+    .theme-scheme-thumb,
+    .theme-card,
+    .theme-card-check { transition: none; }
+}

@@ -10,7 +10,7 @@
     'use strict';
 
     var SEL = '.sum-modal-overlay, .sources-modal-overlay, ' +
-              '.similar-modal-overlay, .dd-modal-overlay';
+              '.similar-modal-overlay, .dd-modal-overlay, .theme-modal-overlay';
 
     function sync() {
         var open = !!document.querySelector(SEL);

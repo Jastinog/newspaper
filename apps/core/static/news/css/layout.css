@@ -129,42 +129,28 @@
     border-color: var(--fg);
 }
 
-/* === THEME PICKER === */
-.theme-picker {
+/* === THEME BUTTON === (styled like a single .lang-switcher button) */
+.theme-btn {
     position: absolute;
     top: 50%;
     right: 0;
     transform: translateY(-50%);
-    display: flex;
-}
-.theme-picker button {
     background: none;
     border: 1px solid var(--border);
-    border-right: none;
+    border-radius: 3px;
     padding: 0.3rem 0.5rem;
     font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
-    font-size: 0.6rem;
+    font-size: 0.65rem;
     font-weight: 600;
-    letter-spacing: 0.03em;
+    line-height: 1.65;
+    letter-spacing: 0.04em;
     cursor: pointer;
     color: var(--fg-muted);
     transition: color 0.2s, background 0.2s;
     white-space: nowrap;
 }
-.theme-picker button:first-of-type {
-    border-radius: 3px 0 0 3px;
-}
-.theme-picker button:last-of-type {
-    border-right: 1px solid var(--border);
-    border-radius: 0 3px 3px 0;
-}
-.theme-picker button:hover {
+.theme-btn:hover {
     color: var(--fg);
-}
-.theme-picker button.active {
-    background: var(--fg);
-    color: var(--bg);
-    border-color: var(--fg);
 }
 
 /* === FOOTER === */
@@ -195,10 +181,9 @@ footer {
         justify-content: center;
         margin-bottom: 0.5rem;
     }
-    .theme-picker {
+    .theme-btn {
         position: static;
         transform: none;
-        justify-content: center;
         margin: 0.4rem auto 0;
     }
 }

@@ -1,94 +1,346 @@
-/* === THEME VARIABLES === */
-:root, [data-theme="broadsheet"] {
-    --bg: #f4f0e8;
-    --bg-rgb: 244, 240, 232;
-    --fg: #161210;
-    --fg-rgb: 22, 18, 16;
-    --fg-secondary: #2a2622;
-    --fg-dim: #4a4640;
-    --fg-muted: #706a62;
-    --fg-faint: #96908a;
-    --accent: #6b1520;
-    --link: #161210;
-    --link-hover: #000;
-    --border: #c4baa8;
-    --border-light: #d4cbbe;
-    --border-faint: #dfd8cc;
-    --border-heavy: #161210;
-    --code-bg: #eae5da;
-    --grain-opacity: 0.30;
+/* === THEME VARIABLES ===
+ *
+ * 10 theme families, each with a light and a dark variant. Palette is keyed
+ * on BOTH attributes on <html>: data-theme (family) + data-scheme (light|dark).
+ * The theme id and the scheme are chosen independently in the theme modal.
+ *
+ * Shared emboss recipes (light shading vs. dark shading) are set once per
+ * scheme so individual theme blocks only carry colour. Keep the two maps in
+ * theme.js and the FOUC script in base.html in sync with the ids below.
+ */
+[data-scheme="light"] {
     --emboss: 0 2px 1px rgba(255,255,255,0.9), 0 -1px 1px rgba(0,0,0,0.1);
     --emboss-subtle: 0 1px 1px rgba(255,255,255,0.8), 0 -1px 0 rgba(0,0,0,0.06);
     --section-heading-fg: #fff;
 }
-
-[data-theme="gazette"] {
-    --bg: #f7f8fa;
-    --bg-rgb: 247, 248, 250;
-    --fg: #1a1e2c;
-    --fg-rgb: 26, 30, 44;
-    --fg-secondary: #2c3148;
-    --fg-dim: #4a5068;
-    --fg-muted: #6b7290;
-    --fg-faint: #9298ae;
-    --accent: #2a4080;
-    --link: #1a1e2c;
-    --link-hover: #000;
-    --border: #c8ccd8;
-    --border-light: #d8dbe4;
-    --border-faint: #e4e6ec;
-    --border-heavy: #1a1e2c;
-    --code-bg: #edeef2;
-    --grain-opacity: 0.18;
-    --emboss: 0 2px 1px rgba(255,255,255,0.9), 0 -1px 1px rgba(0,0,0,0.08);
-    --emboss-subtle: 0 1px 1px rgba(255,255,255,0.8), 0 -1px 0 rgba(0,0,0,0.05);
-    --section-heading-fg: #fff;
-}
-
-[data-theme="evening"] {
-    --bg: #181410;
-    --bg-rgb: 24, 20, 16;
-    --fg: #d8d0c2;
-    --fg-rgb: 216, 208, 194;
-    --fg-secondary: #c4bcae;
-    --fg-dim: #a8a296;
-    --fg-muted: #948e82;
-    --fg-faint: #706860;
-    --accent: #c27a48;
-    --link: #d8d0c2;
-    --link-hover: #f0ebe2;
-    --border: #362e24;
-    --border-light: #2c2620;
-    --border-faint: #24201a;
-    --border-heavy: #685e50;
-    --code-bg: #221e18;
-    --grain-opacity: 0.04;
+[data-scheme="dark"] {
     --emboss: 0 2px 2px rgba(0,0,0,0.6), 0 -1px 0 rgba(255,255,255,0.06);
     --emboss-subtle: 0 1px 2px rgba(0,0,0,0.4), 0 -1px 0 rgba(255,255,255,0.04);
-    --section-heading-fg: #181410;
 }
 
-[data-theme="midnight"] {
-    --bg: #0e1118;
-    --bg-rgb: 14, 17, 24;
-    --fg: #c8cdd8;
-    --fg-rgb: 200, 205, 216;
-    --fg-secondary: #b0b6c4;
-    --fg-dim: #8a92a6;
-    --fg-muted: #6a7288;
-    --fg-faint: #4a5268;
-    --accent: #8a9ab0;
-    --link: #c8cdd8;
-    --link-hover: #e8ecf2;
-    --border: #222838;
-    --border-light: #1c2230;
-    --border-faint: #181c28;
-    --border-heavy: #586880;
-    --code-bg: #141822;
-    --grain-opacity: 0.03;
-    --emboss: 0 2px 2px rgba(0,0,0,0.7), 0 -1px 0 rgba(255,255,255,0.04);
-    --emboss-subtle: 0 1px 2px rgba(0,0,0,0.5), 0 -1px 0 rgba(255,255,255,0.03);
-    --section-heading-fg: #0e1118;
+/* ── 1. Broadsheet — warm ivory, crimson ──────────────────── */
+:root,
+[data-theme="broadsheet"][data-scheme="light"] {
+    --bg: #f4f0e8; --bg-rgb: 244, 240, 232;
+    --fg: #161210; --fg-rgb: 22, 18, 16;
+    --fg-secondary: #2a2622; --fg-dim: #4a4640; --fg-muted: #706a62; --fg-faint: #96908a;
+    --accent: #6b1520; --link: #161210; --link-hover: #000;
+    --border: #c4baa8; --border-light: #d4cbbe; --border-faint: #dfd8cc; --border-heavy: #161210;
+    --code-bg: #eae5da; --grain-opacity: 0.30; --section-heading-fg: #fff;
+}
+[data-theme="broadsheet"][data-scheme="dark"] {
+    --bg: #17130f; --bg-rgb: 23, 19, 15;
+    --fg: #e2dccf; --fg-rgb: 226, 220, 207;
+    --fg-secondary: #cec7b8; --fg-dim: #aaa393; --fg-muted: #888173; --fg-faint: #635c50;
+    --accent: #c9614e; --link: #e2dccf; --link-hover: #f4efe4;
+    --border: #352e25; --border-light: #2b251d; --border-faint: #221d17; --border-heavy: #6b6255;
+    --code-bg: #201b15; --grain-opacity: 0.05; --section-heading-fg: #17130f;
+}
+
+/* ── 2. Gazette — cool blue-grey, navy ────────────────────── */
+[data-theme="gazette"][data-scheme="light"] {
+    --bg: #f7f8fa; --bg-rgb: 247, 248, 250;
+    --fg: #1a1e2c; --fg-rgb: 26, 30, 44;
+    --fg-secondary: #2c3148; --fg-dim: #4a5068; --fg-muted: #6b7290; --fg-faint: #9298ae;
+    --accent: #2a4080; --link: #1a1e2c; --link-hover: #000;
+    --border: #c8ccd8; --border-light: #d8dbe4; --border-faint: #e4e6ec; --border-heavy: #1a1e2c;
+    --code-bg: #edeef2; --grain-opacity: 0.18; --section-heading-fg: #fff;
+}
+[data-theme="gazette"][data-scheme="dark"] {
+    --bg: #0f131c; --bg-rgb: 15, 19, 28;
+    --fg: #ccd2e0; --fg-rgb: 204, 210, 224;
+    --fg-secondary: #b6bccd; --fg-dim: #8f97ac; --fg-muted: #6c7489; --fg-faint: #4c5468;
+    --accent: #7f93c2; --link: #ccd2e0; --link-hover: #eef1f8;
+    --border: #232a3b; --border-light: #1c2230; --border-faint: #171b27; --border-heavy: #56607b;
+    --code-bg: #141826; --grain-opacity: 0.03; --section-heading-fg: #0f131c;
+}
+
+/* ── 3. Sepia — vintage tan, sienna ───────────────────────── */
+[data-theme="sepia"][data-scheme="light"] {
+    --bg: #f2e8d4; --bg-rgb: 242, 232, 212;
+    --fg: #29200f; --fg-rgb: 41, 32, 15;
+    --fg-secondary: #3b3018; --fg-dim: #5b4c30; --fg-muted: #857550; --fg-faint: #a89873;
+    --accent: #8a4b22; --link: #29200f; --link-hover: #180f02;
+    --border: #cdb992; --border-light: #dccaa6; --border-faint: #e6d8ba; --border-heavy: #29200f;
+    --code-bg: #e8dcc0; --grain-opacity: 0.30; --section-heading-fg: #fff;
+}
+[data-theme="sepia"][data-scheme="dark"] {
+    --bg: #191410; --bg-rgb: 25, 20, 16;
+    --fg: #ddd0b6; --fg-rgb: 221, 208, 182;
+    --fg-secondary: #cabfa4; --fg-dim: #a89c82; --fg-muted: #877c64; --fg-faint: #635947;
+    --accent: #d08a4e; --link: #ddd0b6; --link-hover: #f2e8d4;
+    --border: #382f1e; --border-light: #2c2519; --border-faint: #231e14; --border-heavy: #6a5f46;
+    --code-bg: #211c13; --grain-opacity: 0.06; --section-heading-fg: #191410;
+}
+
+/* ── 4. Ink — neutral monochrome, steel-blue ──────────────── */
+[data-theme="ink"][data-scheme="light"] {
+    --bg: #fbfbfb; --bg-rgb: 251, 251, 251;
+    --fg: #101214; --fg-rgb: 16, 18, 20;
+    --fg-secondary: #262a2e; --fg-dim: #45494f; --fg-muted: #6c7076; --fg-faint: #9a9ea4;
+    --accent: #1f3a5f; --link: #101214; --link-hover: #000;
+    --border: #d9dbdd; --border-light: #e7e8ea; --border-faint: #efeff1; --border-heavy: #101214;
+    --code-bg: #f0f1f2; --grain-opacity: 0.10; --section-heading-fg: #fff;
+}
+[data-theme="ink"][data-scheme="dark"] {
+    --bg: #0b0c0e; --bg-rgb: 11, 12, 14;
+    --fg: #d5d7da; --fg-rgb: 213, 215, 218;
+    --fg-secondary: #bdc0c4; --fg-dim: #94989e; --fg-muted: #6e7278; --fg-faint: #4a4e54;
+    --accent: #729ed3; --link: #d5d7da; --link-hover: #f3f4f6;
+    --border: #24262b; --border-light: #1c1e23; --border-faint: #17181d; --border-heavy: #565a61;
+    --code-bg: #131418; --grain-opacity: 0.03; --section-heading-fg: #0b0c0e;
+}
+
+/* ── 5. Forest — muted green ───────────────────────────────── */
+[data-theme="forest"][data-scheme="light"] {
+    --bg: #f0f4ec; --bg-rgb: 240, 244, 236;
+    --fg: #151f18; --fg-rgb: 21, 31, 24;
+    --fg-secondary: #253026; --fg-dim: #42503e; --fg-muted: #6a7566; --fg-faint: #98a292;
+    --accent: #2f6b3d; --link: #151f18; --link-hover: #050f08;
+    --border: #c3cfbc; --border-light: #d5ddd0; --border-faint: #e1e7db; --border-heavy: #151f18;
+    --code-bg: #e6ebe0; --grain-opacity: 0.16; --section-heading-fg: #fff;
+}
+[data-theme="forest"][data-scheme="dark"] {
+    --bg: #0d130e; --bg-rgb: 13, 19, 14;
+    --fg: #c6d0c2; --fg-rgb: 198, 208, 194;
+    --fg-secondary: #b0bcac; --fg-dim: #8a9888; --fg-muted: #687668; --fg-faint: #4a584a;
+    --accent: #61a268; --link: #c6d0c2; --link-hover: #e6efe3;
+    --border: #202a21; --border-light: #1a221b; --border-faint: #161c16; --border-heavy: #556a54;
+    --code-bg: #121a14; --grain-opacity: 0.03; --section-heading-fg: #0d130e;
+}
+
+/* ── 6. Crimson — bold red ─────────────────────────────────── */
+[data-theme="crimson"][data-scheme="light"] {
+    --bg: #faf1f0; --bg-rgb: 250, 241, 240;
+    --fg: #231313; --fg-rgb: 35, 19, 19;
+    --fg-secondary: #351f1f; --fg-dim: #533535; --fg-muted: #805f5f; --fg-faint: #b08f8f;
+    --accent: #a01824; --link: #231313; --link-hover: #0f0505;
+    --border: #dcc3c1; --border-light: #e8d3d1; --border-faint: #f0e1df; --border-heavy: #231313;
+    --code-bg: #f0e1df; --grain-opacity: 0.18; --section-heading-fg: #fff;
+}
+[data-theme="crimson"][data-scheme="dark"] {
+    --bg: #150d0d; --bg-rgb: 21, 13, 13;
+    --fg: #d8c7c5; --fg-rgb: 216, 199, 197;
+    --fg-secondary: #c4b1af; --fg-dim: #a08b89; --fg-muted: #7c6765; --fg-faint: #564745;
+    --accent: #db564d; --link: #d8c7c5; --link-hover: #f2e3e1;
+    --border: #322120; --border-light: #281b1a; --border-faint: #201615; --border-heavy: #6a5150;
+    --code-bg: #1e1413; --grain-opacity: 0.03; --section-heading-fg: #150d0d;
+}
+
+/* ── 7. Ocean — teal ───────────────────────────────────────── */
+[data-theme="ocean"][data-scheme="light"] {
+    --bg: #ecf4f5; --bg-rgb: 236, 244, 245;
+    --fg: #0f1f1e; --fg-rgb: 15, 31, 30;
+    --fg-secondary: #1d2f2e; --fg-dim: #38514f; --fg-muted: #627f7d; --fg-faint: #94adab;
+    --accent: #0f6b76; --link: #0f1f1e; --link-hover: #000f0e;
+    --border: #bcd1d1; --border-light: #cfdfde; --border-faint: #dee9e8; --border-heavy: #0f1f1e;
+    --code-bg: #dfeceb; --grain-opacity: 0.14; --section-heading-fg: #fff;
+}
+[data-theme="ocean"][data-scheme="dark"] {
+    --bg: #091313; --bg-rgb: 9, 19, 19;
+    --fg: #c2d2d0; --fg-rgb: 194, 210, 208;
+    --fg-secondary: #acbebc; --fg-dim: #849896; --fg-muted: #627674; --fg-faint: #445856;
+    --accent: #40a8af; --link: #c2d2d0; --link-hover: #e2efee;
+    --border: #1e2c2c; --border-light: #182322; --border-faint: #141b1b; --border-heavy: #4e6462;
+    --code-bg: #101919; --grain-opacity: 0.03; --section-heading-fg: #091313;
+}
+
+/* ── 8. Plum — deep purple ─────────────────────────────────── */
+[data-theme="plum"][data-scheme="light"] {
+    --bg: #f4eff6; --bg-rgb: 244, 239, 246;
+    --fg: #1d1323; --fg-rgb: 29, 19, 35;
+    --fg-secondary: #2d1f35; --fg-dim: #493753; --fg-muted: #735f7f; --fg-faint: #a58fb0;
+    --accent: #6a3b7a; --link: #1d1323; --link-hover: #0d0511;
+    --border: #d1c3d9; --border-light: #dfd3e5; --border-faint: #e9dfed; --border-heavy: #1d1323;
+    --code-bg: #ebe1ef; --grain-opacity: 0.16; --section-heading-fg: #fff;
+}
+[data-theme="plum"][data-scheme="dark"] {
+    --bg: #120d16; --bg-rgb: 18, 13, 22;
+    --fg: #cec4d6; --fg-rgb: 206, 196, 214;
+    --fg-secondary: #bab0c4; --fg-dim: #948aa0; --fg-muted: #706680; --fg-faint: #4e4658;
+    --accent: #aa79bd; --link: #cec4d6; --link-hover: #ede4f2;
+    --border: #2c2333; --border-light: #221b27; --border-faint: #1b171f; --border-heavy: #605070;
+    --code-bg: #18131f; --grain-opacity: 0.03; --section-heading-fg: #120d16;
+}
+
+/* ── 9. Amber — warm gold ──────────────────────────────────── */
+[data-theme="amber"][data-scheme="light"] {
+    --bg: #f8f2e3; --bg-rgb: 248, 242, 227;
+    --fg: #231c0f; --fg-rgb: 35, 28, 15;
+    --fg-secondary: #352b19; --fg-dim: #55472f; --fg-muted: #85744f; --fg-faint: #b0a077;
+    --accent: #b06814; --link: #231c0f; --link-hover: #110b01;
+    --border: #dccca3; --border-light: #e8dab9; --border-faint: #f0e6cd; --border-heavy: #231c0f;
+    --code-bg: #efe4cb; --grain-opacity: 0.22; --section-heading-fg: #fff;
+}
+[data-theme="amber"][data-scheme="dark"] {
+    --bg: #181410; --bg-rgb: 24, 20, 16;
+    --fg: #d8d0c2; --fg-rgb: 216, 208, 194;
+    --fg-secondary: #c4bcae; --fg-dim: #a8a296; --fg-muted: #948e82; --fg-faint: #706860;
+    --accent: #c27a48; --link: #d8d0c2; --link-hover: #f0ebe2;
+    --border: #362e24; --border-light: #2c2620; --border-faint: #24201a; --border-heavy: #685e50;
+    --code-bg: #221e18; --grain-opacity: 0.04; --section-heading-fg: #181410;
+}
+
+/* ── 10. Slate — cool steel ────────────────────────────────── */
+[data-theme="slate"][data-scheme="light"] {
+    --bg: #f0f3f6; --bg-rgb: 240, 243, 246;
+    --fg: #13171e; --fg-rgb: 19, 23, 30;
+    --fg-secondary: #232932; --fg-dim: #414956; --fg-muted: #69727e; --fg-faint: #98a1ad;
+    --accent: #3d5566; --link: #13171e; --link-hover: #030710;
+    --border: #c5ccd6; --border-light: #d7dde4; --border-faint: #e3e7ed; --border-heavy: #13171e;
+    --code-bg: #e7eaef; --grain-opacity: 0.10; --section-heading-fg: #fff;
+}
+[data-theme="slate"][data-scheme="dark"] {
+    --bg: #0e1118; --bg-rgb: 14, 17, 24;
+    --fg: #c8cdd8; --fg-rgb: 200, 205, 216;
+    --fg-secondary: #b0b6c4; --fg-dim: #8a92a6; --fg-muted: #6a7288; --fg-faint: #4a5268;
+    --accent: #8a9ab0; --link: #c8cdd8; --link-hover: #e8ecf2;
+    --border: #222838; --border-light: #1c2230; --border-faint: #181c28; --border-heavy: #586880;
+    --code-bg: #141822; --grain-opacity: 0.03; --section-heading-fg: #0e1118;
+}
+
+/* ── 11. Rose — soft pink-magenta ──────────────────────────── */
+[data-theme="rose"][data-scheme="light"] {
+    --bg: #faf0f4; --bg-rgb: 250, 240, 244;
+    --fg: #23131c; --fg-rgb: 35, 19, 28;
+    --fg-secondary: #351f2c; --fg-dim: #533545; --fg-muted: #806070; --fg-faint: #b090a0;
+    --accent: #b0407a; --link: #23131c; --link-hover: #0f0509;
+    --border: #dcc3d0; --border-light: #e8d3e0; --border-faint: #f0e1ea; --border-heavy: #23131c;
+    --code-bg: #f0e1ea; --grain-opacity: 0.16; --section-heading-fg: #fff;
+}
+[data-theme="rose"][data-scheme="dark"] {
+    --bg: #150d12; --bg-rgb: 21, 13, 18;
+    --fg: #d8c7d0; --fg-rgb: 216, 199, 208;
+    --fg-secondary: #c4b1bc; --fg-dim: #a08b96; --fg-muted: #7c6772; --fg-faint: #564751;
+    --accent: #d86ba0; --link: #d8c7d0; --link-hover: #f2e3ec;
+    --border: #322029; --border-light: #281a22; --border-faint: #20161c; --border-heavy: #6a5160;
+    --code-bg: #1e1419; --grain-opacity: 0.03; --section-heading-fg: #150d12;
+}
+
+/* ── 12. Sky — bright azure ────────────────────────────────── */
+[data-theme="sky"][data-scheme="light"] {
+    --bg: #eef4fb; --bg-rgb: 238, 244, 251;
+    --fg: #101a26; --fg-rgb: 16, 26, 38;
+    --fg-secondary: #1e2c3c; --fg-dim: #384f66; --fg-muted: #627f9a; --fg-faint: #94aecc;
+    --accent: #1f74c0; --link: #101a26; --link-hover: #000c18;
+    --border: #bcd0e6; --border-light: #cfdff0; --border-faint: #dee9f4; --border-heavy: #101a26;
+    --code-bg: #e0ecf6; --grain-opacity: 0.12; --section-heading-fg: #fff;
+}
+[data-theme="sky"][data-scheme="dark"] {
+    --bg: #091019; --bg-rgb: 9, 16, 25;
+    --fg: #c2d2e2; --fg-rgb: 194, 210, 226;
+    --fg-secondary: #acbecf; --fg-dim: #8498ac; --fg-muted: #62768c; --fg-faint: #445866;
+    --accent: #4a9ce0; --link: #c2d2e2; --link-hover: #e2eff8;
+    --border: #1e2a38; --border-light: #18222e; --border-faint: #141b24; --border-heavy: #4e6478;
+    --code-bg: #101922; --grain-opacity: 0.03; --section-heading-fg: #091019;
+}
+
+/* ── 13. Indigo — blue-violet ──────────────────────────────── */
+[data-theme="indigo"][data-scheme="light"] {
+    --bg: #f1f0fa; --bg-rgb: 241, 240, 250;
+    --fg: #16142a; --fg-rgb: 22, 20, 42;
+    --fg-secondary: #262340; --fg-dim: #423c66; --fg-muted: #6a6698; --fg-faint: #9a96c4;
+    --accent: #4a45a8; --link: #16142a; --link-hover: #06041a;
+    --border: #c8c4e0; --border-light: #d8d4ec; --border-faint: #e4e2f2; --border-heavy: #16142a;
+    --code-bg: #e6e4f4; --grain-opacity: 0.14; --section-heading-fg: #fff;
+}
+[data-theme="indigo"][data-scheme="dark"] {
+    --bg: #0e0d1a; --bg-rgb: 14, 13, 26;
+    --fg: #c8c6dc; --fg-rgb: 200, 198, 220;
+    --fg-secondary: #b2b0c8; --fg-dim: #8c8aac; --fg-muted: #6a6890; --fg-faint: #4a4870;
+    --accent: #8580e0; --link: #c8c6dc; --link-hover: #e6e4f6;
+    --border: #221f38; --border-light: #1b192c; --border-faint: #161426; --border-heavy: #56527e;
+    --code-bg: #131124; --grain-opacity: 0.03; --section-heading-fg: #0e0d1a;
+}
+
+/* ── 14. Mint — fresh emerald ──────────────────────────────── */
+[data-theme="mint"][data-scheme="light"] {
+    --bg: #edf6f1; --bg-rgb: 237, 246, 241;
+    --fg: #0f2019; --fg-rgb: 15, 32, 25;
+    --fg-secondary: #1d3028; --fg-dim: #385046; --fg-muted: #627f72; --fg-faint: #94ada0;
+    --accent: #1f8a63; --link: #0f2019; --link-hover: #001008;
+    --border: #bcd4c8; --border-light: #cfe2d8; --border-faint: #deece5; --border-heavy: #0f2019;
+    --code-bg: #e0ede7; --grain-opacity: 0.14; --section-heading-fg: #fff;
+}
+[data-theme="mint"][data-scheme="dark"] {
+    --bg: #091410; --bg-rgb: 9, 20, 16;
+    --fg: #c2d2c9; --fg-rgb: 194, 210, 201;
+    --fg-secondary: #acbeb3; --fg-dim: #849a90; --fg-muted: #62786e; --fg-faint: #44584e;
+    --accent: #3cba86; --link: #c2d2c9; --link-hover: #e2efe9;
+    --border: #1e2c26; --border-light: #182320; --border-faint: #141b18; --border-heavy: #4e6458;
+    --code-bg: #101a15; --grain-opacity: 0.03; --section-heading-fg: #091410;
+}
+
+/* ── 15. Olive — khaki yellow-green ────────────────────────── */
+[data-theme="olive"][data-scheme="light"] {
+    --bg: #f4f4e6; --bg-rgb: 244, 244, 230;
+    --fg: #1e2010; --fg-rgb: 30, 32, 16;
+    --fg-secondary: #2e3018; --fg-dim: #4a4e28; --fg-muted: #757a48; --fg-faint: #a5aa78;
+    --accent: #6f7518; --link: #1e2010; --link-hover: #0c0e02;
+    --border: #cece9c; --border-light: #dcdcac; --border-faint: #e6e6be; --border-heavy: #1e2010;
+    --code-bg: #ebeacc; --grain-opacity: 0.18; --section-heading-fg: #fff;
+}
+[data-theme="olive"][data-scheme="dark"] {
+    --bg: #14140b; --bg-rgb: 20, 20, 11;
+    --fg: #d0d0b6; --fg-rgb: 208, 208, 182;
+    --fg-secondary: #bcbca4; --fg-dim: #989882; --fg-muted: #767662; --fg-faint: #585846;
+    --accent: #b0b84e; --link: #d0d0b6; --link-hover: #eeeed4;
+    --border: #2a2a1a; --border-light: #222216; --border-faint: #1a1a10; --border-heavy: #64684a;
+    --code-bg: #1a1a10; --grain-opacity: 0.03; --section-heading-fg: #14140b;
+}
+
+/* ── 16. Rust — burnt terracotta ───────────────────────────── */
+[data-theme="rust"][data-scheme="light"] {
+    --bg: #f8efe9; --bg-rgb: 248, 239, 233;
+    --fg: #241610; --fg-rgb: 36, 22, 16;
+    --fg-secondary: #362219; --fg-dim: #543628; --fg-muted: #806450; --fg-faint: #b09680;
+    --accent: #b04a25; --link: #241610; --link-hover: #100603;
+    --border: #ddc7bb; --border-light: #e8d6cc; --border-faint: #f0e4dc; --border-heavy: #241610;
+    --code-bg: #f0e4dc; --grain-opacity: 0.18; --section-heading-fg: #fff;
+}
+[data-theme="rust"][data-scheme="dark"] {
+    --bg: #150f0b; --bg-rgb: 21, 15, 11;
+    --fg: #d8cabf; --fg-rgb: 216, 202, 191;
+    --fg-secondary: #c4b4a8; --fg-dim: #a08e82; --fg-muted: #7c6a5e; --fg-faint: #564a40;
+    --accent: #d8734a; --link: #d8cabf; --link-hover: #f2e6dc;
+    --border: #322520; --border-light: #281d18; --border-faint: #201812; --border-heavy: #6a5648;
+    --code-bg: #1e1610; --grain-opacity: 0.04; --section-heading-fg: #150f0b;
+}
+
+/* ── 17. Wine — deep burgundy ──────────────────────────────── */
+[data-theme="wine"][data-scheme="light"] {
+    --bg: #f7eef1; --bg-rgb: 247, 238, 241;
+    --fg: #24131a; --fg-rgb: 36, 19, 26;
+    --fg-secondary: #351f28; --fg-dim: #533540; --fg-muted: #805f6c; --fg-faint: #b08f9c;
+    --accent: #7a1f3f; --link: #24131a; --link-hover: #0f050a;
+    --border: #dcc3cc; --border-light: #e8d3da; --border-faint: #f0e1e6; --border-heavy: #24131a;
+    --code-bg: #f0e1e6; --grain-opacity: 0.16; --section-heading-fg: #fff;
+}
+[data-theme="wine"][data-scheme="dark"] {
+    --bg: #150d10; --bg-rgb: 21, 13, 16;
+    --fg: #d8c7ce; --fg-rgb: 216, 199, 206;
+    --fg-secondary: #c4b1b8; --fg-dim: #a08b92; --fg-muted: #7c676e; --fg-faint: #56474e;
+    --accent: #c04a6a; --link: #d8c7ce; --link-hover: #f2e3e9;
+    --border: #322027; --border-light: #281a20; --border-faint: #20161a; --border-heavy: #6a515c;
+    --code-bg: #1e1418; --grain-opacity: 0.03; --section-heading-fg: #150d10;
+}
+
+/* ── 18. Graphite — warm neutral grey ──────────────────────── */
+[data-theme="graphite"][data-scheme="light"] {
+    --bg: #f3f2f0; --bg-rgb: 243, 242, 240;
+    --fg: #1a1917; --fg-rgb: 26, 25, 23;
+    --fg-secondary: #2c2a27; --fg-dim: #4a4844; --fg-muted: #726f6a; --fg-faint: #9c9993;
+    --accent: #6a6058; --link: #1a1917; --link-hover: #000;
+    --border: #d7d5d1; --border-light: #e5e3df; --border-faint: #eeece9; --border-heavy: #1a1917;
+    --code-bg: #eae8e4; --grain-opacity: 0.12; --section-heading-fg: #fff;
+}
+[data-theme="graphite"][data-scheme="dark"] {
+    --bg: #0e0d0c; --bg-rgb: 14, 13, 12;
+    --fg: #d6d3ce; --fg-rgb: 214, 211, 206;
+    --fg-secondary: #bebbb5; --fg-dim: #979490; --fg-muted: #6f6c67; --fg-faint: #4c4945;
+    --accent: #b0a498; --link: #d6d3ce; --link-hover: #f2f0ec;
+    --border: #262420; --border-light: #1e1c19; --border-faint: #181613; --border-heavy: #5a564f;
+    --code-bg: #161412; --grain-opacity: 0.03; --section-heading-fg: #0e0d0c;
 }
 
 /* === RESET === */
