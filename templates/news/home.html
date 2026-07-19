@@ -12,5 +12,35 @@
 {% endblock %}
 
 {% block extra_js %}
+{% trans "Gist" as t_gist %}
+{% trans "Gist ready" as t_gist_ready %}
+{% trans "Read the gist" as t_read_gist %}
+{% trans "Takeaway" as t_takeaway %}
+{% trans "Original" as t_original %}
+{% trans "Close" as t_close %}
+{% trans "Retry" as t_retry %}
+{% trans "Generating the summary…" as t_gen_summary %}
+{% trans "Sending request…" as t_sending %}
+{% trans "No server connection. Please try again." as t_no_conn %}
+{% trans "Reading the article" as t_reading %}
+{% trans "Generating…" as t_generating %}
+{% trans "Couldn't generate the summary." as t_err_generic %}
+<script>
+window.SUMMARY_I18N = {
+    kicker: "{{ t_gist|escapejs }}",
+    gistReady: "{{ t_gist_ready|escapejs }}",
+    readGist: "{{ t_read_gist|escapejs }}",
+    takeaway: "{{ t_takeaway|escapejs }}",
+    original: "{{ t_original|escapejs }}",
+    close: "{{ t_close|escapejs }}",
+    retry: "{{ t_retry|escapejs }}",
+    genSummary: "{{ t_gen_summary|escapejs }}",
+    sending: "{{ t_sending|escapejs }}",
+    noConnection: "{{ t_no_conn|escapejs }}",
+    reading: "{{ t_reading|escapejs }}",
+    generating: "{{ t_generating|escapejs }}",
+    errorGeneric: "{{ t_err_generic|escapejs }}"
+};
+</script>
 <script src="{% static 'news/js/summary.js' %}"></script>
 {% endblock %}

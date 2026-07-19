@@ -1,16 +1,19 @@
 /**
- * Article "Суть на русском" — on-demand RU summary in a modal.
+ * Article "Gist" — on-demand summary in a modal.
  *
- * Clicking a card's image or "Суть" button opens a modal that:
+ * Clicking a card's image or "Gist" button opens a modal that:
  *   - shows live generation progress (over WebSocket), or
  *   - renders an already-stored summary instantly (server marks such cards).
  *
- * The whole feature is Russian by design, so labels are hardcoded RU.
+ * UI labels come from window.SUMMARY_I18N (localized server-side); each lookup
+ * falls back to the original Russian so the feature works without the catalog.
  *
  * Depends on: ws.js
  */
 (function () {
     'use strict';
+
+    var I18N = window.SUMMARY_I18N || {};
 
     /* ── DOM helpers ──────────────────────────────────── */
 
@@ -56,10 +59,10 @@
 
         var head = el('div', 'sum-modal-head');
         head.appendChild(el('span', 'sum-modal-badge', 'AI'));
-        head.appendChild(el('span', 'sum-modal-kicker', 'Суть на русском'));
+        head.appendChild(el('span', 'sum-modal-kicker', I18N.kicker || 'Суть'));
         var close = el('button', 'sum-modal-close', '✕');
         close.type = 'button';
-        close.setAttribute('aria-label', 'Закрыть');
+        close.setAttribute('aria-label', I18N.close || 'Закрыть');
         close.onclick = closeModal;
         head.appendChild(close);
         modal.appendChild(head);
@@ -87,7 +90,7 @@
 
         var box = el('div', 'sum-progress');
         box.appendChild(el('div', 'sum-spinner'));
-        box.appendChild(el('div', 'sum-progress-label', label || 'Генерирую пересказ…'));
+        box.appendChild(el('div', 'sum-progress-label', label || I18N.genSummary || 'Генерирую пересказ…'));
 
         var t = total || 3;
         var s = step || 0;
@@ -112,7 +115,7 @@
 
         if (data.conclusion) {
             var concl = el('div', 'sum-result-concl');
-            concl.appendChild(el('span', 'sum-result-concl-label', 'Вывод'));
+            concl.appendChild(el('span', 'sum-result-concl-label', I18N.takeaway || 'Вывод'));
             concl.appendChild(el('p', null, data.conclusion));
             content.appendChild(concl);
         }
@@ -121,14 +124,14 @@
         if (openCard) {
             var orig = openCard.querySelector('.home-orig-btn');
             if (orig) {
-                var a = el('a', 'sum-modal-btn sum-modal-btn-secondary', 'Оригинал ↗');
+                var a = el('a', 'sum-modal-btn sum-modal-btn-secondary', (I18N.original || 'Оригинал') + ' ↗');
                 a.href = orig.href;
                 a.target = '_blank';
                 a.rel = 'noopener';
                 actions.appendChild(a);
             }
         }
-        var done = el('button', 'sum-modal-btn sum-modal-btn-primary', 'Закрыть');
+        var done = el('button', 'sum-modal-btn sum-modal-btn-primary', I18N.close || 'Закрыть');
         done.type = 'button';
         done.onclick = closeModal;
         actions.appendChild(done);
@@ -142,9 +145,9 @@
 
         var box = el('div', 'sum-error');
         box.appendChild(el('div', 'sum-error-icon', '⚠'));
-        box.appendChild(el('div', 'sum-error-msg', message || 'Не удалось сделать пересказ.'));
+        box.appendChild(el('div', 'sum-error-msg', message || I18N.errorGeneric || 'Не удалось сделать пересказ.'));
 
-        var retry = el('button', 'sum-modal-btn sum-modal-btn-primary', 'Повторить');
+        var retry = el('button', 'sum-modal-btn sum-modal-btn-primary', I18N.retry || 'Повторить');
         retry.type = 'button';
         retry.onclick = function () { requestSummary(articleId); };
         box.appendChild(retry);
@@ -154,9 +157,9 @@
     /* ── Request flow ─────────────────────────────────── */
 
     function requestSummary(articleId) {
-        renderProgress(0, 3, 'Отправляю запрос…');
+        renderProgress(0, 3, I18N.sending || 'Отправляю запрос…');
         if (!WS.send('summary.generate', { article_id: articleId })) {
-            renderError(articleId, 'Нет соединения с сервером. Попробуйте ещё раз.');
+            renderError(articleId, I18N.noConnection || 'Нет соединения с сервером. Попробуйте ещё раз.');
         }
     }
 
@@ -177,12 +180,12 @@
 
     WS.on('summary.generating', function (msg) {
         if (openId !== msg.article_id) return;
-        renderProgress(1, 3, 'Читаю статью');
+        renderProgress(1, 3, I18N.reading || 'Читаю статью');
     });
 
     WS.on('summary.progress', function (msg) {
         if (openId !== msg.article_id) return;
-        renderProgress(msg.step, msg.total_steps, msg.label || 'Генерирую…');
+        renderProgress(msg.step, msg.total_steps, msg.label || I18N.generating || 'Генерирую…');
     });
 
     WS.on('summary.ready', function (msg) {
@@ -199,9 +202,9 @@
     function markCardReady(card) {
         card.classList.add('has-summary');
         var badge = card.querySelector('.home-item-badge-text');
-        if (badge) badge.textContent = 'Суть готова';
+        if (badge) badge.textContent = I18N.gistReady || 'Суть готова';
         var label = card.querySelector('.home-sum-btn-label');
-        if (label) label.textContent = 'Читать суть';
+        if (label) label.textContent = I18N.readGist || 'Читать суть';
     }
 
     /* ── Click delegation (survives HTMX infinite-scroll swaps) ── */

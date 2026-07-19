@@ -1,10 +1,10 @@
 {% load i18n news_extras markdown_extras %}
 <article class="home-item{% if article.has_summary %} has-summary{% endif %}" data-article-id="{{ article.pk }}">
-    <button type="button" class="home-item-thumb" data-summary-trigger aria-label="Показать суть на русском">
+    <button type="button" class="home-item-thumb" data-summary-trigger aria-label="{% trans 'Show the gist' %}">
         <img src="{{ article.image.url }}" alt="" loading="lazy">
         <span class="home-item-badge">
             <span class="home-item-badge-icon">✦</span>
-            <span class="home-item-badge-text">{% if article.has_summary %}Суть готова{% else %}Суть на русском{% endif %}</span>
+            <span class="home-item-badge-text">{% if article.has_summary %}{% trans "Gist ready" %}{% else %}{% trans "Gist" %}{% endif %}</span>
         </span>
     </button>
     <div class="home-item-body">
@@ -17,7 +17,7 @@
         <div class="home-item-actions">
             <button type="button" class="home-sum-btn" data-summary-trigger>
                 <span class="home-sum-btn-icon">✦</span>
-                <span class="home-sum-btn-label">{% if article.has_summary %}Читать суть{% else %}Суть на русском{% endif %}</span>
+                <span class="home-sum-btn-label">{% if article.has_summary %}{% trans "Read the gist" %}{% else %}{% trans "Gist" %}{% endif %}</span>
             </button>
             <a class="home-orig-btn" href="{{ article.url }}" target="_blank" rel="noopener"
                title="{% trans 'Open the original source' %}">

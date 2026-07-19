@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Newspaper 1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-03-21 08:21+0000\n"
+"POT-Creation-Date: 2026-07-19 10:32+0000\n"
 "PO-Revision-Date: 2026-03-18 18:00+0000\n"
 "Last-Translator: \n"
 "Language-Team: Ukrainian\n"
@@ -19,100 +19,42 @@ msgstr ""
 "100 > 14) ? 1 : n % 1 == 0 && (n % 10 ==0 || (n % 10 >=5 && n % 10 <=9) || "
 "(n % 100 >=11 && n % 100 <=14 )) ? 2: 3);\n"
 
-msgid "Analytics"
-msgstr "Аналітика"
+msgid "Daily AI-curated news digest from 100+ RSS sources worldwide"
+msgstr "Щоденний AI-дайджест новин з 100+ RSS-джерел з усього світу"
 
-msgid "7 days"
-msgstr "7 днів"
+msgid "Daily News Digest"
+msgstr "Щоденний дайджест новин"
 
-msgid "30 days"
-msgstr "30 днів"
+msgid "Newspaper"
+msgstr "Newspaper"
 
-msgid "90 days"
-msgstr "90 днів"
+msgid "Articles"
+msgstr "Статті"
 
-msgid "Today"
-msgstr "Сьогодні"
+msgid "Too many requests. Please try again later."
+msgstr ""
 
-msgid "Page Views"
-msgstr "Перегляди"
+msgid "Digest"
+msgstr "Дайджест"
 
-#, fuzzy
-#| msgid "Unique Visitors"
-msgid "Unique Clients"
-msgstr "Унікальні відвідувачі"
+msgid "Search"
+msgstr "Пошук"
 
-msgid "Sessions"
-msgstr "Сесії"
+msgid "Search results for"
+msgstr "Результати пошуку за запитом"
 
-msgid "Confirmed Humans"
-msgstr "Підтверджені люди"
+msgid "Sources"
+msgstr "Джерела"
 
-msgid "Top Country"
-msgstr "Топ країна"
+msgid "All news sources and RSS feeds"
+msgstr "Усі джерела новин та RSS-стрічки"
 
-msgid "Today — Hourly Traffic"
-msgstr "Сьогодні — погодинний трафік"
+#, python-format
+msgid "Articles from %(title)s"
+msgstr "Статті з %(title)s"
 
-msgid "Total Sessions"
-msgstr "Усього сесій"
-
-msgid "Human Sessions"
-msgstr "Сесії людей"
-
-msgid "Bounce Rate"
-msgstr "Показник відмов"
-
-msgid "Avg Pages/Session"
-msgstr "Стор./сесію"
-
-msgid "Avg Active Time"
-msgstr "Сер. активний час"
-
-msgid "Avg Duration"
-msgstr "Сер. тривалість"
-
-msgid "Live Sessions"
-msgstr "Активні сесії"
-
-msgid "Period Overview"
-msgstr "Огляд за період"
-
-msgid "Views Over Time"
-msgstr "Перегляди за період"
-
-msgid "Top Articles"
-msgstr "Популярні статті"
-
-msgid "Top Pages"
-msgstr "Популярні сторінки"
-
-msgid "Recent Page Views"
-msgstr "Останні перегляди"
-
-msgid "Top Referrers"
-msgstr "Джерела трафіку"
-
-msgid "Countries"
-msgstr "Країни"
-
-msgid "Devices & Tech"
-msgstr "Пристрої та технології"
-
-msgid "Devices"
-msgstr "Пристрої"
-
-msgid "Browsers"
-msgstr "Браузери"
-
-msgid "Operating Systems"
-msgstr "Операційні системи"
-
-msgid "Content"
-msgstr "Контент"
-
-msgid "Categories"
-msgstr "Категорії"
+msgid "Browse all news articles"
+msgstr "Перегляд усіх статей"
 
 msgid "Left"
 msgstr "Лівий"
@@ -129,8 +71,174 @@ msgstr "Правоцентристський"
 msgid "Right"
 msgstr "Правий"
 
-msgid "Sources"
-msgstr "Джерела"
+msgid "Main"
+msgstr ""
+
+msgid "Dashboard"
+msgstr ""
+
+msgid "Content"
+msgstr "Контент"
+
+#, fuzzy
+#| msgid "feeds"
+msgid "Feeds"
+msgstr "стрічок"
+
+msgid "Categories"
+msgstr "Категорії"
+
+#, fuzzy
+#| msgid "Articles"
+msgid "Article chunks"
+msgstr "Статті"
+
+#, fuzzy
+#| msgid "Digest"
+msgid "Digests"
+msgstr "Дайджест"
+
+#, fuzzy
+#| msgid "Sessions"
+msgid "Sections"
+msgstr "Сесії"
+
+msgid "Config"
+msgstr ""
+
+msgid "Research"
+msgstr "Дослідження"
+
+#, fuzzy
+#| msgid "Research"
+msgid "Researches"
+msgstr "Дослідження"
+
+msgid "Telegram"
+msgstr ""
+
+msgid "Channels"
+msgstr ""
+
+msgid "Post log"
+msgstr ""
+
+msgid "Harvester"
+msgstr ""
+
+msgid "Pipeline settings"
+msgstr ""
+
+msgid "Feed fetches"
+msgstr ""
+
+#, fuzzy
+#| msgid "Content"
+msgid "Content extracts"
+msgstr "Контент"
+
+msgid "Image downloads"
+msgstr ""
+
+msgid "Analytics"
+msgstr "Аналітика"
+
+#, fuzzy
+#| msgid "Unique Visitors"
+msgid "Clients"
+msgstr "Унікальні відвідувачі"
+
+msgid "Sessions"
+msgstr "Сесії"
+
+msgid "Activities"
+msgstr ""
+
+msgid "System"
+msgstr ""
+
+#, fuzzy
+#| msgid "Browsers"
+msgid "Users"
+msgstr "Браузери"
+
+msgid "Languages"
+msgstr ""
+
+#, fuzzy
+#| msgid "Sessions"
+msgid "Regions"
+msgstr "Сесії"
+
+msgid "Countries"
+msgstr "Країни"
+
+msgid "API usage"
+msgstr ""
+
+msgid "Gist"
+msgstr "Суть"
+
+msgid "Takeaway"
+msgstr "Висновок"
+
+msgid "Couldn't generate the summary:"
+msgstr "Не вдалося зробити переказ:"
+
+msgid "Retry"
+msgstr "Повторити"
+
+msgid "Get the gist"
+msgstr "Переказати"
+
+msgid "generating…"
+msgstr "генерую…"
+
+msgid "No digest yet. Run the digest command to generate one."
+msgstr "Дайджест ще не створено. Запустіть команду генерації дайджесту."
+
+msgid "Share"
+msgstr ""
+
+#, fuzzy
+#| msgid "No articles yet."
+msgid "No news yet."
+msgstr "Статей поки немає."
+
+msgid "Show the gist"
+msgstr "Показати суть"
+
+msgid "Gist ready"
+msgstr "Суть готова"
+
+msgid "Read the gist"
+msgstr "Читати суть"
+
+#, fuzzy
+#| msgid "Read on the original site"
+msgid "Open the original source"
+msgstr "Читати на оригінальному сайті"
+
+msgid "Original"
+msgstr "Оригінал"
+
+msgid "Previous"
+msgstr "Назад"
+
+msgid "Next"
+msgstr "Далі"
+
+msgid "Search news..."
+msgstr "Пошук новин..."
+
+msgid "Unpin section"
+msgstr ""
+
+msgid "Pin section"
+msgstr ""
+
+msgid "All"
+msgstr ""
 
 msgid "Back to digest"
 msgstr "Назад до дайджесту"
@@ -141,9 +249,6 @@ msgstr "(без заголовка)"
 msgid "ago"
 msgstr "тому"
 
-msgid "Original"
-msgstr "Оригінал"
-
 msgid "No content available."
 msgstr "Вміст недоступний."
 
@@ -152,6 +257,36 @@ msgstr "Читати на оригінальному сайті"
 
 msgid "Read original"
 msgstr "Читати оригінал"
+
+msgid "Page"
+msgstr "Стор."
+
+msgid "of"
+msgstr "з"
+
+msgid "Search by title..."
+msgstr "Пошук за заголовком..."
+
+msgid "All categories"
+msgstr "Усі категорії"
+
+msgid "All countries"
+msgstr "Усі країни"
+
+msgid "From"
+msgstr ""
+
+msgid "To"
+msgstr ""
+
+msgid "Filter"
+msgstr "Фільтр"
+
+msgid "Clear"
+msgstr "Скинути"
+
+msgid "No articles match your filters."
+msgstr "Немає статей за обраними фільтрами."
 
 msgid "Generation error"
 msgstr "Помилка генерації"
@@ -165,29 +300,85 @@ msgstr "Читати"
 msgid "Close"
 msgstr "Закрити"
 
-msgid "Newspaper"
-msgstr "Newspaper"
+msgid "Similar news"
+msgstr "Схожі новини"
 
-msgid "Daily News Digest"
-msgstr "Щоденний дайджест новин"
+msgid "No similar news found"
+msgstr "Схожих новин не знайдено"
 
-msgid "Toggle dark/light theme"
-msgstr "Перемкнути темну/світлу тему"
+msgid "Source articles"
+msgstr "Статті-джерела"
 
-msgid "Toggle theme"
-msgstr "Змінити тему"
+msgid "Current"
+msgstr "Поточна"
+
+msgid "Digest news"
+msgstr "Новини дайджесту"
+
+msgid "Loading…"
+msgstr "Завантаження…"
+
+msgid "Home"
+msgstr ""
+
+msgid "Broadsheet"
+msgstr ""
+
+msgid "Gazette"
+msgstr ""
+
+msgid "Evening"
+msgstr ""
+
+#, fuzzy
+#| msgid "Right"
+msgid "Midnight"
+msgstr "Правий"
 
 msgid "RSS aggregator"
 msgstr "RSS-агрегатор"
 
-msgid "latest articles"
-msgstr "останніх статей"
+msgid "articles"
+msgstr "статей"
 
 msgid "No articles yet."
 msgstr "Статей поки немає."
 
-msgid "Deep Dive"
-msgstr "Глибокий аналіз"
+msgid "All sources"
+msgstr "Усі джерела"
+
+msgid "feeds"
+msgstr "стрічок"
+
+msgid "Search feeds..."
+msgstr "Пошук джерел..."
+
+msgid "All leanings"
+msgstr "Усі позиції"
+
+msgid "All factuality"
+msgstr "Будь-яка фактуальність"
+
+msgid "No feeds match your filters."
+msgstr "Немає джерел за обраними фільтрами."
+
+msgid "Generating the summary…"
+msgstr "Генерую переказ…"
+
+msgid "Sending request…"
+msgstr "Надсилаю запит…"
+
+msgid "No server connection. Please try again."
+msgstr "Немає з'єднання з сервером. Спробуйте ще раз."
+
+msgid "Reading the article"
+msgstr "Читаю статтю"
+
+msgid "Generating…"
+msgstr "Генерую…"
+
+msgid "Couldn't generate the summary."
+msgstr "Не вдалося зробити переказ."
 
 #, python-format
 msgid "Synthesized from %(num_sources)s source"
@@ -212,27 +403,6 @@ msgstr "Збираємо інформацію з джерел..."
 msgid "Generation error."
 msgstr "Помилка генерації."
 
-msgid "research"
-msgstr "дослідити"
-
-msgid "No digest yet. Run the digest command to generate one."
-msgstr "Дайджест ще не створено. Запустіть команду генерації дайджесту."
-
-msgid "Unknown"
-msgstr "Невідомо"
-
-msgid "Neutral"
-msgstr "Нейтральний"
-
-msgid "Daily AI-curated news digest from 100+ RSS sources worldwide"
-msgstr "Щоденний AI-дайджест новин з 100+ RSS-джерел з усього світу"
-
-msgid "Search"
-msgstr "Пошук"
-
-msgid "Search news..."
-msgstr "Пошук новин..."
-
 msgid "results"
 msgstr "результатів"
 
@@ -254,8 +424,101 @@ msgstr "Спробуйте інші ключові слова або ширшу 
 msgid "Enter a topic to search across all news sources."
 msgstr "Введіть тему для пошуку по всіх джерелах новин."
 
-msgid "Search results for"
-msgstr "Результати пошуку за запитом"
+msgid "sources"
+msgstr "джерела"
+
+msgid "More from"
+msgstr ""
+
+#~ msgid "7 days"
+#~ msgstr "7 днів"
+
+#~ msgid "30 days"
+#~ msgstr "30 днів"
+
+#~ msgid "90 days"
+#~ msgstr "90 днів"
+
+#~ msgid "Today"
+#~ msgstr "Сьогодні"
+
+#~ msgid "Page Views"
+#~ msgstr "Перегляди"
+
+#~ msgid "Confirmed Humans"
+#~ msgstr "Підтверджені люди"
+
+#~ msgid "Top Country"
+#~ msgstr "Топ країна"
+
+#~ msgid "Today — Hourly Traffic"
+#~ msgstr "Сьогодні — погодинний трафік"
+
+#~ msgid "Total Sessions"
+#~ msgstr "Усього сесій"
+
+#~ msgid "Human Sessions"
+#~ msgstr "Сесії людей"
+
+#~ msgid "Bounce Rate"
+#~ msgstr "Показник відмов"
+
+#~ msgid "Avg Pages/Session"
+#~ msgstr "Стор./сесію"
+
+#~ msgid "Avg Active Time"
+#~ msgstr "Сер. активний час"
+
+#~ msgid "Avg Duration"
+#~ msgstr "Сер. тривалість"
+
+#~ msgid "Live Sessions"
+#~ msgstr "Активні сесії"
+
+#~ msgid "Period Overview"
+#~ msgstr "Огляд за період"
+
+#~ msgid "Views Over Time"
+#~ msgstr "Перегляди за період"
+
+#~ msgid "Top Articles"
+#~ msgstr "Популярні статті"
+
+#~ msgid "Top Pages"
+#~ msgstr "Популярні сторінки"
+
+#~ msgid "Recent Page Views"
+#~ msgstr "Останні перегляди"
+
+#~ msgid "Top Referrers"
+#~ msgstr "Джерела трафіку"
+
+#~ msgid "Devices & Tech"
+#~ msgstr "Пристрої та технології"
+
+#~ msgid "Devices"
+#~ msgstr "Пристрої"
+
+#~ msgid "Operating Systems"
+#~ msgstr "Операційні системи"
+
+#~ msgid "Toggle dark/light theme"
+#~ msgstr "Перемкнути темну/світлу тему"
+
+#~ msgid "Toggle theme"
+#~ msgstr "Змінити тему"
+
+#~ msgid "Deep Dive"
+#~ msgstr "Глибокий аналіз"
+
+#~ msgid "research"
+#~ msgstr "дослідити"
+
+#~ msgid "Unknown"
+#~ msgstr "Невідомо"
+
+#~ msgid "Neutral"
+#~ msgstr "Нейтральний"
 
 #~ msgid "Articles Viewed"
 #~ msgstr "Переглянуто статей"
@@ -272,117 +535,26 @@ msgstr "Результати пошуку за запитом"
 #~ msgid "Period Visitors"
 #~ msgstr "Відвідувачі за період"
 
-msgid "sources"
-msgstr "джерела"
+#~ msgid "Breaking news"
+#~ msgstr "Термінова новина"
 
-msgid "Breaking news"
-msgstr "Термінова новина"
+#~ msgid "Important"
+#~ msgstr "Важливо"
 
-msgid "Important"
-msgstr "Важливо"
+#~ msgid "Worth noting"
+#~ msgstr "Варто звернути увагу"
 
-msgid "Worth noting"
-msgstr "Варто звернути увагу"
+#~ msgid "For context"
+#~ msgstr "Для контексту"
 
-msgid "For context"
-msgstr "Для контексту"
+#~ msgid "Read full research"
+#~ msgstr "Читати повне дослідження"
 
-msgid "Similar news"
-msgstr "Схожі новини"
+#~ msgid "High"
+#~ msgstr "Висока"
 
-msgid "No similar news found"
-msgstr "Схожих новин не знайдено"
+#~ msgid "Mixed"
+#~ msgstr "Змішана"
 
-msgid "Source articles"
-msgstr "Статті-джерела"
-
-msgid "Current"
-msgstr "Поточна"
-
-msgid "Loading…"
-msgstr "Завантаження…"
-
-msgid "Digest"
-msgstr "Дайджест"
-
-msgid "Articles"
-msgstr "Статті"
-
-msgid "All news sources and RSS feeds"
-msgstr "Усі джерела новин та RSS-стрічки"
-
-msgid "Browse all news articles"
-msgstr "Перегляд усіх статей"
-
-msgid "feeds"
-msgstr "стрічок"
-
-msgid "articles"
-msgstr "статей"
-
-msgid "Search feeds..."
-msgstr "Пошук джерел..."
-
-msgid "All categories"
-msgstr "Усі категорії"
-
-msgid "All countries"
-msgstr "Усі країни"
-
-msgid "All leanings"
-msgstr "Усі позиції"
-
-msgid "All factuality"
-msgstr "Будь-яка фактуальність"
-
-msgid "Filter"
-msgstr "Фільтр"
-
-msgid "Clear"
-msgstr "Скинути"
-
-msgid "No feeds match your filters."
-msgstr "Немає джерел за обраними фільтрами."
-
-msgid "All sources"
-msgstr "Усі джерела"
-
-msgid "Page"
-msgstr "Стор."
-
-msgid "of"
-msgstr "з"
-
-msgid "Search by title..."
-msgstr "Пошук за заголовком..."
-
-msgid "No articles match your filters."
-msgstr "Немає статей за обраними фільтрами."
-
-msgid "Previous"
-msgstr "Назад"
-
-msgid "Next"
-msgstr "Далі"
-
-msgid "Read full research"
-msgstr "Читати повне дослідження"
-
-msgid "Research"
-msgstr "Дослідження"
-
-msgid "Digest news"
-msgstr "Новини дайджесту"
-
-msgid "High"
-msgstr "Висока"
-
-msgid "Mixed"
-msgstr "Змішана"
-
-msgid "Low"
-msgstr "Низька"
-
-#, python-format
-msgid "Articles from %(title)s"
-msgstr "Статті з %(title)s"
+#~ msgid "Low"
+#~ msgstr "Низька"

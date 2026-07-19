@@ -3,23 +3,23 @@
 {% if summary %}
     <div class="ai-summary-head">
         <span class="ai-summary-badge">AI</span>
-        <span class="ai-summary-title">Суть на русском</span>
+        <span class="ai-summary-title">{% trans "Gist" %}</span>
     </div>
     <div class="ai-summary-body">{{ summary.summary|linebreaks }}</div>
     {% if summary.conclusion %}
     <div class="ai-summary-conclusion">
-        <span class="ai-summary-sub">Вывод</span>
+        <span class="ai-summary-sub">{% trans "Takeaway" %}</span>
         <p>{{ summary.conclusion }}</p>
     </div>
     {% endif %}
 {% elif summary_error %}
     <div class="ai-summary-error">
-        <p>Не удалось сделать пересказ: {{ summary_error }}</p>
+        <p>{% trans "Couldn't generate the summary:" %} {{ summary_error }}</p>
         <button class="ai-summary-btn"
                 hx-post="{% url 'article_summarize' article.pk %}"
                 hx-target="#articleSummary" hx-swap="outerHTML"
                 hx-trigger="click once" hx-disabled-elt="this">
-            Повторить
+            {% trans "Retry" %}
         </button>
     </div>
 {% else %}
@@ -29,8 +29,8 @@
             hx-trigger="click once" hx-disabled-elt="this"
             hx-indicator="#aiSummarySpin">
         <span class="ai-summary-btn-icon">✦</span>
-        <span>Пересказать на русском</span>
-        <span id="aiSummarySpin" class="ai-summary-spin htmx-indicator">генерирую…</span>
+        <span>{% trans "Get the gist" %}</span>
+        <span id="aiSummarySpin" class="ai-summary-spin htmx-indicator">{% trans "generating…" %}</span>
     </button>
 {% endif %}
 </div>

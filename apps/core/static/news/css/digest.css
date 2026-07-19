@@ -110,11 +110,10 @@
     font-size: 0.55rem;
     color: var(--section-heading-fg);
     opacity: 0.4;
-    transition: opacity 0.2s, transform 0.2s;
+    transition: opacity 0.2s;
 }
 .pin-section-btn:hover {
     opacity: 1;
-    transform: scale(1.2);
 }
 .digest-section.pinned .pin-section-btn {
     opacity: 0.85;
