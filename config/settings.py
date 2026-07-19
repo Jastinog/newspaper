@@ -24,6 +24,14 @@ DEBUG = os.environ.get("DJANGO_DEBUG", "True").lower() in ("true", "1", "yes")
 
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "*").split(",")
 
+# Behind a reverse proxy (nginx) that terminates TLS and forwards the scheme.
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+# https origins allowed to submit forms/POST (admin login etc.) when DEBUG=False.
+CSRF_TRUSTED_ORIGINS = [
+    o for o in os.environ.get("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",") if o
+]
+
 INSTALLED_APPS = [
     # Must precede django.contrib.staticfiles so its ASGI-capable `runserver`
     # (HTTP + WebSocket on one port) overrides the default WSGI one.
