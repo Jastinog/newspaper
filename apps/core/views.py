@@ -2,7 +2,6 @@ import re as _re
 from datetime import datetime
 
 from django.conf import settings
-from django.core.cache import cache
 from django.core.paginator import Paginator
 from django.db.models import BooleanField, Count, Exists, F, OuterRef, Prefetch, Q, Value, Window
 from django.db.models.functions import Coalesce, RowNumber
@@ -37,11 +36,6 @@ def _breadcrumbs(request, *crumbs):
         else:
             result.append({"name": str(name), "url": f"{base}{reverse(url)}"})
     return result
-
-
-def _cache_suffix(request):
-    """Return ':bot' for bot requests to separate cached HTML variants."""
-    return ":bot" if getattr(request, "is_bot", False) else ""
 
 
 _MD_CHARS = _re.compile(r"[\*_#\[\]\(\)>`~|]")
@@ -95,11 +89,8 @@ def home(request):
     cursor = request.GET.get("cursor", "")
     lang = get_language() or "en"
 
-    variant = "p" if is_htmx else "f"
-    cache_key = f"home:{variant}:{cursor or 'first'}:{lang}{_cache_suffix(request)}"
-    html = cache.get(cache_key)
-    if html is not None:
-        return HttpResponse(html)
+    # No server-side cache here: the feed must always reflect the genuinely
+    # latest articles the moment they land, so we render fresh every request.
 
     # Straight chronological order — the actual latest news first. Articles dated
     # in the future (feeds with bad timestamps) are not "latest", so keep them out.
@@ -148,10 +139,7 @@ def home(request):
             "og_type": "website",
         }
 
-    response = render(request, template, context)
-    cache.set(cache_key, response.content, 60 * 5)
-    return response
-
+    return render(request, template, context)
 
 
 def _latest_digest(qs, date=None):
@@ -278,27 +266,10 @@ _HTMX_TEMPLATES = {
 
 def digest(request, date=None):
     is_htmx = request.headers.get("HX-Request") == "true" and not request.headers.get("HX-Boosted")
-    has_pinned = bool(request.COOKIES.get(_PINNED_COOKIE, ""))
-    has_section = bool(request.GET.get("section"))
-    lang = get_language() or "en"
 
-    # Cache context dict, not the rendered response — caching the full HttpResponse
-    # would bake one user's CSRF token into the HTML served to everyone.
-    can_cache = not is_htmx and not has_pinned and not has_section
-    context = None
-    if can_cache:
-        cache_key = f"index:{lang}:{date or 'latest'}"
-        context = cache.get(cache_key)
-
+    context = _build_digest_context(request, date=date)
     if context is None:
-        context = _build_digest_context(request, date=date)
-        if context is None:
-            return redirect("index")
-        if can_cache and context.get("digest"):
-            digest_date = str(context["digest"].date)
-            cache.set(f"index:{lang}:{digest_date}", context, 60 * 60)
-            if not date:
-                cache.set(f"index:{lang}:latest", context, 60 * 5)
+        return redirect("index")
 
     if is_htmx:
         target = request.headers.get("HX-Target", "contentArea")
@@ -327,21 +298,8 @@ def toggle_pin(request, slug):
     return response
 
 
-def _article_cache_key(pk, lang, *, bot=False):
-    """Single source of truth for the article-detail HTML cache key."""
-    return f"article:{pk}:{lang}{':bot' if bot else ''}"
-
-
 def article_detail(request, pk, slug=""):
     lang = get_language() or "en"
-    cache_key = _article_cache_key(pk, lang, bot=getattr(request, "is_bot", False))
-    cached = cache.get(cache_key)
-
-    if cached is not None:
-        cached_slug, html = cached
-        if cached_slug and cached_slug != slug:
-            return redirect(reverse("article_detail", kwargs={"pk": pk, "slug": cached_slug}), permanent=True)
-        return HttpResponse(html)
 
     article = get_object_or_404(
         Article.objects.select_related("feed", "feed__category"), pk=pk,
@@ -369,22 +327,10 @@ def article_detail(request, pk, slug=""):
         seo["og_image"] = request.build_absolute_uri(article.image.url)
 
     summary = ArticleSummary.get_for(article, Language.get_by_code_safe(lang))
-    response = render(request, "news/article.html", {"article": article, "seo": seo, "summary": summary})
-    cache.set(cache_key, (article.slug, response.content), 60 * 60)
-    return response
+    return render(request, "news/article.html", {"article": article, "seo": seo, "summary": summary})
 
 
-def _invalidate_article_cache(pk):
-    """Drop cached article HTML across all language/bot variants."""
-    keys = [
-        _article_cache_key(pk, code, bot=bot)
-        for code, _name in settings.LANGUAGES
-        for bot in (False, True)
-    ]
-    cache.delete_many(keys)
-
-
-@csrf_exempt  # unauthenticated, stateless, idempotent (cached) endpoint — CSRF adds
+@csrf_exempt  # unauthenticated, stateless, idempotent endpoint — CSRF adds
 @require_POST  # no protection here; abuse is capped by the per-IP rate limit below.
 def article_summarize(request, pk):
     """Generate (or return the stored) Russian summary for an article — HTMX POST.
@@ -417,7 +363,6 @@ def article_summarize(request, pk):
     except SummaryError as e:
         return _render(summary_error=str(e))
 
-    _invalidate_article_cache(pk)
     return _render(summary=summary)
 
 
@@ -430,12 +375,6 @@ def article_detail_redirect(request, pk):
 
 def category_detail(request, slug):
     page_num = request.GET.get("page", "1")
-    lang = get_language() or "en"
-    cache_key = f"category:{slug}:{page_num}:{lang}{_cache_suffix(request)}"
-    html = cache.get(cache_key)
-
-    if html is not None:
-        return HttpResponse(html)
 
     category = get_object_or_404(Category, slug=slug)
     articles_qs = (
@@ -460,18 +399,11 @@ def category_detail(request, slug):
         ),
     }
 
-    response = render(request, "news/category.html", {"category": category, "page": page, "seo": seo})
-    cache.set(cache_key, response.content, 60 * 15)
-    return response
+    return render(request, "news/category.html", {"category": category, "page": page, "seo": seo})
 
 
 def story_detail(request, item_id):
     current_lang = get_language() or "en"
-    cache_key = f"story:{item_id}:{current_lang}{_cache_suffix(request)}"
-    html = cache.get(cache_key)
-
-    if html is not None:
-        return HttpResponse(html)
 
     item = get_object_or_404(
         DigestItem.objects.select_related("digest", "section")
@@ -535,7 +467,7 @@ def story_detail(request, item_id):
         ),
     }
 
-    response = render(request, "news/story.html", {
+    return render(request, "news/story.html", {
         "item": item,
         "topic": topic,
         "summary": summary,
@@ -545,17 +477,10 @@ def story_detail(request, item_id):
         "has_research": bool(item._researches),
         "seo": seo,
     })
-    cache.set(cache_key, response.content, 60 * 60)
-    return response
 
 
 def research(request, item_id):
     lang = get_language() or "en"
-    cache_key = f"research:{item_id}:{lang}{_cache_suffix(request)}"
-    html = cache.get(cache_key)
-
-    if html is not None:
-        return HttpResponse(html)
 
     item = get_object_or_404(
         DigestItem.objects.select_related("digest", "section")
@@ -594,15 +519,13 @@ def research(request, item_id):
         ),
     }
 
-    response = render(request, "news/research.html", {
+    return render(request, "news/research.html", {
         "dive": dive,
         "item": item,
         "sources": sources,
         "hero_image": hero_image,
         "seo": seo,
     })
-    cache.set(cache_key, response.content, 60 * 60)
-    return response
 
 
 def search(request):
@@ -619,12 +542,6 @@ def search(request):
     if sort not in ("date", "relevance"):
         sort = "date"
 
-    lang = get_language() or "en"
-    cache_key = f"search:{hash(query)}:{sort}:{lang}{_cache_suffix(request)}"
-    html = cache.get(cache_key)
-    if html is not None:
-        return HttpResponse(html)
-
     service = SearchService()
     results = service.search_articles(query, top_k=30, sort=sort)
 
@@ -633,7 +550,7 @@ def search(request):
         "description": f"{_('Search results for')} {query}",
     }
 
-    response = render(request, "news/search.html", {
+    return render(request, "news/search.html", {
         "query": query,
         "sort": sort,
         "results": results.get("articles", []),
@@ -641,8 +558,6 @@ def search(request):
         "elapsed_ms": results.get("elapsed_ms", 0),
         "seo": seo,
     })
-    cache.set(cache_key, response.content, 60 * 30)
-    return response
 
 
 _ARTICLES_PER_PAGE = 40
@@ -650,13 +565,9 @@ _ARTICLES_PER_PAGE = 40
 
 def _filter_options():
     """Return categories and countries for browse filter dropdowns."""
-    return cache.get_or_set(
-        "filter_options",
-        lambda: (
-            list(Category.objects.order_by("order")),
-            list(Country.objects.filter(feeds__enabled=True).distinct().order_by("name")),
-        ),
-        3600,
+    return (
+        list(Category.objects.order_by("order")),
+        list(Country.objects.filter(feeds__enabled=True).distinct().order_by("name")),
     )
 
 
@@ -667,12 +578,6 @@ def feeds_list(request):
     lean = request.GET.get("lean", "")
     factuality = request.GET.get("factuality", "")
     q = request.GET.get("q", "").strip()
-    lang = get_language() or "en"
-
-    cache_key = f"feeds_list:{category_slug}:{country_code}:{lean}:{factuality}:{q}:{lang}{_cache_suffix(request)}"
-    html = cache.get(cache_key)
-    if html is not None:
-        return HttpResponse(html)
 
     qs = Feed.objects.filter(enabled=True).select_related("category", "country", "language")
     if category_slug:
@@ -714,7 +619,7 @@ def feeds_list(request):
         "breadcrumbs": _breadcrumbs(request, (_("Sources"), "feeds_list")),
     }
 
-    response = render(request, "news/feeds.html", {
+    return render(request, "news/feeds.html", {
         "feeds": feeds,
         "categories": categories,
         "countries": countries,
@@ -729,19 +634,11 @@ def feeds_list(request):
         },
         "seo": seo,
     })
-    cache.set(cache_key, response.content, 60 * 15)
-    return response
 
 
 def feed_detail(request, pk):
     """Single feed with its articles, paginated."""
     page_num = request.GET.get("page", "1")
-    lang = get_language() or "en"
-    cache_key = f"feed_detail:{pk}:{page_num}:{lang}{_cache_suffix(request)}"
-    html = cache.get(cache_key)
-
-    if html is not None:
-        return HttpResponse(html)
 
     feed = get_object_or_404(
         Feed.objects.select_related("category", "country", "language"), pk=pk,
@@ -762,9 +659,7 @@ def feed_detail(request, pk):
         ),
     }
 
-    response = render(request, "news/feed_detail.html", {"feed": feed, "page": page, "seo": seo})
-    cache.set(cache_key, response.content, 60 * 15)
-    return response
+    return render(request, "news/feed_detail.html", {"feed": feed, "page": page, "seo": seo})
 
 
 def articles_list(request):
@@ -776,12 +671,6 @@ def articles_list(request):
     date_to = request.GET.get("to", "")
     q = request.GET.get("q", "").strip()
     page_num = request.GET.get("page", "1")
-    lang = get_language() or "en"
-
-    cache_key = f"articles:{category_slug}:{feed_id}:{country_code}:{date_from}:{date_to}:{q}:{page_num}:{lang}{_cache_suffix(request)}"
-    html = cache.get(cache_key)
-    if html is not None:
-        return HttpResponse(html)
 
     qs = Article.objects.select_related("feed", "feed__category", "feed__country").exclude(image="")
 
@@ -819,7 +708,7 @@ def articles_list(request):
         "breadcrumbs": _breadcrumbs(request, (_("Articles"), "articles_list")),
     }
 
-    response = render(request, "news/articles.html", {
+    return render(request, "news/articles.html", {
         "page": page,
         "categories": categories,
         "countries": countries,
@@ -833,8 +722,6 @@ def articles_list(request):
         },
         "seo": seo,
     })
-    cache.set(cache_key, response.content, 60 * 15)
-    return response
 
 
 def set_language_get(request, lang):
