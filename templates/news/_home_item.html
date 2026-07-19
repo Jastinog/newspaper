@@ -25,6 +25,7 @@
         <div class="home-item-meta">
             <a href="{% url 'feed_detail' article.feed.pk %}" class="home-item-source">{{ article.feed.title }}</a>
             <span class="home-item-date">{% if article.published %}{{ article.published|date:"j M Y, H:i" }}{% elif article.created_at %}{{ article.created_at|date:"j M Y, H:i" }}{% endif %}</span>
+            {% if article.published %}<span class="home-item-ago">{{ article.published|timesince }} {% trans "ago" %}</span>{% elif article.created_at %}<span class="home-item-ago">{{ article.created_at|timesince }} {% trans "ago" %}</span>{% endif %}
         </div>
         <div class="home-item-actions">
             <button type="button" class="home-sum-btn" data-summary-trigger>

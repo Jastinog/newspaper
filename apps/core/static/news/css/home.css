@@ -102,6 +102,13 @@
     text-transform: none;
     letter-spacing: 0;
 }
+.home-item-ago {
+    margin-left: auto;
+    color: var(--fg-faint);
+    white-space: nowrap;
+    text-transform: none;
+    letter-spacing: 0;
+}
 
 /* Infinite-scroll sentinel — spans the full grid width */
 .home-more {
