@@ -187,16 +187,18 @@ footer {
     /* Extra top padding leaves room for the corner controls (lang left,
        theme right) so they never overlap the date/title below them. */
     .masthead {
-        padding: 2.9rem 0 0.6rem;
+        padding: 3.4rem 0 0.6rem;
     }
-    /* Thin rule dividing the utility row (lang / theme) from the masthead. */
+    /* Thin embossed rule dividing the utility row (lang / theme) from the
+       masthead, centred with equal spacing above (buttons) and below (date). */
     .masthead::before {
         content: "";
         position: absolute;
-        top: 2.4rem;
+        top: 2.88rem;
         left: 0;
         right: 0;
         border-top: 1px solid var(--border);
+        box-shadow: var(--emboss-subtle);
     }
     .masthead-date {
         font-size: 0.6rem;
