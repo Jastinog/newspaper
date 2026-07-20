@@ -78,6 +78,34 @@ def _parse_home_cursor(cursor):
         return None
 
 
+def _interleave_by_feed(articles):
+    """Spread a chronological page so the same source isn't shown back-to-back.
+
+    A feed that publishes a burst lands ~20 near-identical timestamps together,
+    so a straight date sort shows a long run from one source. This greedily
+    picks, at each slot, the most-recent remaining article whose source differs
+    from the one just shown — falling back to the next remaining when a source
+    genuinely dominates. Recency is preserved as far as diversity allows (the
+    newest article still leads), and it never drops or adds items, so the
+    chronological cursor built before this call stays exact.
+
+    articles_list() diversifies differently — a feed_rank Window round-robin in
+    the queryset itself. home() can't reuse that: its order_by would no longer
+    match the keyset cursor, and a global feed_rank abandons chronology (a stale
+    feed's newest would outrank an active feed's second), which breaks the
+    latest-first contract. Hence this per-page pass instead.
+    """
+    remaining = list(articles)  # already newest-first
+    result = []
+    prev_feed = None
+    while remaining:
+        idx = next((i for i, a in enumerate(remaining) if a.feed_id != prev_feed), 0)
+        article = remaining.pop(idx)
+        result.append(article)
+        prev_feed = article.feed_id
+    return result
+
+
 def home(request):
     """Homepage: infinite-scroll feed of the genuinely latest news, newest first.
 
@@ -124,6 +152,10 @@ def home(request):
     has_next = len(articles) > _HOME_PER_PAGE
     articles = articles[:_HOME_PER_PAGE]
     next_cursor = _build_home_cursor(articles[-1]) if has_next and articles else ""
+
+    # Cursor is fixed above (chronological), so reordering the page for display
+    # is safe — it changes only what the reader sees, never what the next batch is.
+    articles = _interleave_by_feed(articles)
 
     context = {
         "articles": articles,
