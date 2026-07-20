@@ -94,6 +94,7 @@ TEMPLATES = [
                 "django.template.context_processors.i18n",
                 "apps.core.context_processors.hreflang",
                 "apps.core.context_processors.bot_context",
+                "apps.core.context_processors.nav_topics",
             ],
         },
     },

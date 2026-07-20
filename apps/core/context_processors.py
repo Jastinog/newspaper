@@ -3,13 +3,15 @@ from django.core.cache import cache
 from django.utils.translation import get_language
 
 
-_SKIP_HREFLANG = ("/admin/", "/api/", "/analytics/", "/static/", "/media/")
+# URL prefixes that are not user-facing pages — skipped by the page-scoped
+# context processors below (hreflang, topic nav).
+_SKIP_PREFIXES = ("/admin/", "/api/", "/analytics/", "/static/", "/media/")
 
 
 def hreflang(request):
     """Build hreflang alternate URLs for the current page (cached)."""
     path = request.path
-    if any(path.startswith(p) for p in _SKIP_HREFLANG):
+    if any(path.startswith(p) for p in _SKIP_PREFIXES):
         return {}
 
     current_lang = get_language() or settings.LANGUAGE_CODE
@@ -43,3 +45,16 @@ def bot_context(request):
     """Provide the matching base template for bot vs human rendering."""
     is_bot = getattr(request, "is_bot", False)
     return {"base_template": "news/base_bot.html" if is_bot else "news/base.html"}
+
+
+def nav_topics(request):
+    """Topic list for the site-wide topic nav bar (cached; skips non-page URLs)."""
+    if any(request.path.startswith(p) for p in _SKIP_PREFIXES):
+        return {}
+
+    cached = cache.get("nav_topics")
+    if cached is None:
+        from apps.feed.models import Topic
+        cached = list(Topic.objects.all())
+        cache.set("nav_topics", cached, 60 * 60)
+    return {"nav_topics": cached}

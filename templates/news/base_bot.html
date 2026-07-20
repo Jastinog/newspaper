@@ -18,6 +18,7 @@
             <a href="{% url 'search' %}">{% trans "Search" %}</a>
         </nav>
     </header>
+    {% include "news/_topic_nav.html" %}
     <main>
         {% block content %}{% endblock %}
     </main>

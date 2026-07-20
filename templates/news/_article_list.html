@@ -1,0 +1,24 @@
+{% load i18n %}
+{# Shared article-listing body for the source (category) and content (topic)
+   axes. Caller passes `list_title` and puts a `page` in context. #}
+<div class="category-header">
+    <h1>{{ list_title }}</h1>
+    <p>{{ page.paginator.count }} {% trans "articles" %}</p>
+</div>
+
+<ul class="article-list">
+{% for article in page %}
+    <li>
+        <a href="{{ article.get_absolute_url }}">{{ article.title }}</a>
+        <div class="meta">
+            {{ article.feed.title }}
+            {% if article.published %} &middot; {{ article.published|timesince }} {% trans "ago" %}{% endif %}
+            {% for at in article.top_topics %}<a href="{{ at.topic.get_absolute_url }}" class="topic-chip">{{ at.topic.name }}</a>{% endfor %}
+        </div>
+    </li>
+{% empty %}
+    <li style="text-align:center; color: var(--fg-muted);">{% trans "No articles yet." %}</li>
+{% endfor %}
+</ul>
+
+{% include "news/_pagination.html" %}

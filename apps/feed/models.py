@@ -21,6 +21,25 @@ class Category(models.Model):
         return reverse("category_detail", kwargs={"slug": self.slug})
 
 
+class Topic(models.Model):
+    """A content-level topic (Politics, Technology, Sport…). Unlike Category —
+    which is fixed per source — an Article is assigned Topics from its own text
+    by the classifier, so one article can carry several (multi-label)."""
+
+    name = models.CharField(max_length=100, unique=True)
+    slug = models.SlugField(max_length=100, unique=True)
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["order", "name"]
+
+    def __str__(self):
+        return self.name
+
+    def get_absolute_url(self):
+        return reverse("topic_detail", kwargs={"slug": self.slug})
+
+
 class Feed(models.Model):
     class Lean(models.TextChoices):
         LEFT = "left", _("Left")
@@ -84,7 +103,7 @@ class Article(models.Model):
     class Status(models.IntegerChoices):
         PENDING = 0, "Pending"
         EXTRACTED = 1, "Extracted"
-        COMPLETED = 2, "Completed"
+        COMPLETED = 2, "Completed"  # terminal: fetched, extracted, image done
 
     feed = models.ForeignKey(Feed, on_delete=models.CASCADE, related_name="articles")
     title = models.CharField(max_length=1000)
@@ -100,6 +119,14 @@ class Article(models.Model):
     image_url = models.URLField(max_length=2000, blank=True, default="")
     image = models.ImageField(upload_to="articles/%Y/%m/", blank=True)
     used_in_digest = models.BooleanField(default=False, db_index=True)
+
+    topics = models.ManyToManyField(
+        Topic, through="ArticleTopic", related_name="articles", blank=True,
+    )
+    # Enrichment flag: set once the classifier has run (or been skipped) for this
+    # article. Kept separate from `status` so classification never gates the
+    # article's terminal state — a completed article shows even if untagged.
+    classified = models.BooleanField(default=False, db_index=True)
 
     class Meta:
         ordering = ["-published"]
@@ -119,6 +146,28 @@ class Article(models.Model):
         if self.slug:
             return reverse("article_detail", kwargs={"pk": self.pk, "slug": self.slug})
         return reverse("article_detail_redirect", kwargs={"pk": self.pk})
+
+
+class ArticleTopic(models.Model):
+    """One (article, topic) assignment with the classifier's confidence.
+
+    We store every topic scoring above a low floor and decide the *display*
+    threshold at query time, so sensitivity can be tuned without re-classifying.
+    The article's primary topic is simply the row with the highest score.
+    """
+
+    article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name="article_topics")
+    topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name="article_topics")
+    score = models.FloatField()
+
+    class Meta:
+        unique_together = [("article", "topic")]
+        indexes = [
+            models.Index(fields=["topic", "score"]),  # topic-detail: filter topic + score >= t
+        ]
+
+    def __str__(self):
+        return f"{self.topic_id} @ {self.score:.2f} on article {self.article_id}"
 
 
 class ArticleSummary(models.Model):

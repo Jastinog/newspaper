@@ -110,6 +110,32 @@
     letter-spacing: 0;
 }
 
+/* Topic chips on a card — small pills between the teaser and the meta row */
+.home-item-topics {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    margin-top: 0.5rem;
+}
+.home-item-topic {
+    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+    color: var(--fg-muted);
+    text-decoration: none;
+    padding: 0.12rem 0.42rem;
+    border: 1px solid var(--border-light);
+    border-radius: 999px;
+    white-space: nowrap;
+    transition: color 0.12s, border-color 0.12s;
+}
+.home-item-topic:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+}
+
 /* Infinite-scroll sentinel — spans the full grid width */
 .home-more {
     grid-column: 1 / -1;

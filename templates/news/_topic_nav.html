@@ -1,0 +1,15 @@
+{% load i18n %}
+{% if nav_topics %}
+<nav class="topic-nav" aria-label="{% trans 'Topics' %}" hx-boost="true" hx-swap="innerHTML transition:true">
+    <div class="container">
+        <div class="topic-nav-track">
+            <a href="{% url 'index' %}"
+               class="topic-nav-item{% if request.resolver_match.url_name == 'index' %} active{% endif %}">{% trans "All" %}</a>
+            {% for topic in nav_topics %}
+            <a href="{{ topic.get_absolute_url }}"
+               class="topic-nav-item{% if request.resolver_match.url_name == 'topic_detail' and request.resolver_match.kwargs.slug == topic.slug %} active{% endif %}">{{ topic.name }}</a>
+            {% endfor %}
+        </div>
+    </div>
+</nav>
+{% endif %}

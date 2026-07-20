@@ -17,7 +17,8 @@ from django.views.decorators.http import require_POST
 from apps.core.models import Language
 from apps.core.services.utils import get_article_image_url
 from apps.digest.models import Digest, DigestItem
-from apps.feed.models import Article, ArticleSummary, Category, Feed, HiddenFeed
+from apps.feed.models import Article, ArticleSummary, ArticleTopic, Category, Feed, HiddenFeed, Topic
+from apps.feed.services.classify import DISPLAY_THRESHOLD
 from apps.feed.services.search import SearchService
 from apps.location.models import Country
 from apps.research.models import Research
@@ -60,6 +61,21 @@ def _parse_pinned_cookie(request):
 # ── Template Views ────────────────────────────────────────
 
 _HOME_PER_PAGE = 30
+
+
+def _topic_chips_prefetch():
+    """Prefetch each article's top-scoring topics (above the display threshold)
+    onto `article.top_topics`, so card templates render chips without N+1."""
+    return Prefetch(
+        "article_topics",
+        queryset=(
+            ArticleTopic.objects
+            .filter(score__gte=DISPLAY_THRESHOLD)
+            .select_related("topic")
+            .order_by("-score")
+        ),
+        to_attr="top_topics",
+    )
 
 
 def _build_home_cursor(article):
@@ -130,6 +146,7 @@ def home(request):
     summary_exists = ArticleSummary.objects.filter(article=OuterRef("pk"), language=lang_obj)
     qs = (
         Article.objects.select_related("feed")  # cards only render feed.title / feed.pk
+        .prefetch_related(_topic_chips_prefetch())
         .exclude(image="")
         .filter(feed__hidden__isnull=True)  # drop sources a curator marked hidden site-wide
         .annotate(
@@ -436,6 +453,7 @@ def category_detail(request, slug):
         .filter(feed__category=category)
         .exclude(image="")
         .select_related("feed")
+        .prefetch_related(_topic_chips_prefetch())
         .order_by("-published")
     )
     paginator = Paginator(articles_qs, _ARTICLES_PER_PAGE)
@@ -454,6 +472,40 @@ def category_detail(request, slug):
     }
 
     return render(request, "news/category.html", {"category": category, "page": page, "seo": seo})
+
+
+def topic_detail(request, slug):
+    """All articles the classifier tagged with this topic (score above the
+    display threshold), newest first. Mirrors category_detail but the axis is
+    the article's own content, not its source."""
+    page_num = request.GET.get("page", "1")
+    topic = get_object_or_404(Topic, slug=slug)
+    articles_qs = (
+        Article.objects
+        .filter(article_topics__topic=topic, article_topics__score__gte=DISPLAY_THRESHOLD)
+        .exclude(image="")
+        .filter(feed__hidden__isnull=True)
+        .select_related("feed")
+        .prefetch_related(_topic_chips_prefetch())
+        .order_by("-published")
+        # No .distinct() needed: topic + score are filtered in one join and
+        # ArticleTopic is unique per (article, topic), so a row can't duplicate.
+    )
+    paginator = Paginator(articles_qs, _ARTICLES_PER_PAGE)
+    page = paginator.get_page(page_num)
+
+    seo = {
+        "title": f"{topic.name} — {SITE_NAME}",
+        "description": f"Latest {topic.name} news from {SITE_NAME}",
+        "canonical": request.build_absolute_uri(topic.get_absolute_url()),
+        "og_type": "website",
+        "breadcrumbs": _breadcrumbs(
+            request,
+            (topic.name, topic.get_absolute_url()),
+        ),
+    }
+
+    return render(request, "news/topic.html", {"topic": topic, "page": page, "seo": seo})
 
 
 def story_detail(request, item_id):

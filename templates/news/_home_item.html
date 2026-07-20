@@ -22,6 +22,13 @@
     <div class="home-item-body">
         <a href="{{ article.get_absolute_url }}" class="home-item-title">{{ article.title }}</a>
         <p class="home-item-desc">{% if article.content %}{{ article.content|teaser|truncatechars_word:220 }}{% endif %}</p>
+        {% if article.top_topics %}
+        <div class="home-item-topics">
+            {% for at in article.top_topics %}
+            <a href="{{ at.topic.get_absolute_url }}" class="home-item-topic">{{ at.topic.name }}</a>
+            {% endfor %}
+        </div>
+        {% endif %}
         <div class="home-item-meta">
             <a href="{% url 'feed_detail' article.feed.pk %}" class="home-item-source">{{ article.feed.title }}</a>
             <span class="home-item-date">{% if article.published %}{{ article.published|date:"j M Y, H:i" }}{% elif article.created_at %}{{ article.created_at|date:"j M Y, H:i" }}{% endif %}</span>

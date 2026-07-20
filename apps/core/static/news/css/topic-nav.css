@@ -1,0 +1,35 @@
+/* Site-wide topic navigation bar (below the masthead). Horizontally scrollable
+   on narrow screens; scrollbar hidden. */
+.topic-nav {
+    border-bottom: 1px solid var(--border-faint);
+    background: var(--bg);
+}
+.topic-nav-track {
+    display: flex;
+    gap: 0.3rem;
+    overflow-x: auto;
+    scrollbar-width: none;               /* Firefox */
+    -ms-overflow-style: none;            /* IE/Edge */
+    padding: 0.5rem 0;
+}
+.topic-nav-track::-webkit-scrollbar { display: none; }  /* WebKit */
+
+.topic-nav-item {
+    flex: 0 0 auto;
+    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+    color: var(--fg-muted);
+    text-decoration: none;
+    padding: 0.28rem 0.7rem;
+    border-radius: 999px;
+    white-space: nowrap;
+    transition: color 0.12s, background 0.12s;
+}
+.topic-nav-item:hover { color: var(--accent); }
+.topic-nav-item.active {
+    color: var(--accent);
+    background: rgba(var(--fg-rgb), 0.06);
+}

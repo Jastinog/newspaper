@@ -50,6 +50,25 @@
     color: var(--fg-muted);
     margin-top: 0.2rem;
 }
+.article-list .meta .topic-chip {
+    display: inline-block;
+    margin-left: 0.35rem;
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 600;
+    color: var(--fg-muted);
+    text-decoration: none;
+    padding: 0.05rem 0.4rem;
+    border: 1px solid var(--border-light);
+    border-radius: 999px;
+    vertical-align: middle;
+}
+.article-list .meta .topic-chip:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+    text-decoration: none;
+}
 
 /* === RESPONSIVE === */
 @media (max-width: 480px) {

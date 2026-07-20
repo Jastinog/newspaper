@@ -27,4 +27,11 @@ dependencies = [
     "tiktoken>=0.7",
     "markdownify>=1.2.2",
     "nh3>=0.3.4",
+    # Local, torch-free zero-shot topic classification (ONNX runtime only).
+    "onnxruntime>=1.18",
+    "transformers>=4.44",
+    "huggingface-hub>=0.24",
+    "sentencepiece>=0.2",
+    "protobuf>=4.25",
+    "numpy>=1.26",
 ]

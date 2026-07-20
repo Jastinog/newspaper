@@ -103,6 +103,7 @@ class PipelineSettings(models.Model):
     )
     enable_feed_fetching = models.BooleanField(default=True, verbose_name="Feed fetching")
     enable_content_extraction = models.BooleanField(default=True, verbose_name="Content extraction")
+    enable_topic_classification = models.BooleanField(default=True, verbose_name="Topic classification")
     enable_image_download = models.BooleanField(default=True, verbose_name="Image download")
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -149,6 +150,7 @@ class PipelineSettings(models.Model):
 STAGE_FIELDS = [
     ("enable_feed_fetching", "Feed Fetching"),
     ("enable_content_extraction", "Extraction"),
+    ("enable_topic_classification", "Classification"),
     ("enable_image_download", "Image Download"),
 ]
 STAGE_FIELD_NAMES = frozenset(name for name, _ in STAGE_FIELDS)
@@ -157,6 +159,7 @@ STAGE_FIELD_NAMES = frozenset(name for name, _ in STAGE_FIELDS)
 # Pipeline event stage keys — single source of truth for Python side.
 STAGE_FEED = "feed"
 STAGE_EXTRACT = "extract"
+STAGE_CLASSIFY = "classify"
 STAGE_DOWNLOAD = "download"
 
 

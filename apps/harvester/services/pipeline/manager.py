@@ -4,18 +4,23 @@ from concurrent.futures import Future, ThreadPoolExecutor
 
 from apps.harvester.models import PipelineSettings
 from .events import PipelineEventRecorder
-from .stages import DownloadStage, ExtractStage, FetchFeedsStage
+from .stages import ClassifyStage, DownloadStage, ExtractStage, FetchFeedsStage
 
 logger = logging.getLogger(__name__)
 
 
 class HarvestManager:
-    """Article-centric pipeline with three independent stages:
+    """Article-centric pipeline with four independent stages:
 
     fetch_feeds -> extract_content -> download_image -> COMPLETED
+                                                     -> classify (enrichment)
 
-    Each stage runs in a worker thread and is re-submitted as soon as it
-    finishes, without waiting on slower stages.
+    download_image is the terminal transition to COMPLETED. Classification is a
+    separate enrichment pass over completed-but-unclassified articles (flagged
+    via `Article.classified`), so it only runs on articles that passed the
+    earlier checks and disabling it never strands an article mid-pipeline. Each
+    stage runs in a worker thread and is re-submitted as soon as it finishes,
+    without waiting on slower stages.
     """
 
     IDLE_SLEEP = 1
@@ -38,8 +43,11 @@ class HarvestManager:
         self._last_cleanup = 0.0
         self._running: dict[str, Future] = {}
         self._stage_idle: dict[str, float] = {}
-        # Highest priority first: images -> extraction -> feed fetching.
-        self._stages = [DownloadStage(), ExtractStage(), FetchFeedsStage()]
+        # Highest priority first: images -> extraction -> feed fetching ->
+        # classification (last: it's the final, CPU-heavy stage).
+        self._stages = [
+            DownloadStage(), ExtractStage(), FetchFeedsStage(), ClassifyStage(),
+        ]
         HarvestManager._instance = self
 
     @property

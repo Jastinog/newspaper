@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.utils.html import format_html
 from unfold.admin import ModelAdmin
 
-from .models import Article, ArticleChunk, Category, Feed, HiddenFeed
+from .models import Article, ArticleChunk, ArticleTopic, Category, Feed, HiddenFeed, Topic
 
 
 def _img_thumbnail(url, w=60, h=40):
@@ -20,6 +20,22 @@ class CategoryAdmin(ModelAdmin):
     list_display_links = ("id", "name")
     list_editable = ("order",)
     prepopulated_fields = {"slug": ("name",)}
+
+
+@admin.register(Topic)
+class TopicAdmin(ModelAdmin):
+    list_display = ("id", "name", "slug", "order")
+    list_display_links = ("id", "name")
+    list_editable = ("order",)
+    prepopulated_fields = {"slug": ("name",)}
+
+
+@admin.register(ArticleTopic)
+class ArticleTopicAdmin(ModelAdmin):
+    list_display = ("id", "article", "topic", "score")
+    list_filter = ("topic",)
+    raw_id_fields = ("article",)
+    search_fields = ("article__title",)
 
 
 @admin.register(Feed)
