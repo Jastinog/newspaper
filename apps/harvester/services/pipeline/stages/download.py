@@ -12,7 +12,9 @@ logger = logging.getLogger(__name__)
 
 
 class DownloadStage(PipelineStage):
-    """Highest priority: download images for extracted articles, then complete them."""
+    """Highest priority: download images for extracted articles, then complete
+    them. An article whose image can't be downloaded is dropped, not stored —
+    the feed is image-led, so an image-less card is junk."""
 
     stage = STAGE_DOWNLOAD
     enable_field = "enable_image_download"
@@ -34,7 +36,10 @@ class DownloadStage(PipelineStage):
 
     def handle(self, row, domain):
         article_id, image_url = row
-        if image_url:
-            ImageDownloader.download_to_article(article_id, image_url)
+        downloaded = bool(image_url) and ImageDownloader.download_to_article(article_id, image_url)
+        if not downloaded:
+            Article.objects.filter(id=article_id).delete()
+            logger.info("Dropped article %s: no image", article_id)
+            return
         Article.objects.filter(id=article_id).update(status=Article.Status.COMPLETED)
         logger.info("Completed article %s", article_id)
