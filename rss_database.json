@@ -3,7 +3,7 @@
   "version": "1.2.0",
   "generated": "2026-03-25",
   "description": "Curated database of RSS feeds from around the world",
-  "total_feeds": 241,
+  "total_feeds": 243,
   "feeds": [
     {
       "id": "africanews",
@@ -30,7 +30,7 @@
     {
       "id": "mail-guardian",
       "name": "Mail & Guardian",
-      "url": "https://mg.co.za/feed/",
+      "url": "https://mg.co.za/rss/",
       "website": "",
       "description": "",
       "country_id": "ZA",
@@ -52,7 +52,7 @@
     {
       "id": "news24-za",
       "name": "News24 South Africa",
-      "url": "https://feeds.news24.com/articles/news24/TopStories/rss",
+      "url": "https://feeds.capi24.com/v1/Search/articles/news24/TopStories/rss",
       "website": "https://www.news24.com",
       "description": "South Africa's leading news website",
       "country_id": "ZA",
@@ -438,17 +438,6 @@
       "id": "deterministic-simulation",
       "name": "Deterministic Simulation",
       "url": "https://deterministic.space/feed.xml",
-      "website": "",
-      "description": "",
-      "country_id": "",
-      "language_id": "en",
-      "category": "dev",
-      "reliability": 3
-    },
-    {
-      "id": "dev-to",
-      "name": "Dev.to",
-      "url": "https://dev.to/feed",
       "website": "",
       "description": "",
       "country_id": "",
@@ -1392,17 +1381,6 @@
       "reliability": 3
     },
     {
-      "id": "new-scientist",
-      "name": "New Scientist",
-      "url": "https://www.newscientist.com/feed/home/",
-      "website": "",
-      "description": "",
-      "country_id": "",
-      "language_id": "en",
-      "category": "science",
-      "reliability": 3
-    },
-    {
       "id": "phys-org",
       "name": "Phys.org",
       "url": "https://phys.org/rss-feed/",
@@ -1933,7 +1911,7 @@
     {
       "id": "nbc-news",
       "name": "NBC News",
-      "url": "https://feeds.nbcnews.com/nbcnews/public/news",
+      "url": "https://feeds.nbcnews.com/nbcnews/public/us-news",
       "website": "",
       "description": "",
       "country_id": "US",
@@ -2327,17 +2305,6 @@
       "reliability": 5
     },
     {
-      "id": "new-scientist-space",
-      "name": "New Scientist - Space",
-      "url": "https://www.newscientist.com/subject/space/feed/",
-      "website": "https://www.newscientist.com",
-      "description": "New Scientist space and astronomy coverage",
-      "country_id": "GB",
-      "language_id": "en",
-      "category": "science",
-      "reliability": 5
-    },
-    {
       "id": "global-news-ca",
       "name": "Global News Canada",
       "url": "https://globalnews.ca/feed/",
@@ -2654,6 +2621,61 @@
       "country_id": "INT",
       "language_id": "en",
       "category": "tech",
+      "reliability": 4
+    },
+    {
+      "id": "arxiv-cs-ai",
+      "name": "arXiv - CS.AI",
+      "url": "https://rss.arxiv.org/rss/cs.AI",
+      "website": "https://arxiv.org",
+      "description": "arXiv Artificial Intelligence papers",
+      "country_id": "",
+      "language_id": "en",
+      "category": "ai",
+      "reliability": 5
+    },
+    {
+      "id": "arxiv-physics",
+      "name": "arXiv - Physics",
+      "url": "https://rss.arxiv.org/rss/physics",
+      "website": "https://arxiv.org",
+      "description": "arXiv Physics papers",
+      "country_id": "",
+      "language_id": "en",
+      "category": "science",
+      "reliability": 5
+    },
+    {
+      "id": "euractiv",
+      "name": "EurActiv",
+      "url": "https://www.euractiv.com/feed/",
+      "website": "https://www.euractiv.com",
+      "description": "European Union policy news",
+      "country_id": "BE",
+      "language_id": "en",
+      "category": "europe",
+      "reliability": 4
+    },
+    {
+      "id": "euronews-en",
+      "name": "Euronews English",
+      "url": "https://www.euronews.com/rss?format=mrss&level=theme&name=news",
+      "website": "https://www.euronews.com",
+      "description": "European news in English",
+      "country_id": "FR",
+      "language_id": "en",
+      "category": "europe",
+      "reliability": 4
+    },
+    {
+      "id": "css-tricks",
+      "name": "CSS-Tricks",
+      "url": "https://css-tricks.com/feed/",
+      "website": "https://css-tricks.com",
+      "description": "Web design and development",
+      "country_id": "",
+      "language_id": "en",
+      "category": "dev",
       "reliability": 4
     }
   ]
