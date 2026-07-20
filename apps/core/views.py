@@ -122,15 +122,21 @@ def _interleave_by_feed(articles):
     return result
 
 
-def home(request):
-    """Homepage: infinite-scroll feed of the genuinely latest news, newest first.
+def _home_feed_context(request, extra_filter=None):
+    """Build the keyset-paged home-feed context shared by the homepage and the
+    topic-filtered feed.
 
     Paging is keyset (cursor) based, not offset (?page=N). New articles arrive
     constantly at the top; an offset would shift every row down between requests
     and re-serve rows the reader already saw. A cursor pins each batch to items
     strictly older than the last one shown, so newer arrivals never cause dupes.
+
+    `extra_filter` is an optional Q applied to the base queryset (e.g. a topic
+    filter) — the cursor, ordering and per-page interleave are identical to the
+    homepage so the same cards and infinite scroll work for either axis.
+
+    Returns (context, is_first_page).
     """
-    is_htmx = request.headers.get("HX-Request") == "true" and not request.headers.get("HX-Boosted")
     cursor = request.GET.get("cursor", "")
     lang = get_language() or "en"
 
@@ -156,6 +162,8 @@ def home(request):
         .filter(sort_date__lte=now)
         .order_by("-sort_date", "-id")
     )
+    if extra_filter is not None:
+        qs = qs.filter(extra_filter)
 
     parsed = _parse_home_cursor(cursor)
     if parsed:
@@ -174,11 +182,18 @@ def home(request):
     # is safe — it changes only what the reader sees, never what the next batch is.
     articles = _interleave_by_feed(articles)
 
-    context = {
+    return {
         "articles": articles,
         "next_cursor": next_cursor,
         "is_first": not parsed,
-    }
+    }, not parsed
+
+
+def home(request):
+    """Homepage: infinite-scroll feed of the genuinely latest news, newest first."""
+    is_htmx = request.headers.get("HX-Request") == "true" and not request.headers.get("HX-Boosted")
+    context, _is_first = _home_feed_context(request)
+
     if is_htmx:
         template = "news/_home_feed.html"
     else:
@@ -475,26 +490,27 @@ def category_detail(request, slug):
 
 
 def topic_detail(request, slug):
-    """All articles the classifier tagged with this topic (score above the
-    display threshold), newest first. Mirrors category_detail but the axis is
-    the article's own content, not its source."""
-    page_num = request.GET.get("page", "1")
+    """All articles the classifier tagged with this topic, newest first —
+    rendered with the same infinite-scroll card grid as the homepage. The topic
+    is obvious from the highlighted nav item, so the per-card topic chips are
+    hidden here (hide_topics)."""
+    is_htmx = request.headers.get("HX-Request") == "true" and not request.headers.get("HX-Boosted")
     topic = get_object_or_404(Topic, slug=slug)
-    articles_qs = (
-        Article.objects
-        .filter(article_topics__topic=topic, article_topics__score__gte=DISPLAY_THRESHOLD)
-        .exclude(image="")
-        .filter(feed__hidden__isnull=True)
-        .select_related("feed")
-        .prefetch_related(_topic_chips_prefetch())
-        .order_by("-published")
-        # No .distinct() needed: topic + score are filtered in one join and
-        # ArticleTopic is unique per (article, topic), so a row can't duplicate.
-    )
-    paginator = Paginator(articles_qs, _ARTICLES_PER_PAGE)
-    page = paginator.get_page(page_num)
 
-    seo = {
+    # topic + score in one Q → a single join (no .distinct() needed, since
+    # ArticleTopic is unique per (article, topic), so a row can't duplicate).
+    topic_filter = Q(
+        article_topics__topic=topic,
+        article_topics__score__gte=DISPLAY_THRESHOLD,
+    )
+    context, _is_first = _home_feed_context(request, extra_filter=topic_filter)
+    context["hide_topics"] = True
+
+    if is_htmx:
+        return render(request, "news/_home_feed.html", context)
+
+    context["active_topic"] = topic
+    context["seo"] = {
         "title": f"{topic.name} — {SITE_NAME}",
         "description": f"Latest {topic.name} news from {SITE_NAME}",
         "canonical": request.build_absolute_uri(topic.get_absolute_url()),
@@ -504,8 +520,7 @@ def topic_detail(request, slug):
             (topic.name, topic.get_absolute_url()),
         ),
     }
-
-    return render(request, "news/topic.html", {"topic": topic, "page": page, "seo": seo})
+    return render(request, "news/home.html", context)
 
 
 def story_detail(request, item_id):

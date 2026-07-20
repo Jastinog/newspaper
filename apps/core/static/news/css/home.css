@@ -74,9 +74,8 @@
 
 .home-item-meta {
     display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 0.35rem 0.6rem;
+    flex-direction: column;
+    gap: 0.2rem;
     padding-top: 0.15rem;
     margin-top: auto;
     font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
@@ -96,44 +95,63 @@
     max-width: 100%;
 }
 .home-item-source:hover { color: var(--accent); }
-.home-item-date {
-    color: var(--fg-faint);
-    white-space: nowrap;
+/* Date and "time ago" sit together on one line, separated by a dot */
+.home-item-when {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.4rem;
     text-transform: none;
     letter-spacing: 0;
+    color: var(--fg-faint);
+}
+.home-item-date {
+    white-space: nowrap;
 }
 .home-item-ago {
-    margin-left: auto;
-    color: var(--fg-faint);
     white-space: nowrap;
-    text-transform: none;
-    letter-spacing: 0;
+    position: relative;
+    padding-left: 0.4rem;
+}
+.home-item-ago::before {
+    content: "·";
+    position: absolute;
+    left: -0.05rem;
+    color: var(--fg-faint);
 }
 
-/* Topic chips on a card — small pills between the teaser and the meta row */
+/* Topic chips overlaid on the top-left of the card image */
 .home-item-topics {
+    position: absolute;
+    top: 0.5rem;
+    left: 0.5rem;
+    z-index: 2;
     display: flex;
     flex-wrap: wrap;
     gap: 0.3rem;
-    margin-top: 0.5rem;
+    max-width: calc(100% - 3.4rem); /* leave room for the staff "⋮" menu */
+    pointer-events: none; /* only the chips themselves are interactive */
 }
 .home-item-topic {
     font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
-    font-size: 0.6rem;
+    font-size: 0.58rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    font-weight: 600;
-    color: var(--fg-muted);
+    font-weight: 700;
+    color: #fff;
     text-decoration: none;
-    padding: 0.12rem 0.42rem;
-    border: 1px solid var(--border-light);
+    padding: 0.16rem 0.44rem;
+    background: rgba(0, 0, 0, 0.62);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
     border-radius: 999px;
     white-space: nowrap;
-    transition: color 0.12s, border-color 0.12s;
+    pointer-events: auto;
+    transition: background 0.12s;
 }
 .home-item-topic:hover {
-    color: var(--accent);
-    border-color: var(--accent);
+    background: var(--accent);
+    color: #fff;
 }
 
 /* Infinite-scroll sentinel — spans the full grid width */

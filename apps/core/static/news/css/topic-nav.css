@@ -1,18 +1,55 @@
 /* Site-wide topic navigation bar (below the masthead). Horizontally scrollable
-   on narrow screens; scrollbar hidden. */
+   with arrow buttons at the edges; native scrollbar hidden. */
 .topic-nav {
     border-bottom: 1px solid var(--border-faint);
     background: var(--bg);
 }
+.topic-nav-inner {
+    display: flex;
+    align-items: center;
+    gap: 0.2rem;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+}
+
+/* ‹ › scroll buttons — hidden when there's nothing to scroll to that side */
+.topic-nav-arrow {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.6rem;
+    height: 1.6rem;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--fg-muted);
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.15s;
+}
+.topic-nav-arrow:hover { color: var(--accent); }
+.topic-nav-arrow.hidden { visibility: hidden; }
+
+/* Overflow wrapper with a soft fade at each edge as a scroll affordance */
 .topic-nav-track {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    mask-image: linear-gradient(to right, transparent, black 1rem, black calc(100% - 1rem), transparent);
+    -webkit-mask-image: linear-gradient(to right, transparent, black 1rem, black calc(100% - 1rem), transparent);
+}
+.topic-nav-list {
     display: flex;
     gap: 0.3rem;
     overflow-x: auto;
+    scroll-behavior: smooth;
     scrollbar-width: none;               /* Firefox */
     -ms-overflow-style: none;            /* IE/Edge */
-    padding: 0.5rem 0;
 }
-.topic-nav-track::-webkit-scrollbar { display: none; }  /* WebKit */
+.topic-nav-list::-webkit-scrollbar { display: none; }  /* WebKit */
 
 .topic-nav-item {
     flex: 0 0 auto;

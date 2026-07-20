@@ -1,15 +1,21 @@
 {% load i18n %}
 {% if nav_topics %}
 <nav class="topic-nav" aria-label="{% trans 'Topics' %}" hx-boost="true" hx-swap="innerHTML transition:true">
-    <div class="container">
+    <div class="container topic-nav-inner">
+        <button type="button" class="topic-nav-arrow topic-nav-arrow-left hidden" id="topicNavLeft"
+                aria-label="{% trans 'Scroll left' %}">&lsaquo;</button>
         <div class="topic-nav-track">
-            <a href="{% url 'index' %}"
-               class="topic-nav-item{% if request.resolver_match.url_name == 'index' %} active{% endif %}">{% trans "All" %}</a>
-            {% for topic in nav_topics %}
-            <a href="{{ topic.get_absolute_url }}"
-               class="topic-nav-item{% if request.resolver_match.url_name == 'topic_detail' and request.resolver_match.kwargs.slug == topic.slug %} active{% endif %}">{{ topic.name }}</a>
-            {% endfor %}
+            <div class="topic-nav-list" id="topicNavList">
+                <a href="{% url 'index' %}"
+                   class="topic-nav-item{% if request.resolver_match.url_name == 'index' %} active{% endif %}">{% trans "All" %}</a>
+                {% for topic in nav_topics %}
+                <a href="{{ topic.get_absolute_url }}"
+                   class="topic-nav-item{% if request.resolver_match.url_name == 'topic_detail' and request.resolver_match.kwargs.slug == topic.slug %} active{% endif %}">{{ topic.name }}</a>
+                {% endfor %}
+            </div>
         </div>
+        <button type="button" class="topic-nav-arrow topic-nav-arrow-right hidden" id="topicNavRight"
+                aria-label="{% trans 'Scroll right' %}">&rsaquo;</button>
     </div>
 </nav>
 {% endif %}

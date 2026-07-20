@@ -1,6 +1,8 @@
 {% load i18n %}
-{# Shared article-listing body for the source (category) and content (topic)
-   axes. Caller passes `list_title` and puts a `page` in context. #}
+{% comment %}
+Shared article-listing body for the source (category) and content (topic)
+axes. Caller passes `list_title` and puts a `page` in context.
+{% endcomment %}
 <div class="category-header">
     <h1>{{ list_title }}</h1>
     <p>{{ page.paginator.count }} {% trans "articles" %}</p>
