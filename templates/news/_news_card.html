@@ -4,7 +4,7 @@ Shared news card used by both the homepage digest and the /articles/ feed, so
 the two look and behave the same. The caller normalizes its model into these
 variables before including:
 
-  card_pk           article id (drives the "Gist" summary + the summary token)
+  card_pk           article id (drives the "Summary" feature + the summary token)
   card_url          internal article page URL
   card_orig_url     original source URL (the "Original ↗" button)
   card_image        image URL (falls back to the placeholder)
@@ -13,7 +13,7 @@ variables before including:
   card_feed_title   source name (shown in the top bar)
   card_feed_url     source page URL
   card_published    published/created datetime ("when" + "… ago")
-  card_has_summary  bool — a stored gist exists in the current language
+  card_has_summary  bool — a stored summary exists in the current language
   card_topics       optional iterable of ArticleTopic (chips over the image);
                     suppressed when the surrounding context sets `hide_topics`
 {% endcomment %}

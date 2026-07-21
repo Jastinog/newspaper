@@ -317,7 +317,7 @@ class DigestItem(models.Model):
     @cached_property
     def article(self):
         """The backing article, exposed to templates so a digest card can render
-        the same source / published / gist affordances as the /articles/ feed.
+        the same source / published / summary affordances as the /articles/ feed.
         Cached because a card reads it many times per render."""
         return self._primary_article()
 

@@ -10,10 +10,10 @@
     flex-direction: column;
     min-width: 0;
     height: 100%;
-    position: relative; /* anchors the "Gist" badge overlay over the thumb */
+    position: relative; /* anchors the "Summary" badge overlay over the thumb */
 }
 
-/* Wraps the thumb, the "Gist" badge and the topic tags so both overlays
+/* Wraps the thumb, the "Summary" badge and the topic tags so both overlays
    position against the image rather than the whole card. */
 .home-item-media {
     position: relative;
@@ -145,7 +145,7 @@
     color: #fff;
 }
 
-/* "Суть" badge overlaid on the image — reveals on hover, always shown when ready */
+/* "Summary" badge overlaid on the image — reveals on hover, always shown when ready */
 .home-item-badge {
     position: absolute;
     right: 0.5rem;

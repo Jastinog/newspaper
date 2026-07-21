@@ -79,7 +79,7 @@ def _topic_chips_prefetch():
 
 def _digest_article_prefetch(lang_obj):
     """Prefetch each digest item's backing article(s) with feed + a `has_summary`
-    flag, so a digest card renders the same source / gist affordances as the
+    flag, so a digest card renders the same source / summary affordances as the
     /articles/ feed without an N+1. `has_summary` mirrors the feed's annotation:
     true when a stored summary exists in the current language."""
     if lang_obj:
@@ -162,7 +162,7 @@ def _home_feed_context(request, extra_filter=None):
     # in the future (feeds with bad timestamps) are not "latest", so keep them out.
     # id is the tie-breaker so the (sort_date, id) sort key is strictly total.
     now = timezone.now()
-    # A card is "gist ready" only when a summary exists in the *current* language.
+    # A card is "summary ready" only when a summary exists in the *current* language.
     lang_obj = Language.get_by_code_safe(lang)
     summary_exists = ArticleSummary.objects.filter(article=OuterRef("pk"), language=lang_obj)
     qs = (

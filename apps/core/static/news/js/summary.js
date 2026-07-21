@@ -1,7 +1,7 @@
 /**
- * Article "Gist" — on-demand summary in a modal.
+ * Article "Summary" — on-demand summary in a modal.
  *
- * Clicking a card's image or "Gist" button opens a modal that:
+ * Clicking a card's image or "Summary" button opens a modal that:
  *   - shows live generation progress (over WebSocket), or
  *   - renders an already-stored summary instantly (server marks such cards).
  *
