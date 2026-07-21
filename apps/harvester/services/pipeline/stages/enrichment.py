@@ -16,8 +16,10 @@ class EnrichmentStage(PipelineStage):
     every candidate already cleared the earlier quality gates (image + enough
     text) and disabling the stage never strands an article mid-pipeline. It uses
     a local model (no HTTP, so no domain locking) and is best-effort: once the
-    model proves unloadable this process stops retrying it and flags articles
-    done untouched, so the pass never stalls behind a broken model.
+    model proves unloadable this process stops retrying it for the rest of the
+    run, but leaves those articles *unflagged* so a later healthy process picks
+    them up — the pass never stalls, and a transient model outage self-heals
+    instead of silently marking articles enriched with no output.
 
     Subclasses set `stage`, `enable_field`, `flag_field`, `verb`, and implement
     `enrich(article_id, title, content) -> int` (the returned count is logged).
@@ -48,14 +50,20 @@ class EnrichmentStage(PipelineStage):
     def handle(self, row, domain):
         aid, title, content = row
 
-        if not self._degraded:
-            try:
-                n = self.enrich(aid, title or "", content or "")
-                logger.info("%s article %s → %d", self.verb, aid, n)
-            except Exception:
-                self._degraded = True
-                logger.exception(
-                    "%s model unavailable; flagging articles done untouched", self.verb
-                )
+        # Model already proved unloadable this run — leave the article unflagged
+        # so a later healthy process retries it, and don't touch the model again.
+        if self._degraded:
+            return
+
+        try:
+            n = self.enrich(aid, title or "", content or "")
+            logger.info("%s article %s → %d", self.verb, aid, n)
+        except Exception:
+            # Transient/unloadable model: keep the article unflagged for retry.
+            self._degraded = True
+            logger.exception(
+                "%s model unavailable; leaving articles unflagged for retry", self.verb
+            )
+            return
 
         Article.objects.filter(id=aid).update(**{self.flag_field: True})

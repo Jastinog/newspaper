@@ -30,6 +30,7 @@ class DigestFeed(Feed):
             .prefetch_related(
                 "translations", "translations__language",
                 "section__translations", "section__translations__language",
+                "articles",  # embedding-digest items fall back to the article's title/teaser
             )
             .order_by("-digest__date", "-freshness")
         )

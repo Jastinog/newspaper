@@ -1,4 +1,5 @@
 from django.db import models
+from pgvector.django import VectorField
 
 from apps.core.services.utils import get_translated_field
 
@@ -82,6 +83,13 @@ class DigestConfig(models.Model):
     )
     hours_lookback = models.PositiveIntegerField(
         default=24, help_text="Collect articles published within this many hours",
+    )
+
+    # ── Embedding digest ─────────────────────────────────────
+    embed_score_floor = models.FloatField(
+        default=0.5,
+        help_text="Minimum cosine score between an article and a section's "
+                  "embedding seeds for the article to be included in that section.",
     )
 
     # ── Edition Settings ─────────────────────────────────────
@@ -170,6 +178,29 @@ class DigestSectionTranslation(models.Model):
         return f"{self.section.slug} [{self.language.code}]: {self.name}"
 
 
+class SectionEmbedding(models.Model):
+    """One embedding seed for a section: a short descriptive phrase and its
+    locally-computed vector.
+
+    A section carries many of these (see the `embeddings` arrays in the section
+    fixtures). The embedding digest treats each seed as a search *query* against
+    the article-chunk vectors and assigns each article to the single section
+    whose seeds it matches best — no OpenAI, no generated summaries.
+    """
+
+    section = models.ForeignKey(
+        DigestSection, on_delete=models.CASCADE, related_name="embeddings",
+    )
+    text = models.TextField()
+    embedding = VectorField(dimensions=384)
+
+    class Meta:
+        unique_together = [("section", "text")]
+
+    def __str__(self):
+        return f"{self.section.slug}: {self.text[:60]}"
+
+
 # ── Digest ───────────────────────────────────────────────────────
 
 
@@ -253,20 +284,33 @@ class DigestRun(models.Model):
 class DigestItem(models.Model):
     """Single news story in digest. Language-specific text in DigestItemTranslation."""
 
+    # Length of the article-teaser fallback used when an item has no written
+    # summary (embedding digest). Consumers may re-truncate shorter.
+    FALLBACK_SUMMARY_CHARS = 400
+
     digest = models.ForeignKey(Digest, on_delete=models.CASCADE, related_name="items", null=True)
     section = models.ForeignKey(DigestSection, on_delete=models.PROTECT, related_name="items", null=True)
     order = models.PositiveIntegerField(default=0)
     freshness = models.FloatField(default=0, db_index=True)
+    # Best cosine score between the item's article and the section's embedding
+    # seeds. Drives within-section ordering for the embedding digest (0 for
+    # legacy LLM-written items).
+    match_score = models.FloatField(default=0, db_index=True)
     articles = models.ManyToManyField("feed.Article", blank=True, related_name="digest_items")
 
     class Meta:
-        ordering = ["section__order", "-freshness", "order"]
+        ordering = ["section__order", "-match_score", "-freshness", "order"]
         indexes = [
             models.Index(fields=["digest", "-freshness"]),
         ]
 
     def __str__(self):
         return self.get_topic("en") or f"Item #{self.pk}"
+
+    def _primary_article(self):
+        """The single article backing this item (prefetch-safe)."""
+        arts = list(self.articles.all())
+        return arts[0] if arts else None
 
     @property
     def best_image_url(self):
@@ -276,10 +320,27 @@ class DigestItem(models.Model):
         return ""
 
     def get_topic(self, language):
-        return get_translated_field(self.translations.all(), "topic", language)
+        """Localized topic, falling back to the linked article's title.
+
+        The embedding digest links a single article and writes no translations,
+        so the fallback lets every consumer (digest view, story page, RSS,
+        Telegram) render article-backed text with no further changes."""
+        val = get_translated_field(self.translations.all(), "topic", language)
+        if val:
+            return val
+        art = self._primary_article()
+        return art.title if art else ""
 
     def get_summary(self, language):
-        return get_translated_field(self.translations.all(), "summary", language)
+        """Localized summary, falling back to a clean teaser of the article."""
+        val = get_translated_field(self.translations.all(), "summary", language)
+        if val:
+            return val
+        art = self._primary_article()
+        if not art or not art.content:
+            return ""
+        from apps.feed.templatetags.markdown_extras import teaser_filter
+        return teaser_filter(art.content)[:self.FALLBACK_SUMMARY_CHARS]
 
 
 class DigestItemTranslation(models.Model):

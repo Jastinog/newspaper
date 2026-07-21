@@ -7,20 +7,16 @@ logger = logging.getLogger(__name__)
 
 @shared_task(name="digest.generate")
 def generate_digest():
-    """Generate daily digest using the Edition pipeline."""
-    from apps.digest.services import EditionService
+    """Generate the daily digest by matching articles to section embeddings."""
+    from apps.digest.services import EmbeddingEdition
 
-    service = EditionService()
+    service = EmbeddingEdition()
     digest = service.run()
 
     item_count = digest.items.count()
-    run = getattr(digest, "run", None)
-    cost = float(run.total_cost_usd) if run else 0
-
-    logger.info("Edition %s: %d items, cost=$%.4f", digest.date, item_count, cost)
+    logger.info("Embedding edition %s: %d items", digest.date, item_count)
 
     return {
         "date": str(digest.date),
         "items": item_count,
-        "cost_usd": cost,
     }

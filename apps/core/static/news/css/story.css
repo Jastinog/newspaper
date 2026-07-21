@@ -12,11 +12,6 @@
     margin-bottom: 0.8rem;
 }
 
-/* Story hero: add pixelated rendering on top of shared .story-hero from article.css */
-.story-hero img {
-    image-rendering: pixelated;
-}
-
 /* Research CTA */
 .story-research-link {
     max-width: 680px;
@@ -73,11 +68,6 @@
 }
 .story-item-actions .research-link:hover {
     color: var(--accent);
-}
-
-/* Story source images: add pixelated rendering */
-.article-source-img {
-    image-rendering: pixelated;
 }
 
 /* More from section */

@@ -5,7 +5,7 @@ from unfold.admin import ModelAdmin, TabularInline
 from .models import (
     Digest, DigestConfig, DigestItem, DigestItemTranslation,
     DigestRun, DigestSection, DigestSectionTranslation, DigestTranslation,
-    ItemPipeline,
+    ItemPipeline, SectionEmbedding,
 )
 
 
@@ -26,19 +26,27 @@ class DigestConfigAdmin(ModelAdmin):
     list_display = ("__str__",)
 
     fieldsets = (
-        ("LLM Model", {
+        ("Embedding digest", {
             "classes": ["tab"],
+            "description": "Settings for the embedding digest (collect -> match -> save)",
+            "fields": (
+                "embed_score_floor",
+                ("hours_lookback", "edition_items_per_section"),
+            ),
+        }),
+        ("LLM Model (legacy)", {
+            "classes": ["tab"],
+            "description": "Unused by the embedding digest — kept for the legacy OpenAI pipeline",
             "fields": (
                 ("chat_model", "planner_model"),
                 ("temperature", "max_tokens_generation"),
-                "hours_lookback",
             ),
         }),
-        ("Edition", {
+        ("Edition (legacy LLM)", {
             "classes": ["tab"],
-            "description": "Settings for the Edition pipeline (collect -> plan -> write)",
+            "description": "Unused by the embedding digest — kept for the legacy OpenAI pipeline",
             "fields": (
-                ("edition_items_per_section", "edition_max_workers"),
+                "edition_max_workers",
                 ("edition_article_card_tokens", "edition_article_body_tokens"),
                 ("edition_max_articles_per_story", "edition_writer_budget_tokens"),
                 "edition_planner_budget_tokens",
@@ -70,7 +78,7 @@ class DigestSectionTranslationInline(TabularInline):
 
 @admin.register(DigestSection)
 class DigestSectionAdmin(ModelAdmin):
-    list_display = ("id", "slug", "section_name", "order", "enabled")
+    list_display = ("id", "slug", "section_name", "seed_count", "order", "enabled")
     list_display_links = ("id", "slug")
     list_editable = ("order", "enabled")
     prepopulated_fields = {"slug": []}
@@ -83,6 +91,24 @@ class DigestSectionAdmin(ModelAdmin):
     def section_name(self, obj):
         t = obj.translations.filter(language__is_default=True).first()
         return t.name if t else obj.slug
+
+    @admin.display(description="Seeds")
+    def seed_count(self, obj):
+        return obj.embeddings.count()
+
+
+@admin.register(SectionEmbedding)
+class SectionEmbeddingAdmin(ModelAdmin):
+    """Seed phrases and their vectors — managed by `initdigest`, read-only here."""
+
+    list_display = ("id", "section", "text")
+    list_display_links = ("id", "text")
+    list_filter = ("section",)
+    search_fields = ("text",)
+    readonly_fields = ("section", "text", "embedding")
+
+    def has_add_permission(self, request):
+        return False
 
 
 # ── Digest ───────────────────────────────────────────────────────

@@ -278,7 +278,6 @@ a.item-topic:hover {
     aspect-ratio: 16 / 9;
     object-fit: cover;
     display: block;
-    image-rendering: pixelated;
 }
 .item-image-placeholder {
     width: 100%;
@@ -366,7 +365,6 @@ a.item-topic:hover {
     aspect-ratio: 16 / 9;
     object-fit: cover;
     display: block;
-    image-rendering: pixelated;
     opacity: 0;
     transition: opacity 0.4s ease;
 }
