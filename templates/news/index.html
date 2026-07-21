@@ -1,10 +1,6 @@
 {% extends base_template %}
 {% load i18n static %}
 
-{% block masthead_date %}
-    {% include "news/_date_nav.html" %}
-{% endblock %}
-
 {% block content %}
 <div id="contentArea">
     {% include "news/_content_area.html" %}
@@ -12,12 +8,9 @@
 {% endblock %}
 
 {% block extra_js %}
-{% if digest %}
-    <script src="{% static 'news/js/research.js' %}"></script>
+{% if has_sections %}
     <script src="{% static 'news/js/section-nav.js' %}"></script>
     <script src="{% static 'news/js/back-to-top.js' %}"></script>
-    <script src="{% static 'news/js/similar-news.js' %}"></script>
-    <script src="{% static 'news/js/sources.js' %}"></script>
     <script src="{% static 'news/js/share.js' %}"></script>
     {% include "news/_summary_scripts.html" %}
 {% endif %}

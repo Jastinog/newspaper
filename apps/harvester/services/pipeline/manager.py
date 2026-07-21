@@ -4,7 +4,9 @@ from concurrent.futures import Future, ThreadPoolExecutor
 
 from apps.harvester.models import PipelineSettings
 from .events import PipelineEventRecorder
-from .stages import ClassifyStage, DownloadStage, EmbedStage, ExtractStage, FetchFeedsStage
+from .stages import (
+    ClassifyStage, DownloadStage, EmbedStage, ExtractStage, FetchFeedsStage, SectionStage,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -44,10 +46,11 @@ class HarvestManager:
         self._running: dict[str, Future] = {}
         self._stage_idle: dict[str, float] = {}
         # Highest priority first: images -> extraction -> feed fetching ->
-        # classification -> embedding (last: the CPU-heavy enrichment passes).
+        # classification -> embedding -> section assignment (last: the CPU-heavy
+        # enrichment passes; section runs after embedding as it needs chunks).
         self._stages = [
             DownloadStage(), ExtractStage(), FetchFeedsStage(),
-            ClassifyStage(), EmbedStage(),
+            ClassifyStage(), EmbedStage(), SectionStage(),
         ]
         HarvestManager._instance = self
 

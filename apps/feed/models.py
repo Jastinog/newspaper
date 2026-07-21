@@ -116,6 +116,18 @@ class Article(models.Model):
     # never gates the article's terminal state.
     embedded = models.BooleanField(default=False, db_index=True)
 
+    # Semantic section this article belongs to, matched by embedding similarity
+    # against DigestSection seed vectors (the day-less replacement for the old
+    # daily digest). Assigned by the harvester's SectionStage after embedding.
+    section = models.ForeignKey(
+        "digest.DigestSection", on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="articles", db_index=True,
+    )
+    section_score = models.FloatField(default=0)
+    # Enrichment flag: set once section assignment has run (even if the article
+    # cleared no section's score floor, so it isn't retried forever).
+    sectioned = models.BooleanField(default=False, db_index=True)
+
     class Meta:
         ordering = ["-published"]
         indexes = [

@@ -15,7 +15,7 @@ from django.views.decorators.http import require_POST
 
 from apps.core.models import Language
 from apps.core.services.utils import get_article_image_url
-from apps.digest.models import Digest, DigestItem
+from apps.digest.models import Digest, DigestItem, DigestSection
 from apps.feed.models import Article, ArticleSummary, ArticleTopic, Category, Feed, Topic
 from apps.feed.services.classify import DISPLAY_THRESHOLD
 from apps.feed.services.search import SearchService
@@ -60,6 +60,10 @@ def _parse_pinned_cookie(request):
 # ── Template Views ────────────────────────────────────────
 
 _HOME_PER_PAGE = 30
+
+# Max stories shown per section in the homepage digest grid. The digest itself
+# accumulates across the day's hourly runs; this caps only what the grid renders.
+_DIGEST_SECTION_LIMIT = 20
 
 
 def _topic_chips_prefetch():
@@ -233,135 +237,90 @@ def _latest_digest(qs, date=None):
     return qs.first()
 
 
-def _build_digest_context(request, date=None, pinned_slugs=None):
-    """Build the shared context dict used by index() and toggle_pin()."""
-    from datetime import datetime as dt
-    from itertools import groupby
+def _build_digest_context(request, pinned_slugs=None):
+    """Build the homepage context: the freshest articles per section.
 
+    Day-less: each section shows its newest `_DIGEST_SECTION_LIMIT` articles
+    (by publish time), pulled live from `Article.section` — the continuous
+    embedding classification, not a per-day digest snapshot. Clicking a section
+    opens its full infinite feed at `/section/<slug>/`.
+
+    Shared with toggle_pin(), which recomputes the groups after a pin change.
+    """
     current_lang = get_language() or "en"
     lang_obj = Language.get_by_code_safe(current_lang)
-
-    parsed = None
-    if date:
-        try:
-            parsed = dt.strptime(date, "%Y-%m-%d").date()
-        except ValueError:
-            return None
-
-    digest = _latest_digest(Digest.objects.all(), date=parsed)
-
-    # Prev/next navigation
-    prev_date = next_date = None
-    if digest:
-        done = Digest.objects.filter(stage=Digest.Stage.DONE)
-        prev_digest = done.filter(date__lt=digest.date).only("date").first()
-        next_digest = done.filter(date__gt=digest.date).order_by("date").only("date").first()
-        if prev_digest:
-            prev_date = prev_digest.date
-        if next_digest:
-            next_date = next_digest.date
-
-    # Group items by section
-    items = []
-    section_groups = []
-    pinned_groups = []
-    active_section = None
-    filtered_items = None
-    section_id = request.GET.get("section")
 
     if pinned_slugs is None:
         pinned_slugs = _parse_pinned_cookie(request)
 
-    if digest:
-        items = list(digest.items.select_related("section").prefetch_related(
-            "translations", "translations__language",
-            "section__translations", "section__translations__language",
-            _digest_article_prefetch(lang_obj),
-        ).all())
+    now = timezone.now()
+    if lang_obj:
+        summary_exists = ArticleSummary.objects.filter(article=OuterRef("pk"), language=lang_obj)
+        has_summary = Exists(summary_exists)
+    else:
+        has_summary = Value(False, output_field=BooleanField())
 
-        # Annotate items with localized text, skip empty items
-        for item in items:
-            item.loc_topic = item.get_topic(current_lang)
-            item.loc_summary = item.get_summary(current_lang)
-            item.loc_section_name = item.section.get_name(current_lang) if item.section else ""
-        items = [i for i in items if i.loc_topic and i.loc_summary]
+    sections = list(
+        DigestSection.objects.filter(enabled=True)
+        .prefetch_related("translations", "translations__language")
+        .order_by("order")
+    )
 
-        if section_id:
-            filtered_items = [i for i in items if str(i.section_id) == section_id]
-            if filtered_items:
-                active_section = filtered_items[0].section
-
-        # Always build section_groups (needed for nav bar even when filtering)
-        for _sec_id, group_items in groupby(items, key=lambda i: i.section_id):
-            group_list = list(group_items)
-            if group_list:
-                group = {
-                    "section": group_list[0].section,
-                    "name": group_list[0].loc_section_name,
-                    "items": group_list,
-                }
-                if group_list[0].section and group_list[0].section.slug in pinned_slugs:
-                    pinned_groups.append(group)
-                else:
-                    section_groups.append(group)
-
-    # Pick OG image from already-loaded items to avoid an extra query
-    og_image = ""
-    if digest and items:
-        top_item = max(
-            (i for i in items if i.best_image_url),
-            key=lambda i: i.freshness,
-            default=None,
+    section_groups = []
+    pinned_groups = []
+    for section in sections:
+        articles = list(
+            Article.objects
+            .filter(section=section, status=Article.Status.COMPLETED, published__lte=now)
+            .exclude(image="")
+            .select_related("feed")
+            .prefetch_related(_topic_chips_prefetch())
+            .annotate(has_summary=has_summary)
+            .order_by("-published", "-id")[:_DIGEST_SECTION_LIMIT]
         )
-        if top_item:
-            og_image = f"{settings.SITE_URL}{top_item.best_image_url}"
+        if not articles:
+            continue
+        group = {
+            "section": section,
+            "name": section.get_name(current_lang),
+            "items": articles,
+        }
+        if section.slug in pinned_slugs:
+            pinned_groups.append(group)
+        else:
+            section_groups.append(group)
+
+    all_groups = sorted(pinned_groups + section_groups, key=lambda g: g["section"].order)
+    has_sections = bool(all_groups)
+
+    # OG image from the freshest article across the grid (already loaded).
+    og_image = ""
+    if all_groups:
+        art = all_groups[0]["items"][0]
+        if art.image:
+            og_image = f"{settings.SITE_URL}{art.image.url}"
 
     seo = {
-        "title": f"{SITE_NAME} — {_('Daily News Digest')}",
+        "title": f"{SITE_NAME} — {_('Latest News')}",
         "description": SITE_DESCRIPTION,
         "canonical": f"{settings.SITE_URL}/",
         "og_type": "website",
         "og_image": og_image,
     }
 
-    all_groups = sorted(pinned_groups + section_groups, key=lambda g: g["section"].order)
-
     return {
-        "digest": digest,
+        "has_sections": has_sections,
         "section_groups": section_groups,
         "pinned_groups": pinned_groups,
         "all_groups": all_groups,
         "pinned_slugs": pinned_slugs,
-        "prev_date": prev_date,
-        "next_date": next_date,
-        "active_section": active_section,
-        "filtered_items": filtered_items,
         "seo": seo,
     }
 
 
-_HTMX_TEMPLATES = {
-    "contentArea": "news/_htmx_content_area.html",
-    "mainGrid": "news/_main_grid.html",
-    "pinnedArea": "news/_pinned_area.html",
-    "sectionNav": "news/_section_nav.html",
-}
-
-
-def index(request, date=None):
-    """Homepage: the daily section-grouped digest. Also serves the dated archive
-    at /digest/<date>/ (name `digest_by_date`)."""
-    is_htmx = request.headers.get("HX-Request") == "true" and not request.headers.get("HX-Boosted")
-
-    context = _build_digest_context(request, date=date)
-    if context is None:
-        return redirect("index")
-
-    if is_htmx:
-        target = request.headers.get("HX-Target", "contentArea")
-        template = _HTMX_TEMPLATES.get(target, "news/_content_area.html")
-        return render(request, template, context)
-
+def index(request):
+    """Homepage: the freshest articles grouped by semantic section."""
+    context = _build_digest_context(request)
     return render(request, "news/index.html", context)
 
 
@@ -469,21 +428,19 @@ def article_detail_redirect(request, pk):
 
 
 def category_detail(request, slug):
-    page_num = request.GET.get("page", "1")
-
+    """All articles in a feed category, newest first — rendered with the same
+    keyset infinite-scroll card grid as the homepage feed, so the reader can
+    page all the way to the end without offset drift as new articles land."""
+    is_htmx = request.headers.get("HX-Request") == "true" and not request.headers.get("HX-Boosted")
     category = get_object_or_404(Category, slug=slug)
-    articles_qs = (
-        Article.objects
-        .filter(feed__category=category)
-        .exclude(image="")
-        .select_related("feed")
-        .prefetch_related(_topic_chips_prefetch())
-        .order_by("-published")
-    )
-    paginator = Paginator(articles_qs, _ARTICLES_PER_PAGE)
-    page = paginator.get_page(page_num)
 
-    seo = {
+    context, _is_first = _home_feed_context(request, extra_filter=Q(feed__category=category))
+
+    if is_htmx:
+        return render(request, "news/_home_feed.html", context)
+
+    context["active_category"] = category
+    context["seo"] = {
         "title": f"{category.name} — {SITE_NAME}",
         "description": f"Latest {category.name} news from {SITE_NAME}",
         "canonical": request.build_absolute_uri(category.get_absolute_url()),
@@ -494,8 +451,35 @@ def category_detail(request, slug):
             (category.name, category.get_absolute_url()),
         ),
     }
+    return render(request, "news/category.html", context)
 
-    return render(request, "news/category.html", {"category": category, "page": page, "seo": seo})
+
+def section_detail(request, slug):
+    """All articles in a semantic section, newest first — the full infinite feed
+    behind a homepage section window. Same keyset card grid as the homepage feed
+    and category pages, filtered by the article's embedding-assigned section."""
+    is_htmx = request.headers.get("HX-Request") == "true" and not request.headers.get("HX-Boosted")
+    section = get_object_or_404(DigestSection, slug=slug, enabled=True)
+
+    context, _is_first = _home_feed_context(request, extra_filter=Q(section=section))
+
+    if is_htmx:
+        return render(request, "news/_home_feed.html", context)
+
+    name = section.get_name(get_language() or "en")
+    context["active_section"] = section
+    context["section_name"] = name
+    context["seo"] = {
+        "title": f"{name} — {SITE_NAME}",
+        "description": f"Latest {name} news from {SITE_NAME}",
+        "canonical": request.build_absolute_uri(section.get_absolute_url()),
+        "og_type": "website",
+        "breadcrumbs": _breadcrumbs(
+            request,
+            (name, section.get_absolute_url()),
+        ),
+    }
+    return render(request, "news/section.html", context)
 
 
 def topic_detail(request, slug):

@@ -15,7 +15,6 @@ urlpatterns = [
     # the bare /digest/ 301-redirects to / so old links survive.
     path("", views.index, name="index"),
     path("digest/", views.digest_redirect, name="digest"),
-    path("digest/<str:date>/", views.index, name="digest_by_date"),
     # Must precede the <slug> route below — otherwise "summarize" matches as a slug.
     path("article/<int:pk>/summarize/", views.article_summarize, name="article_summarize"),
     path("article/<int:pk>/<str:slug>/", views.article_detail, name="article_detail"),
@@ -30,6 +29,7 @@ urlpatterns = [
     path("story/<int:item_id>/", views.story_detail, name="story_detail"),
     path("research/<int:item_id>/", views.research, name="research"),
     path("category/<slug:slug>/", views.category_detail, name="category_detail"),
+    path("section/<slug:slug>/", views.section_detail, name="section_detail"),
     path("topic/<slug:slug>/", views.topic_detail, name="topic_detail"),
     path("pin/<slug:slug>/", views.toggle_pin, name="toggle_pin"),
 ]

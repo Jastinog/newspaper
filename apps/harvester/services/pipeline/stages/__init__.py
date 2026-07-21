@@ -4,8 +4,9 @@ from .download import DownloadStage
 from .embed import EmbedStage
 from .extract import ExtractStage
 from .fetch_feeds import FetchFeedsStage
+from .section import SectionStage
 
 __all__ = [
     "PipelineStage", "DownloadStage", "ClassifyStage", "EmbedStage",
-    "ExtractStage", "FetchFeedsStage",
+    "ExtractStage", "FetchFeedsStage", "SectionStage",
 ]

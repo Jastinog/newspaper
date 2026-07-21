@@ -105,6 +105,7 @@ class PipelineSettings(models.Model):
     enable_content_extraction = models.BooleanField(default=True, verbose_name="Content extraction")
     enable_topic_classification = models.BooleanField(default=True, verbose_name="Topic classification")
     enable_embedding = models.BooleanField(default=True, verbose_name="Semantic embedding")
+    enable_section_assignment = models.BooleanField(default=True, verbose_name="Section assignment")
     enable_image_download = models.BooleanField(default=True, verbose_name="Image download")
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -153,6 +154,7 @@ STAGE_FIELDS = [
     ("enable_content_extraction", "Extraction"),
     ("enable_topic_classification", "Classification"),
     ("enable_embedding", "Embedding"),
+    ("enable_section_assignment", "Section Assignment"),
     ("enable_image_download", "Image Download"),
 ]
 STAGE_FIELD_NAMES = frozenset(name for name, _ in STAGE_FIELDS)
@@ -163,6 +165,7 @@ STAGE_FEED = "feed"
 STAGE_EXTRACT = "extract"
 STAGE_CLASSIFY = "classify"
 STAGE_EMBED = "embed"
+STAGE_SECTION = "section"
 STAGE_DOWNLOAD = "download"
 
 

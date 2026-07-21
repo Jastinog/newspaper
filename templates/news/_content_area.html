@@ -1,17 +1,9 @@
 {% load i18n static %}
 
-{% if digest %}
+{% if has_sections %}
     {% include "news/_section_nav.html" %}
 
     <div class="digest-headline-rule"></div>
-
-    {% if active_section %}
-    <ul class="digest-grid filtered-grid">
-        {% for item in filtered_items %}
-            <li class="digest-item-card">{% include "news/_digest_item.html" %}</li>
-        {% endfor %}
-    </ul>
-    {% else %}
 
     <div id="pinnedArea">
         {% include "news/_pinned_area.html" %}
@@ -20,11 +12,10 @@
     <div id="mainGrid">
         {% include "news/_main_grid.html" %}
     </div>
-    {% endif %}
 
     <button class="back-to-top" id="backToTop" aria-label="Back to top">&uarr;</button>
 {% else %}
     <div class="empty">
-        <p>{% trans "No digest yet. Run the digest command to generate one." %}</p>
+        <p>{% trans "No news yet." %}</p>
     </div>
 {% endif %}

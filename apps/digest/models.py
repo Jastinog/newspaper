@@ -167,6 +167,10 @@ class DigestSection(models.Model):
         """Get section name for a Language instance or code string. Prefetch-safe."""
         return get_translated_field(self.translations.all(), "name", language, fallback=self.slug)
 
+    def get_absolute_url(self):
+        from django.urls import reverse
+        return reverse("section_detail", kwargs={"slug": self.slug})
+
 
 class DigestSectionTranslation(models.Model):
     section = models.ForeignKey(DigestSection, on_delete=models.CASCADE, related_name="translations")
@@ -301,7 +305,10 @@ class DigestItem(models.Model):
     articles = models.ManyToManyField("feed.Article", blank=True, related_name="digest_items")
 
     class Meta:
-        ordering = ["section__order", "-match_score", "-freshness", "order"]
+        # Recency-first within a section: the digest now accumulates across
+        # hourly runs, so a freshly-appended story leads its section and older
+        # ones slide down. -id breaks published-time ties by insertion order.
+        ordering = ["section__order", "-freshness", "-id"]
         indexes = [
             models.Index(fields=["digest", "-freshness"]),
         ]

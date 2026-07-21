@@ -46,34 +46,52 @@ class EmbeddingEdition:
         if S is None:
             raise RuntimeError("No section embeddings. Run initdigest first.")
 
-        # ── Step 1: Collect candidate articles + their chunks ───
+        # Append-only: a day's digest accumulates across hourly runs. We never
+        # delete existing items, so the stories already on the page — and any
+        # work attached to their articles, like a reader-requested summary —
+        # survive. Each run only appends the articles that arrived since; the new
+        # ones sort to the top (recency-first ordering) and older ones slide down.
+        digest, _ = Digest.objects.get_or_create(date=digest_date)
+
+        # ── Step 1: Collect new candidate articles + their chunks ───
+        # _collect excludes used_in_digest=True, so only articles not yet placed
+        # in any digest are considered — the natural dedup for appending.
         chunk_article_ids, C = self._collect(cfg)
         if C is None:
-            raise RuntimeError("No embedded articles in the lookback window.")
+            # No fresh articles this run — normal on an hourly cadence. Leave the
+            # existing items untouched.
+            self._finalize(digest, emit)
+            return digest
         emit("collect", articles=int(np.unique(chunk_article_ids).size),
              chunks=int(C.shape[0]))
 
         # ── Step 2: Score & assign (argmax) ─────────────────────
         assignments = self._assign(chunk_article_ids, C, seed_section_ids, S, floor)
         if not assignments:
-            raise RuntimeError("No article cleared the score floor.")
+            self._finalize(digest, emit)
+            return digest
 
-        # ── Step 3: Save ────────────────────────────────────────
-        Digest.objects.filter(date=digest_date).delete()
-        digest = Digest.objects.create(date=digest_date)
-
+        # ── Step 3: Append ──────────────────────────────────────
         total_items = self._save_items(digest, assignments, per_section, emit)
-        if total_items == 0:
-            raise RuntimeError("No items produced.")
 
-        digest.stage = Digest.Stage.DONE
-        digest.save(update_fields=["stage"])
-        self.saver.invalidate_index_cache()
-
-        emit("done", items=total_items, sections=len(assignments))
-        logger.info("Embedding edition %s: %d items across %d sections",
+        self._finalize(digest, emit, added=total_items, sections=len(assignments))
+        logger.info("Embedding edition %s: +%d items across %d sections",
                      digest.date, total_items, len(assignments))
         return digest
+
+    def _finalize(self, digest, emit, added=0, sections=0):
+        """Promote a digest to DONE once it has content and refresh the index
+        cache when anything changed. An empty, just-created digest is left
+        PENDING so the homepage keeps falling back to the previous day until the
+        first stories of the day land."""
+        flipped = False
+        if digest.items.exists() and digest.stage != Digest.Stage.DONE:
+            digest.stage = Digest.Stage.DONE
+            digest.save(update_fields=["stage"])
+            flipped = True
+        if added or flipped:
+            self.saver.invalidate_index_cache()
+        emit("done", items=added, sections=sections)
 
     # ── Step 3: Save ────────────────────────────────────────────
 

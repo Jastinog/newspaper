@@ -5,11 +5,11 @@
                 hx-post="{% url 'toggle_pin' group.section.slug %}"
                 hx-target="#pinnedArea"
                 hx-swap="outerHTML transition:true"
-                title="{% if is_pinned %}{% trans 'Unpin section' %}{% else %}{% trans 'Pin section' %}{% endif %}"><i class="fas fa-thumbtack"></i></button><span>{{ group.name }}</span> <span class="section-count">{{ group.items|length }}</span></h3>
+                title="{% if is_pinned %}{% trans 'Unpin section' %}{% else %}{% trans 'Pin section' %}{% endif %}"><i class="fas fa-thumbtack"></i></button><a href="{{ group.section.get_absolute_url }}" class="section-title-link">{{ group.name }}</a> <a href="{{ group.section.get_absolute_url }}" class="section-more">{% trans "All" %} &rsaquo;</a></h3>
     <div class="summary">
         <ul>
-        {% for item in group.items %}
-            <li>{% include "news/_digest_item.html" %}</li>
+        {% for article in group.items %}
+            <li>{% include "news/_home_item.html" %}</li>
         {% endfor %}
         </ul>
     </div>
