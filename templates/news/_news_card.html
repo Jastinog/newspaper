@@ -29,10 +29,6 @@ variables before including:
         <a href="{{ card_url }}" class="home-item-thumb">
             <img src="{% if card_image %}{{ card_image }}{% else %}{% static 'news/img/placeholder.webp' %}{% endif %}" alt="" loading="lazy">
         </a>
-        <span class="home-item-badge">
-            <span class="home-item-badge-icon">✦</span>
-            <span class="home-item-badge-text">{% if card_has_summary %}{% trans "Summary ready" %}{% else %}{% trans "Summary" %}{% endif %}</span>
-        </span>
         {% if card_topics and not hide_topics %}
         <div class="home-item-topics">
             {% for at in card_topics %}
@@ -43,7 +39,7 @@ variables before including:
     </div>
     <div class="home-item-body">
         <a href="{{ card_url }}" class="home-item-title">{{ card_title }}</a>
-        {% if card_desc %}<p class="home-item-desc">{{ card_desc|teaser|truncatechars_word:220 }}</p>{% endif %}
+        {% if card_desc %}<p class="home-item-desc">{{ card_desc|teaser|truncatechars_word:660 }}</p>{% endif %}
         {% if card_published %}
         <div class="home-item-meta">
             <span class="home-item-when">

@@ -66,11 +66,11 @@
     color: var(--fg-muted);
     margin: 0;
     display: -webkit-box;
-    -webkit-line-clamp: 3;
+    -webkit-line-clamp: 9;
     -webkit-box-orient: vertical;
     overflow: hidden;
-    /* Reserve exactly 3 lines, even when there's no description */
-    height: 4.5em;
+    /* Reserve exactly 9 lines, even when there's no description */
+    height: 13.5em;
 }
 
 /* Holds only the date / "time ago" line (the source moved to the top bar). */
@@ -82,12 +82,14 @@
     color: var(--fg-faint);
     min-width: 0;
 }
-/* Date and "time ago" sit together on one line, separated by a dot */
+/* Published date on the left, "time ago" on the right — pushed apart to
+   opposite edges of the card. */
 .home-item-when {
     display: flex;
     align-items: baseline;
-    flex-wrap: wrap;
+    justify-content: space-between;
     gap: 0.4rem;
+    width: 100%;
     color: var(--fg-faint);
 }
 .home-item-date {
@@ -95,14 +97,7 @@
 }
 .home-item-ago {
     white-space: nowrap;
-    position: relative;
-    padding-left: 0.4rem;
-}
-.home-item-ago::before {
-    content: "·";
-    position: absolute;
-    left: -0.05rem;
-    color: var(--fg-faint);
+    text-align: right;
 }
 
 /* Topic tags overlaid on the bottom of the card image — small, compact,
@@ -144,35 +139,6 @@
     background: var(--accent);
     color: #fff;
 }
-
-/* "Summary" badge overlaid on the image — reveals on hover, always shown when ready */
-.home-item-badge {
-    position: absolute;
-    right: 0.5rem;
-    bottom: 0.5rem;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3rem;
-    padding: 0.28rem 0.5rem;
-    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
-    font-size: 0.62rem;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: #fff;
-    background: rgba(0, 0, 0, 0.62);
-    backdrop-filter: blur(3px);
-    -webkit-backdrop-filter: blur(3px);
-    opacity: 0;
-    transition: opacity 0.18s ease;
-    pointer-events: none;
-}
-.home-item-media:hover .home-item-badge { opacity: 1; }
-.home-item.has-summary .home-item-badge {
-    opacity: 1;
-    background: var(--accent);
-}
-.home-item-badge-icon { font-size: 0.7rem; line-height: 1; }
 
 /* ── Card top bar: a distinct plate with source (left) + share (right) ── */
 .home-item-bar {

@@ -1,15 +1,16 @@
-/* /articles/ feed page: the news-card grid, 4 per row.
+/* /articles/ feed page: the news-card grid.
+   Column count and sizing mirror the digest grid (1 / 2 / 3 / 5 columns at
+   the same breakpoints, same gap and container width) so the two pages line
+   up — the digest builds them with CSS columns, here we use a plain grid.
    The card itself is styled by the shared news-card.css (loaded globally);
    this file only carries the page-level grid, infinite-scroll sentinel and
    empty state. */
 
 .home-feed {
-    max-width: 1280px;
-    margin: 0 auto;
     padding: 0.5rem 0 2rem;
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 1.4rem 1.1rem;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
     align-items: stretch;
 }
 
@@ -44,12 +45,15 @@
     font-family: "PT Serif", Georgia, serif;
 }
 
-@media (max-width: 1024px) {
+/* Tablet portrait: 2 columns */
+@media (min-width: 600px) and (max-width: 899px) {
+    .home-feed { grid-template-columns: repeat(2, 1fr); }
+}
+/* Tablet landscape: 3 columns */
+@media (min-width: 900px) and (max-width: 1199px) {
     .home-feed { grid-template-columns: repeat(3, 1fr); }
 }
-@media (max-width: 720px) {
-    .home-feed { grid-template-columns: repeat(2, 1fr); gap: 1.1rem 0.8rem; }
-}
-@media (max-width: 440px) {
-    .home-feed { grid-template-columns: 1fr; }
+/* Desktop: 5 columns */
+@media (min-width: 1200px) {
+    .home-feed { grid-template-columns: repeat(5, 1fr); }
 }
