@@ -127,6 +127,10 @@ class Article(models.Model):
     # article. Kept separate from `status` so classification never gates the
     # article's terminal state — a completed article shows even if untagged.
     classified = models.BooleanField(default=False, db_index=True)
+    # Enrichment flag: set once the local embedder has run (or been skipped) for
+    # this article. Like `classified`, kept separate from `status` so embedding
+    # never gates the article's terminal state.
+    embedded = models.BooleanField(default=False, db_index=True)
 
     class Meta:
         ordering = ["-published"]
@@ -207,7 +211,7 @@ class ArticleChunk(models.Model):
     article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name="chunks")
     chunk_index = models.PositiveIntegerField()
     chunk_text = models.TextField()
-    embedding = VectorField(dimensions=1536)
+    embedding = VectorField(dimensions=384)
     model = models.CharField(max_length=100)
     created_at = models.DateTimeField(auto_now_add=True)
 

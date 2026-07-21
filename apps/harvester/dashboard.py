@@ -21,6 +21,20 @@ INDIGO = ("rgb(99, 102, 241)", "rgba(99, 102, 241, 0.5)")
 YELLOW = ("rgb(234, 179, 8)", "rgba(234, 179, 8, 0.5)")
 GRAY = ("rgb(156, 163, 175)", "rgba(156, 163, 175, 0.5)")
 EMERALD = "rgb(16, 185, 129)"
+VIOLET = "rgb(168, 85, 247)"
+BLUE = "rgb(59, 130, 246)"
+AMBER = "rgb(245, 158, 11)"
+
+# Single source of truth for the pipeline-timeline lanes: one entry per stage
+# key emitted into PipelineEvent (see STAGE_* in models.py). Rendered lanes are
+# driven from this server-side — keep it in sync with the stages, not a JS copy.
+TIMELINE_STAGES = [
+    {"key": "feed", "label": "Feed", "color": BLUE},
+    {"key": "extract", "label": "Extract", "color": EMERALD},
+    {"key": "download", "label": "Image", "color": AMBER},
+    {"key": "classify", "label": "Classify", "color": INDIGO[0]},
+    {"key": "embed", "label": "Embed", "color": VIOLET},
+]
 
 
 # ── Helpers ───────────────────────────────────────────────
@@ -317,9 +331,13 @@ def build_harvester_context(request):
         total=Count("id"),
         extracted=Count("id", filter=Q(status__gte=Article.Status.EXTRACTED)),
         completed=Count("id", filter=Q(status=Article.Status.COMPLETED)),
+        classified=Count("id", filter=Q(status=Article.Status.COMPLETED, classified=True)),
+        embedded=Count("id", filter=Q(status=Article.Status.COMPLETED, embedded=True)),
     )
     pipe_total = status_agg["total"]
 
+    # Funnel: total → extracted → completed → classified → embedded. The last two
+    # are enrichment passes that only run on completed articles.
     queue_stages = [
         {
             "label": "Extracted",
@@ -333,16 +351,27 @@ def build_harvester_context(request):
             "pct": round(_pct(status_agg["completed"], pipe_total)),
             "color": EMERALD,
         },
+        {
+            "label": "Classified",
+            "done": status_agg["classified"],
+            "pct": round(_pct(status_agg["classified"], pipe_total)),
+            "color": INDIGO[0],
+        },
+        {
+            "label": "Embedded",
+            "done": status_agg["embedded"],
+            "pct": round(_pct(status_agg["embedded"], pipe_total)),
+            "color": VIOLET,
+        },
     ]
 
-    # ── Per-feed progress ────────────────────────────────────
+    # ── Per-feed progress (compact tiles, one overall bar) ──
     feed_progress = [
         {
             "title": f["feed__title"],
             "total": f["total"],
             "done": f["done"],
             "pct": round(_pct(f["done"], f["total"])),
-            "color": EMERALD,
         }
         for f in art_qs
         .values("feed__title")
@@ -394,4 +423,5 @@ def build_harvester_context(request):
         "feed_progress": feed_progress,
         # Timeline
         "timeline_data": _build_timeline_data(now, minutes=10),
+        "timeline_stages_json": json.dumps(TIMELINE_STAGES),
     }

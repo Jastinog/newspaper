@@ -1,16 +1,10 @@
-import json
 import logging
 import time
 from datetime import datetime, timezone
 
 from apps.feed.models import Article, ArticleChunk
-from apps.core.services.ai import (
-    EmbeddingClient,
-    OpenAIClient,
-    fix_truncated_json,
-)
+from apps.feed.services.embed import LocalEmbedder
 from apps.research.services.search import SimilaritySearch
-from apps.core.services.utils import deduplicate_queries
 
 logger = logging.getLogger(__name__)
 
@@ -18,71 +12,30 @@ SNIPPET_LENGTH = 300
 _DATETIME_MIN_UTC = datetime.min.replace(tzinfo=timezone.utc)
 
 
-class SearchQueryGenerator:
-    """Generate diverse search queries from a user's free-text search input."""
-
-    def __init__(self, client: OpenAIClient = None):
-        self.client = client or OpenAIClient()
-
-    def generate(self, user_query: str) -> tuple[list[str], dict]:
-        system = (
-            "You generate search queries for a semantic search over a news article database. "
-            "The user entered a search query. Generate 4-6 diverse English search queries that "
-            "approach the topic from different angles:\n"
-            "- Key facts and events\n"
-            "- Causes, reasons, and background\n"
-            "- Consequences and implications\n"
-            "- Key actors, organizations, and stakeholders\n"
-            "- Related and adjacent topics\n\n"
-            "Always generate queries in English regardless of the input language, "
-            "since the article database is primarily in English.\n\n"
-            "Output ONLY a JSON array of strings. No markdown fences."
-        )
-        user = f"User search: {user_query}"
-
-        content, usage = self.client.chat(
-            system=system,
-            user=user,
-            max_tokens=500,
-            temperature=0.4,
-        )
-
-        fixed = fix_truncated_json(content)
-        try:
-            queries = json.loads(fixed)
-            if isinstance(queries, list):
-                return [q for q in queries if isinstance(q, str)][:6], usage
-        except json.JSONDecodeError:
-            logger.warning("Failed to parse search queries: %s", content[:200])
-
-        return [user_query], usage
-
-
 class SearchService:
-    """Orchestrates search: user query \u2192 multi-angle queries \u2192 embed \u2192 vector search \u2192 articles."""
+    """Orchestrates search: user query \u2192 local embed \u2192 vector search \u2192 articles.
+
+    Fully local: the query is embedded with the same on-device model that
+    embedded the articles (no OpenAI, no query expansion)."""
 
     def __init__(self):
-        self.query_gen = SearchQueryGenerator()
-        self.embedder = EmbeddingClient()
+        self.embedder = LocalEmbedder.instance()
         self.search = SimilaritySearch(days=30)
 
     SORT_DATE = "date"
     SORT_RELEVANCE = "relevance"
+    # Cosine floor tuned for BGE: its similarities sit higher than OpenAI's, so
+    # unrelated pairs still score ~0.35 — anything below this is noise.
+    RELEVANCE_FLOOR = 0.5
 
     def search_articles(self, user_query: str, top_k: int = 30, sort: str = "date") -> dict:
         start = time.time()
 
-        queries, _ = self.query_gen.generate(user_query)
-        queries.insert(0, user_query)
-        queries = deduplicate_queries(queries, limit=7)
-        logger.info("Search queries for '%s': %s", user_query, queries)
+        queries = [user_query]
+        query_embedding = self.embedder.embed_one(user_query, is_query=True)
 
-        query_embeddings, _ = self.embedder.embed_batch(queries)
-
-        search_results = self.search.multi_query_search(
-            query_embeddings,
-            top_k_per_query=15,
-            final_top_k=top_k,
+        search_results = self.search.search(
+            query_embedding, top_k=top_k, threshold=self.RELEVANCE_FLOOR,
         )
 
         if not search_results:

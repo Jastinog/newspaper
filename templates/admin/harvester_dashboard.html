@@ -186,6 +186,14 @@
     {% endcomponent %}
 </div>
 
+{# --- Pipeline Timeline --- #}
+<div class="mb-8">
+    {% component "unfold/components/card.html" with title="Pipeline Timeline (last 10 minutes)" %}
+    <div id="pipeline-timeline" style="min-height: 170px; font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;">
+    </div>
+    {% endcomponent %}
+</div>
+
 {# --- Processing Queue --- #}
 <div class="mb-8">
     {% component "unfold/components/card.html" with title="Processing Queue" %}
@@ -210,26 +218,18 @@
 {# --- Per-Feed Progress --- #}
 <div class="mb-8">
     {% component "unfold/components/card.html" with title="Feed Progress" %}
-    <div id="feed-progress-section" class="space-y-2">
+    <div id="feed-progress-section" class="feed-grid">
         {% for f in feed_progress %}
-        <div class="feed-prog-row">
-            <div class="flex items-center justify-between mb-0.5">
-                <span class="text-xs text-gray-600 dark:text-gray-400 truncate" style="max-width: 60%;" title="{{ f.title }}">{{ f.title }}</span>
-                <span class="text-xs text-gray-500 dark:text-gray-400"><span class="feed-pct font-semibold text-gray-800 dark:text-gray-200">{{ f.pct }}%</span> <span class="feed-detail">{{ f.done }}/{{ f.total }}</span></span>
+        <div class="feed-tile" title="{{ f.title }} — {{ f.done }}/{{ f.total }} completed ({{ f.pct }}%)">
+            <div class="feed-tile-head">
+                <span class="feed-tile-title truncate">{{ f.title }}</span>
+                <span class="feed-tile-total">{{ f.done }}/{{ f.total }}</span>
             </div>
-            <div class="w-full overflow-hidden" style="height: 6px; background: rgba(128,128,128,0.25);">
-                <div class="feed-bar h-full transition-all duration-500" style="width: {{ f.pct }}%; background: {{ f.color }};"></div>
+            <div class="feed-bar-track">
+                <div class="feed-bar" style="width: {{ f.pct }}%;"></div>
             </div>
         </div>
         {% endfor %}
-    </div>
-    {% endcomponent %}
-</div>
-
-{# --- Pipeline Timeline --- #}
-<div class="mb-8">
-    {% component "unfold/components/card.html" with title="Pipeline Timeline (last 10 minutes)" %}
-    <div id="pipeline-timeline" style="min-height: 170px; font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;">
     </div>
     {% endcomponent %}
 </div>
@@ -422,6 +422,31 @@ a.tl-bar {
 }
 .dark .tl-summary { color: #6b7280; }
 .tl-row { display: flex; align-items: center; margin-bottom: 3px; }
+
+/* ── Feed progress tiles ───────────────────────────────── */
+.feed-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 8px;
+}
+.feed-tile {
+    padding: 7px 9px 8px;
+    border: 1px solid rgba(128,128,128,0.2);
+    border-radius: 6px;
+}
+.feed-tile-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+.feed-tile-title { font-size: 11px; color: #6b7280; min-width: 0; }
+.dark .feed-tile-title { color: #9ca3af; }
+.feed-tile-total { font-size: 12px; font-weight: 600; color: #374151; flex-shrink: 0; }
+.dark .feed-tile-total { color: #e5e7eb; }
+.feed-bar-track { width: 100%; height: 2px; background: rgba(128,128,128,0.3); overflow: hidden; }
+.feed-bar { height: 100%; background: rgb(16, 185, 129); transition: width 0.5s; }
 </style>
 
 <script>
@@ -583,6 +608,39 @@ function updatePipelineUI(active, running) {
         });
     }
 
+    function renderFeedProgress(feeds) {
+        var section = document.getElementById("feed-progress-section");
+        if (!section) return;
+        section.innerHTML = "";
+        feeds.forEach(function(f) {
+            var tile = document.createElement("div");
+            tile.className = "feed-tile";
+            tile.title = f.title + " — " + f.done + "/" + f.total + " completed (" + f.pct + "%)";
+
+            var head = document.createElement("div");
+            head.className = "feed-tile-head";
+            var title = document.createElement("span");
+            title.className = "feed-tile-title truncate";
+            title.textContent = f.title;
+            var total = document.createElement("span");
+            total.className = "feed-tile-total";
+            total.textContent = f.done + "/" + f.total;
+            head.appendChild(title);
+            head.appendChild(total);
+            tile.appendChild(head);
+
+            var track = document.createElement("div");
+            track.className = "feed-bar-track";
+            var bar = document.createElement("div");
+            bar.className = "feed-bar";
+            bar.style.width = f.pct + "%";
+            track.appendChild(bar);
+            tile.appendChild(track);
+
+            section.appendChild(tile);
+        });
+    }
+
     function updateStatus(ok) {
         var st = document.getElementById("hd-status");
         var dot = document.getElementById("hd-dot");
@@ -641,19 +699,8 @@ function updatePipelineUI(active, running) {
                 });
             }
 
-            // Feed progress bars
-            if (data.feed_progress) {
-                var fRows = document.querySelectorAll("#feed-progress-section .feed-prog-row");
-                data.feed_progress.forEach(function(f, i) {
-                    if (!fRows[i]) return;
-                    var bar = fRows[i].querySelector(".feed-bar");
-                    var pct = fRows[i].querySelector(".feed-pct");
-                    var detail = fRows[i].querySelector(".feed-detail");
-                    if (bar) bar.style.width = f.pct + "%";
-                    if (pct) pct.textContent = f.pct + "%";
-                    if (detail) detail.textContent = f.done + "/" + f.total;
-                });
-            }
+            // Feed progress tiles (rebuilt from data — feeds appear as harvest runs)
+            if (data.feed_progress) renderFeedProgress(data.feed_progress);
 
             // Timeline
             if (data.timeline_data) renderTimeline(data.timeline_data);
@@ -683,12 +730,9 @@ function updatePipelineUI(active, running) {
 })();
 
 /* ── Timeline renderer ──────────────────────────────────── */
-var TL_STAGES = [
-    {key: "feed",    label: "Feed",    color: "rgba(59,130,246,0.82)"},
-    {key: "rss_img", label: "RSS Img", color: "rgba(245,158,11,0.82)"},
-    {key: "extract", label: "Extract", color: "rgba(16,185,129,0.82)"},
-    {key: "og_img",  label: "OG Img",  color: "rgba(139,92,246,0.82)"},
-];
+// Lanes are data-driven from the server (dashboard.py TIMELINE_STAGES) so the
+// stage list/colors live in one place and can't drift out of sync.
+var TL_STAGES = {{ timeline_stages_json|safe }};
 
 function renderTimeline(raw) {
     var el = document.getElementById("pipeline-timeline");

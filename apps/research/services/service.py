@@ -6,10 +6,10 @@ import time
 from apps.billing.models import APIUsage
 from apps.core.models import Language
 from apps.feed.models import ArticleChunk
+from apps.feed.services.embed import LocalEmbedder
 from apps.research.models import Research, ResearchSource
 from apps.digest.models import DigestItem
 from apps.core.services.ai import (
-    EMBEDDING_MODEL, EmbeddingClient,
     MODEL_MINI, OpenAIClient, calculate_cost, fix_truncated_json,
 )
 from apps.core.services.utils import deduplicate_queries
@@ -214,7 +214,7 @@ class ResearchService:
 
     def __init__(self):
         self.query_gen = QueryGenerator()
-        self.embedder = EmbeddingClient()
+        self.embedder = LocalEmbedder.instance()
         self.search = SimilaritySearch(days=30)
         self.synthesizer = ArticleSynthesizer()
 
@@ -240,7 +240,7 @@ class ResearchService:
         # 2. Embed queries
         self._progress(progress_callback, 2, "embedding", "Creating embeddings…",
                         f"{len(queries)} queries")
-        query_embeddings, embed_tokens = self.embedder.embed_batch(queries)
+        query_embeddings = self.embedder.embed(queries, is_query=True)
 
         # 3. Multi-query similarity search
         self._progress(progress_callback, 3, "search", "Searching relevant articles…")
@@ -326,19 +326,10 @@ class ResearchService:
                 research=dive,
             )
 
+        # Query embedding now runs on a local model — no API usage to log.
         usages = [
             _log_chat_usage(query_gen_usage),
             _log_chat_usage(synthesis_usage),
-            APIUsage(
-                service=APIUsage.Service.RESEARCH,
-                api_type=APIUsage.APIType.EMBEDDING,
-                model=EMBEDDING_MODEL,
-                prompt_tokens=embed_tokens,
-                completion_tokens=0,
-                total_tokens=embed_tokens,
-                cost_usd=calculate_cost(EMBEDDING_MODEL, embed_tokens),
-                research=dive,
-            ),
         ]
         APIUsage.objects.bulk_create(usages)
 
