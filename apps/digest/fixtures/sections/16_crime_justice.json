@@ -1,0 +1,42 @@
+{
+    "slug": "crime-justice",
+    "order": 16,
+    "description": "Crime, courts, trials, policing, and the legal system",
+    "translations": {
+        "en": "Crime & Justice",
+        "ru": "Преступность • Правосудие",
+        "uk": "Злочинність • Правосуддя"
+    },
+    "embeddings": [
+        "Police arrest a suspect in connection with a high-profile murder case",
+        "Court trial begins as prosecutors present evidence against the defendant",
+        "Jury delivers a guilty verdict in a closely watched criminal trial",
+        "Judge sentences a convicted criminal to years in prison",
+        "Serial killer homicide investigation grips the nation for weeks",
+        "Fraud and embezzlement scheme uncovered as a suspect is charged",
+        "Drug trafficking bust as authorities seize a large narcotics shipment",
+        "Mass shooting leaves multiple victims as a gunman opens fire",
+        "Kidnapping and hostage standoff ends with the suspect apprehended",
+        "Corruption charges filed against an official in a bribery scandal",
+        "Bank robbery and armed heist caught on surveillance footage",
+        "Cold case is solved after decades using new forensic DNA evidence",
+        "Organized crime gang and mafia boss indicted by federal prosecutors",
+        "Wrongful conviction overturned as an inmate is exonerated by DNA",
+        "Human trafficking ring dismantled in a coordinated police raid",
+        "Domestic violence and assault case is brought before the court",
+        "Prison escape triggers a manhunt as the fugitive evades capture",
+        "Supreme Court ruling reshapes criminal justice and sentencing law",
+        "Police misconduct and brutality investigation sparks public outrage",
+        "White-collar crime as an executive is convicted of financial fraud",
+        "Gun violence and a shooting rampage prompts calls for reform",
+        "Drug cartel leader captured in a cross-border law enforcement operation",
+        "Sexual assault case proceeds as the accuser testifies against the defendant",
+        "Death penalty execution is carried out after appeals are exhausted",
+        "Money laundering scheme exposed in an international investigation",
+        "Hate crime and a racially motivated attack are under investigation",
+        "Witness testimony and a plea deal reshape the criminal proceedings",
+        "Arson and property crime investigation identifies a prime suspect",
+        "Class action lawsuit and civil suit filed seeking damages from a company",
+        "Parole board grants release to a long-serving prisoner"
+    ]
+}

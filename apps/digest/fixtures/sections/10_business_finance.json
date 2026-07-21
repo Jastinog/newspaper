@@ -1,0 +1,42 @@
+{
+    "slug": "business-finance",
+    "order": 10,
+    "description": "Markets, economy, corporate earnings, banking, trade, and financial policy",
+    "translations": {
+        "en": "Business & Finance",
+        "ru": "Бизнес • Финансы",
+        "uk": "Бізнес • Фінанси"
+    },
+    "embeddings": [
+        "Stock market indices S&P 500 Nasdaq Dow Jones close higher on earnings optimism",
+        "Federal Reserve interest rate decision and monetary policy tightening to curb inflation",
+        "Quarterly corporate earnings report beats analyst revenue and profit expectations",
+        "Central bank raises benchmark interest rates to combat rising consumer inflation",
+        "Company announces mass layoffs and restructuring to cut operating costs",
+        "Merger and acquisition deal as corporation acquires rival in multibillion-dollar takeover",
+        "Initial public offering IPO debut as company lists its shares on the stock exchange",
+        "Inflation rate consumer price index rises squeezing household purchasing power",
+        "Monthly jobs report shows labor market cooling with fewer nonfarm payrolls added",
+        "Global supply chain disruption raises shipping costs and delays manufacturing output",
+        "Currency exchange rate as the dollar euro and yen fluctuate on economic data",
+        "Import tariffs and duties imposed escalating a trade war between major economies",
+        "Bank collapse and financial institution failure triggers emergency regulatory intervention",
+        "Recession fears grow as GDP economic growth contracts for consecutive quarters",
+        "Consumer spending and retail sales figures signal shifting economic demand",
+        "Treasury bond yields rise as investors price in central bank rate expectations",
+        "Hedge fund and private equity firm makes a major leveraged investment bet",
+        "Company files for bankruptcy protection amid mounting debt and quarterly losses",
+        "CEO resignation and executive leadership shakeup announced at a major corporation",
+        "Commodity prices for gold copper and wheat move on global demand outlook",
+        "Antitrust regulators investigate monopoly power and block an anticompetitive merger",
+        "Dividend payout and stock buyback program announced to reward shareholders",
+        "Small business lending and credit conditions tighten as banks pull back",
+        "International Monetary Fund IMF and World Bank cut global economic growth forecast",
+        "Wall Street analysts upgrade or downgrade a stock rating and price target",
+        "Pension fund and retirement savings returns hit by stock market volatility",
+        "Wage growth and salary negotiations intensify amid cost of living pressures",
+        "Corporate accounting fraud and financial misreporting scandal uncovered at firm",
+        "Multinational expands global operations entering a new market to grow revenue",
+        "Consumer confidence index and business sentiment survey signal economic mood"
+    ]
+}

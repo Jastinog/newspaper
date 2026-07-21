@@ -1,0 +1,42 @@
+{
+    "slug": "music",
+    "order": 14,
+    "description": "Album releases, artists, concerts, charts, and the music industry",
+    "translations": {
+        "en": "Music",
+        "ru": "Музыка",
+        "uk": "Музика"
+    },
+    "embeddings": [
+        "Artist releases a new studio album that tops the charts on release",
+        "Pop star announces a world tour with sold-out stadium concerts",
+        "Grammy Awards honor the best album and song of the year",
+        "Musician drops a surprise single climbing the streaming charts",
+        "Band reunites for a comeback tour after years apart",
+        "Rapper and hip-hop artist releases a long-anticipated mixtape",
+        "Coachella and Glastonbury festival reveals its headline lineup",
+        "Singer collaborates with a producer on a chart-topping hit",
+        "Music streaming service Spotify and Apple Music reports record streams",
+        "Rock band announces a farewell tour and retirement from touring",
+        "Record label signs a breakout artist to a major recording deal",
+        "Live concert and Las Vegas residency draws thousands of fans",
+        "Music video premieres and racks up millions of views",
+        "Classical orchestra and opera performs an acclaimed premiere",
+        "Country music star wins an award at the CMA ceremony",
+        "Album goes platinum with record-breaking first-week sales",
+        "Musician wins a lawsuit over song copyright and royalties",
+        "DJ and electronic artist headlines a dance music festival",
+        "K-pop group breaks records with a new album release",
+        "Singer-songwriter debuts an intimate acoustic project",
+        "Band members feud leading to a lineup change and split",
+        "Tribute concert honors a late legendary musician",
+        "Billboard Hot 100 music chart crowns a new number one single",
+        "Artist teases an upcoming album with a cryptic announcement",
+        "Jazz and blues musician celebrated for a lifetime achievement",
+        "Streaming exclusive as an artist partners with a platform",
+        "Music festival canceled or postponed disappointing ticket holders",
+        "Vinyl records and physical music sales see a nostalgic resurgence",
+        "Emerging indie artist gains viral fame through social media",
+        "Symphony premieres a new orchestral composition to critical praise"
+    ]
+}

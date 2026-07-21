@@ -94,7 +94,7 @@ class DigestConfig(models.Model):
 
     # ── Edition Settings ─────────────────────────────────────
     edition_items_per_section = models.PositiveIntegerField(
-        default=10, help_text="Target stories per section",
+        default=20, help_text="Target stories per section",
     )
     edition_max_workers = models.PositiveIntegerField(
         default=20, help_text="Max parallel writer threads",

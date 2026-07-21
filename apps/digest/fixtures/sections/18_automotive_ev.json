@@ -1,0 +1,42 @@
+{
+    "slug": "automotive-ev",
+    "order": 18,
+    "description": "Cars, electric vehicles, autonomous driving, and automakers",
+    "translations": {
+        "en": "Automotive & EVs",
+        "ru": "Авто • Электромобили",
+        "uk": "Авто • Електромобілі"
+    },
+    "embeddings": [
+        "Electric vehicle maker unveils a new long-range battery-powered model",
+        "Tesla reports record deliveries of electric cars for the quarter",
+        "Automaker recalls vehicles over a safety defect and airbag fault",
+        "Self-driving autonomous vehicle technology tested on public roads",
+        "New car model launched with advanced driver-assistance features",
+        "EV charging network expands with fast-charging stations nationwide",
+        "Legacy automaker shifts production toward an all-electric lineup",
+        "Car sales figures show shifting demand between SUVs and EVs",
+        "Battery breakthrough extends the driving range of electric vehicles",
+        "Automaker and supplier build a gigafactory for EV battery cells",
+        "Hybrid and plug-in vehicle bridges the gap to full electrification",
+        "Autonomous robotaxi service launches on the streets of a major city",
+        "Government EV subsidy and tax credit boosts electric car sales",
+        "Luxury sports car and supercar debuts at the international auto show",
+        "Automaker partners on software-defined connected vehicle features",
+        "Electric pickup truck challenges rivals in the light-truck market",
+        "Car manufacturing plant halts production amid a chip shortage",
+        "Electric motorcycle and scooter startup enters the mobility market",
+        "Tighter vehicle emissions standards push automakers toward electrification",
+        "Automaker faces a lawsuit over an autopilot crash and driver safety",
+        "Chinese EV brand expands aggressively into the European car market",
+        "Solid-state battery promises faster charging for electric cars",
+        "Ride-hailing fleet transitions its vehicles to fully electric models",
+        "Classic car and vintage auto fetches a record price at auction",
+        "Automaker CEO outlines a strategy for the company's electric future",
+        "Used car prices fluctuate amid shifting supply and consumer demand",
+        "Vehicle-to-grid technology lets an electric car power the home",
+        "Car dealership and direct-sales model reshape automotive retail",
+        "Hydrogen fuel cell vehicle offers an alternative to battery power",
+        "New pickup and SUV crash-test safety ratings released by regulators"
+    ]
+}

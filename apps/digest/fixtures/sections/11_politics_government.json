@@ -1,0 +1,42 @@
+{
+    "slug": "politics-government",
+    "order": 11,
+    "description": "Elections, legislation, diplomacy, government policy, and political leaders",
+    "translations": {
+        "en": "Politics & Government",
+        "ru": "Политика • Власть",
+        "uk": "Політика • Влада"
+    },
+    "embeddings": [
+        "National election campaign as candidates compete for votes ahead of polling day",
+        "Parliament passes a landmark legislation bill into law after heated debate",
+        "President signs an executive order enacting a new domestic policy agenda",
+        "Prime minister faces a no-confidence vote as the governing coalition fractures",
+        "Government budget and spending plan approved by the legislature amid opposition",
+        "Diplomatic summit as world leaders negotiate an international agreement",
+        "Political party wins a majority in the general election and forms a government",
+        "Supreme court ruling on a constitutional challenge reshapes government power",
+        "Cabinet reshuffle as the leader appoints new ministers to key portfolios",
+        "Referendum vote on a constitutional amendment and national policy question",
+        "Opposition leader criticizes the government over corruption and mismanagement",
+        "Immigration policy reform and border legislation debated in the legislature",
+        "Diplomatic sanctions imposed on foreign officials over a policy dispute",
+        "Political scandal forces the resignation of a senior government official",
+        "Head of state makes an official state visit to strengthen bilateral relations",
+        "Government shutdown looms as lawmakers fail to agree on federal funding",
+        "Coalition negotiations after an inconclusive election leave a hung parliament",
+        "Impeachment proceedings launched against a sitting president or official",
+        "Foreign minister meets a counterpart to ease diplomatic tensions",
+        "Public protests and demonstrations demand political reform and resignation",
+        "Voter turnout and polling data forecast a tight race between rival parties",
+        "Government approves a new tax policy and public spending reform package",
+        "Legislative committee holds a hearing questioning officials under oath",
+        "Local and regional elections reshape municipal and state governance",
+        "Political leader delivers a state of the nation address outlining priorities",
+        "Trade and cooperation agreement signed between governments after negotiations",
+        "Government censorship and a press freedom crackdown draws condemnation",
+        "Whistleblower leaks classified government documents exposing policy decisions",
+        "Populist and far-right party surges in polls reshaping the political landscape",
+        "Constitutional crisis as branches of government clash over their authority"
+    ]
+}

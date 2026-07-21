@@ -1,0 +1,42 @@
+{
+    "slug": "crypto-blockchain",
+    "order": 17,
+    "description": "Cryptocurrency, bitcoin, blockchain, DeFi, and digital-asset regulation",
+    "translations": {
+        "en": "Crypto & Blockchain",
+        "ru": "Крипто • Блокчейн",
+        "uk": "Крипто • Блокчейн"
+    },
+    "embeddings": [
+        "Bitcoin price surges to a new all-time high amid a market rally",
+        "Ethereum network upgrade improves scalability and lowers gas fees",
+        "Cryptocurrency exchange collapses leaving investors with heavy losses",
+        "Regulators crack down on crypto with a new SEC enforcement action",
+        "Stablecoin depegs from the dollar triggering a sell-off in digital assets",
+        "Spot Bitcoin ETF approval opens crypto to institutional investors",
+        "DeFi protocol hacked in an exploit draining millions in crypto funds",
+        "NFT non-fungible token collection sells for millions at auction",
+        "Bitcoin halving reduces mining rewards and affects token supply",
+        "Central bank digital currency CBDC pilot launched by a government",
+        "Blockchain startup raises funding for a Web3 platform",
+        "Crypto wallet security breach steals tokens from cold storage",
+        "Altcoin and memecoin rallies then crashes in volatile trading",
+        "Coinbase and Binance exchange faces a regulatory lawsuit and fines",
+        "Smart contract vulnerability exploited draining a liquidity pool",
+        "Country adopts Bitcoin as legal tender for everyday payments",
+        "Government bans crypto prohibiting digital currency trading",
+        "Tokenization of real-world assets recorded on the blockchain",
+        "Crypto Ponzi scheme and digital-asset fraud charged by prosecutors",
+        "Ethereum staking rewards attract validators to secure the network",
+        "Stablecoin issuer's reserves questioned amid transparency concerns",
+        "Layer-2 scaling solution reduces blockchain transaction costs",
+        "Crypto market crash wipes billions from total token value",
+        "Decentralized autonomous organization DAO votes on a governance proposal",
+        "Bitcoin miner profitability is squeezed by rising electricity costs",
+        "Hacker exploits a cross-chain bridge stealing bridged crypto funds",
+        "Web3 and metaverse project launches a virtual token economy",
+        "Crypto whale moves large holdings shaking overall market sentiment",
+        "Lawmakers debate a regulatory framework for digital assets and tokens",
+        "Financial firm adopts blockchain payments and on-chain settlement"
+    ]
+}

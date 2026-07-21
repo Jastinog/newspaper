@@ -1,0 +1,42 @@
+{
+    "slug": "sports",
+    "order": 12,
+    "description": "Football, basketball, tennis, Olympics, and professional athletics",
+    "translations": {
+        "en": "Sports",
+        "ru": "Спорт",
+        "uk": "Спорт"
+    },
+    "embeddings": [
+        "Football soccer match result as a team wins the league title in a dramatic final",
+        "Champions League and Premier League fixture ends with a stunning comeback goal",
+        "NBA basketball playoff game as a star player scores a career-high in points",
+        "Tennis Grand Slam final at Wimbledon or the US Open crowns a new champion",
+        "Olympic Games athlete wins a gold medal while breaking a world record",
+        "Formula 1 Grand Prix race as a driver claims victory on the podium",
+        "Cricket test match and World Cup as a batsman scores a match-winning century",
+        "Boxing heavyweight title fight ends in a knockout championship bout",
+        "Golf major tournament as a player wins the Masters and the green jacket",
+        "Summer transfer window as a football club signs a star player in a record deal",
+        "World Cup qualifier as the national team secures its spot in the tournament",
+        "Rugby international as a team wins the Six Nations championship match",
+        "Baseball MLB World Series game decided by a dramatic walk-off home run",
+        "Marathon and athletics championship as a runner sets a new national record",
+        "Head coach fired and manager sacked after a string of poor results",
+        "Star athlete ruled out for the season by injury ahead of a crucial playoff",
+        "Doping scandal as an athlete is banned after failing a drug test",
+        "Ice hockey NHL Stanley Cup final playoff series goes to overtime",
+        "Cycling Tour de France stage win as a rider takes the yellow jersey",
+        "American football NFL Super Bowl matchup set after the conference finals",
+        "Sprinter and swimmer break records at the world athletics championships",
+        "Team promoted or relegated as the league season reaches a dramatic finish",
+        "Sports federation announces the host city for a future championship",
+        "Veteran athlete announces retirement after a decorated professional career",
+        "Referee decision and VAR controversy overshadows a crucial match result",
+        "Underdog team pulls off an upset defeating the favorite in a cup shock",
+        "Contract extension as a franchise re-signs its star to a lucrative deal",
+        "Record crowd fills the stadium as fans create an electric derby atmosphere",
+        "Women's football and basketball league draws record television viewership",
+        "Comeback victory as a team overturns a deficit to reach the final"
+    ]
+}

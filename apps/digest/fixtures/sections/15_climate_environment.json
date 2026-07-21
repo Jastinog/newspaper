@@ -1,0 +1,42 @@
+{
+    "slug": "climate-environment",
+    "order": 15,
+    "description": "Climate change, emissions, conservation, biodiversity, and environmental policy",
+    "translations": {
+        "en": "Climate & Environment",
+        "ru": "Климат • Экология",
+        "uk": "Клімат • Екологія"
+    },
+    "embeddings": [
+        "Global average temperatures rise as climate change accelerates the warming trend",
+        "Carbon emissions and greenhouse gases reach record levels worldwide",
+        "United Nations COP climate summit negotiates emissions reduction targets",
+        "Nations pledge net-zero carbon targets to limit long-term global warming",
+        "Melting glaciers and polar ice caps accelerate global sea level rise",
+        "Deforestation of the Amazon rainforest threatens biodiversity and habitats",
+        "Endangered species conservation efforts work to prevent wildlife extinction",
+        "Ocean acidification and coral reef bleaching harm marine ecosystems",
+        "Air pollution and smog reach hazardous levels across major cities",
+        "Plastic pollution and ocean waste threaten marine life and coastlines",
+        "Climate scientists warn of dangerous tipping points on a warming planet",
+        "Prolonged extreme heat waves are linked to human-caused climate change",
+        "Environmental activists stage protests demanding stronger climate action",
+        "Government introduces a carbon tax and emissions trading policy",
+        "Biodiversity loss accelerates as ecosystems collapse under human pressure",
+        "Reforestation and tree-planting initiative aims to capture atmospheric carbon",
+        "Water scarcity and worsening drought are tied to a changing climate",
+        "Environmental regulation restricts industrial pollution and toxic waste",
+        "Rewilding and habitat restoration project revives a degraded ecosystem",
+        "Corporate greenwashing accusations over hollow climate commitments",
+        "Permafrost thaw releases methane further accelerating global warming",
+        "Climate refugees are displaced by rising seas and spreading desertification",
+        "Scientific report warns of an accelerating mass extinction crisis",
+        "Sustainable farming practices reduce agriculture's environmental footprint",
+        "Investors divest from fossil fuels over long-term climate risk",
+        "Clean air legislation targets vehicle and factory pollution emissions",
+        "Wetlands and old-growth forests protected under a new conservation law",
+        "Climate lawsuit seeks to hold polluters accountable for their emissions",
+        "Global warming breaks temperature records for the hottest year measured",
+        "Recycling and circular economy initiatives cut landfill and packaging waste"
+    ]
+}

@@ -1,0 +1,42 @@
+{
+    "slug": "film-tv",
+    "order": 13,
+    "description": "Movies, streaming series, television, box office, and celebrities",
+    "translations": {
+        "en": "Film & TV",
+        "ru": "Кино • ТВ",
+        "uk": "Кіно • ТБ"
+    },
+    "embeddings": [
+        "Blockbuster movie tops the box office on its opening weekend",
+        "Streaming series premieres on Netflix drawing record viewership numbers",
+        "Film director announces a new movie with an all-star ensemble cast",
+        "Hollywood studio releases the trailer for an upcoming superhero film",
+        "Academy Awards Oscars ceremony honors best picture and lead actors",
+        "TV series finale as a popular show concludes its final season",
+        "Actor cast in the lead role for a major film franchise reboot",
+        "Cannes and Venice film festival premieres an award-winning drama",
+        "Streaming platform renews a hit show for another season",
+        "Celebrity couple relationship news and a high-profile breakup make headlines",
+        "Movie sequel and franchise installment confirmed by the studio",
+        "Documentary and true-crime series sparks widespread online discussion",
+        "Box office flop as an expensive film underperforms expectations",
+        "Emmy Awards celebrate outstanding television drama and comedy series",
+        "Actor and director interview reveals behind-the-scenes production details",
+        "Reboot and remake of a classic film divides longtime fans",
+        "Streaming war as platforms compete for exclusive content deals",
+        "Movie release date delayed amid production and scheduling issues",
+        "Comedian and late-night host returns with a new comedy special",
+        "Animated film from Pixar or Disney charms audiences and critics",
+        "Reality TV show and competition series crowns its latest winner",
+        "Celebrity red carpet appearance draws attention at a film premiere",
+        "Casting controversy and recasting sparks fan backlash online",
+        "Film adaptation of a bestselling novel goes into production",
+        "TV network cancels a series after a decline in ratings",
+        "Film earns critical acclaim and generates awards-season buzz",
+        "Streaming subscriber numbers surge after a hit original release",
+        "Biopic film portrays the life of a famous historical figure",
+        "Horror thriller film scares audiences to box office success",
+        "Talk show host announces a departure from a long-running program"
+    ]
+}
