@@ -38,7 +38,6 @@
     <link rel="stylesheet" href="{% static 'news/css/digest.css' %}" media="print" onload="this.media='all'">
     <link rel="stylesheet" href="{% static 'news/css/news-card.css' %}" media="print" onload="this.media='all'">
     <link rel="stylesheet" href="{% static 'news/css/bias-spectrum.css' %}" media="print" onload="this.media='all'">
-    <link rel="stylesheet" href="{% static 'news/css/research-card.css' %}" media="print" onload="this.media='all'">
     <link rel="stylesheet" href="{% static 'news/css/similar-news.css' %}" media="print" onload="this.media='all'">
     <link rel="stylesheet" href="{% static 'news/css/browse.css' %}" media="print" onload="this.media='all'">
     <link rel="stylesheet" href="{% static 'news/css/search-results.css' %}" media="print" onload="this.media='all'">
@@ -59,7 +58,7 @@
                 <div class="masthead-date" id="mastheadDate">{% block masthead_date %}{% now "l, F j, Y" %}{% endblock %}</div>
                 <div class="site-title"><a href="{% url 'index' %}">{% trans "Newspaper" %}</a></div>
                 <nav class="masthead-nav" hx-boost="true" hx-swap="innerHTML transition:true">
-                    <a href="{% url 'index' %}" class="{% if request.resolver_match.url_name == 'index' or request.resolver_match.url_name == 'digest_by_date' %}active{% endif %}">{% trans "Home" %}</a>
+                    <a href="{% url 'index' %}" class="{% if request.resolver_match.url_name == 'index' %}active{% endif %}">{% trans "Home" %}</a>
                     <a href="{% url 'articles_list' %}" class="{% if request.resolver_match.url_name == 'articles_list' or request.resolver_match.url_name == 'articles_browse' %}active{% endif %}">{% trans "Articles" %}</a>
                     <a href="{% url 'feeds_list' %}" class="{% if request.resolver_match.url_name == 'feeds_list' or request.resolver_match.url_name == 'feed_detail' %}active{% endif %}">{% trans "Sources" %}</a>
                     <a href="{% url 'search' %}" class="{% if request.resolver_match.url_name == 'search' %}active{% endif %}">{% trans "Search" %}</a>

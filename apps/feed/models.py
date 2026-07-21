@@ -102,7 +102,6 @@ class Article(models.Model):
     )
     image_url = models.URLField(max_length=2000, blank=True, default="")
     image = models.ImageField(upload_to="articles/%Y/%m/", blank=True)
-    used_in_digest = models.BooleanField(default=False, db_index=True)
 
     topics = models.ManyToManyField(
         Topic, through="ArticleTopic", related_name="articles", blank=True,

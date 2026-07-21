@@ -10,7 +10,7 @@
 (function () {
     'use strict';
 
-    var API = '/api/digest-items/';
+    var API = '/api/articles/';
     var cache = {};
     var FORCE_GRAPH_URL = 'https://cdn.jsdelivr.net/npm/force-graph/dist/force-graph.min.js';
     var _fgLoading = null;
@@ -563,13 +563,13 @@
         if (!btn) return;
         e.preventDefault();
 
-        var itemId = btn.dataset.itemId;
-        var container = btn.closest('li') || btn.closest('.story-detail');
+        var itemId = btn.dataset.articleId || btn.dataset.itemId;
+        var container = btn.closest('li') || btn.closest('.story-detail') || btn.closest('article') || document;
         if (!container) return;
 
         var topicEl = container.querySelector('.item-topic') || container.querySelector('h1');
         var summaryEl = container.querySelector('.item-summary') || container.querySelector('.article-content p');
-        var imgEl = container.querySelector('.item-image') || container.querySelector('.story-hero img');
+        var imgEl = container.querySelector('.item-image') || container.querySelector('.article-hero img') || container.querySelector('.story-hero img');
 
         var centerInfo = {
             topic: topicEl ? topicEl.textContent.trim() : 'Item #' + itemId,

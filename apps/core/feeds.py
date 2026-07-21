@@ -1,75 +1,51 @@
-from datetime import datetime, time, timezone
-
 from django.conf import settings
 from django.contrib.syndication.views import Feed
-from django.urls import reverse
 from django.utils.feedgenerator import Enclosure
-from django.utils.translation import get_language, gettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
-from apps.digest.models import Digest, DigestItem
+from apps.feed.models import Article
+from apps.feed.templatetags.markdown_extras import teaser_filter
 
 
-class DigestFeed(Feed):
-    """RSS feed for daily digest stories, language-aware."""
+class LatestArticlesFeed(Feed):
+    """RSS feed of the latest news articles (the day-less replacement for the
+    old daily-digest feed)."""
 
     link = "/"
-    description = _("Daily AI-curated news digest from 100+ RSS sources worldwide")
+    description = _("Latest news from 100+ RSS sources worldwide")
 
     def title(self):
-        return f"Newspaper — {_('Daily News Digest')}"
+        return f"Newspaper — {_('Latest News')}"
 
     def items(self):
-        lang = get_language() or "en"
-        digests = Digest.objects.filter(stage=Digest.Stage.DONE).order_by("-date")[:7]
-        digest_ids = [d.pk for d in digests]
-
-        items = (
-            DigestItem.objects
-            .filter(digest_id__in=digest_ids)
-            .select_related("digest", "section")
-            .prefetch_related(
-                "translations", "translations__language",
-                "section__translations", "section__translations__language",
-                "articles",  # embedding-digest items fall back to the article's title/teaser
-            )
-            .order_by("-digest__date", "-freshness")
+        return (
+            Article.objects
+            .filter(status=Article.Status.COMPLETED, published__isnull=False)
+            .exclude(slug="")
+            .exclude(image="")
+            .select_related("feed", "feed__category")
+            .order_by("-published")[:50]
         )
 
-        # Filter out items without translation for current language
-        result = []
-        for item in items:
-            item._lang = lang
-            topic = item.get_topic(lang)
-            summary = item.get_summary(lang)
-            if topic and summary:
-                item._cached_topic = topic
-                item._cached_summary = summary
-                result.append(item)
-        return result
-
     def item_title(self, item):
-        return item._cached_topic
+        return item.title
 
     def item_description(self, item):
-        return item._cached_summary
+        return teaser_filter(item.content) if item.content else ""
 
     def item_link(self, item):
-        return reverse("story_detail", args=[item.pk])
+        return item.get_absolute_url()
 
     def item_pubdate(self, item):
-        if item.digest:
-            return datetime.combine(item.digest.date, time.min, tzinfo=timezone.utc)
-        return None
+        return item.published
 
     def item_categories(self, item):
-        if item.section:
-            name = item.section.get_name(item._lang)
-            if name:
-                return [name]
+        if item.feed and item.feed.category:
+            return [item.feed.category.name]
         return []
 
     def item_enclosures(self, item):
-        if item.best_image_url:
-            url = f"{settings.SITE_URL}{item.best_image_url}"
+        if item.image:
+            url = f"{settings.SITE_URL}{item.image.url}"
             return [Enclosure(url, "0", "image/jpeg")]
         return []

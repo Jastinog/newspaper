@@ -1,9 +1,8 @@
 from django.contrib.sitemaps import Sitemap
 from django.urls import reverse
 
-from apps.digest.models import Digest, DigestItem
+from apps.digest.models import DigestSection
 from apps.feed.models import Article, Category
-from apps.research.models import Research
 
 
 class StaticSitemap(Sitemap):
@@ -20,50 +19,15 @@ class StaticSitemap(Sitemap):
 
     def lastmod(self, item):
         if item == "index":
-            digest = Digest.objects.order_by("-created_at").only("created_at").first()
-            return digest.created_at if digest else None
+            latest = (
+                Article.objects
+                .filter(published__isnull=False)
+                .order_by("-published")
+                .only("published")
+                .first()
+            )
+            return latest.published if latest else None
         return None
-
-
-class DigestSitemap(Sitemap):
-    i18n = True
-    alternates = True
-    priority = 0.9
-    changefreq = "daily"
-
-    def items(self):
-        return (
-            Digest.objects
-            .order_by("-date")
-            .only("date", "created_at")
-        )
-
-    def location(self, obj):
-        return reverse("digest_by_date", kwargs={"date": obj.date.isoformat()})
-
-    def lastmod(self, obj):
-        return obj.created_at
-
-
-class StorySitemap(Sitemap):
-    i18n = True
-    alternates = True
-    limit = 5000
-    priority = 0.8
-    changefreq = "never"
-
-    def items(self):
-        return (
-            DigestItem.objects
-            .order_by("-digest__date", "-freshness")
-            .only("id", "digest__date")
-        )
-
-    def location(self, obj):
-        return reverse("story_detail", kwargs={"item_id": obj.pk})
-
-    def lastmod(self, obj):
-        return obj.digest.date
 
 
 class CategorySitemap(Sitemap):
@@ -86,24 +50,24 @@ class CategorySitemap(Sitemap):
         return latest.published if latest else None
 
 
-class ResearchSitemap(Sitemap):
+class SectionSitemap(Sitemap):
     i18n = True
     alternates = True
-    priority = 0.6
-    changefreq = "never"
+    priority = 0.7
+    changefreq = "daily"
 
     def items(self):
-        return (
-            Research.objects.order_by("item_id", "-created_at")
-            .distinct("item_id")
-            .only("item_id", "created_at")
-        )
-
-    def location(self, obj):
-        return reverse("research", kwargs={"item_id": obj.item_id})
+        return DigestSection.objects.filter(enabled=True)
 
     def lastmod(self, obj):
-        return obj.created_at
+        latest = (
+            Article.objects
+            .filter(section=obj, published__isnull=False)
+            .order_by("-published")
+            .only("published")
+            .first()
+        )
+        return latest.published if latest else None
 
 
 class ArticleSitemap(Sitemap):
@@ -129,10 +93,7 @@ class ArticleSitemap(Sitemap):
 
 sitemaps = {
     "static": StaticSitemap,
-    # Digest temporarily disabled (route commented out in urls.py).
-    # "digests": DigestSitemap,
-    "stories": StorySitemap,
     "categories": CategorySitemap,
-    "research": ResearchSitemap,
+    "sections": SectionSitemap,
     "articles": ArticleSitemap,
 }

@@ -28,18 +28,6 @@ class APIUsage(models.Model):
     total_tokens = models.PositiveIntegerField(default=0)
     step = models.CharField(max_length=20, choices=Step.choices, blank=True, default="")
     cost_usd = models.DecimalField(max_digits=10, decimal_places=6, default=0)
-    item = models.ForeignKey(
-        "digest.DigestItem", on_delete=models.SET_NULL,
-        null=True, blank=True, related_name="api_usages",
-    )
-    digest = models.ForeignKey(
-        "digest.Digest", on_delete=models.SET_NULL,
-        null=True, blank=True, related_name="api_usages",
-    )
-    research = models.ForeignKey(
-        "research.Research", on_delete=models.SET_NULL,
-        null=True, blank=True, related_name="api_usages",
-    )
     article = models.ForeignKey(
         "feed.Article", on_delete=models.SET_NULL,
         null=True, blank=True, related_name="api_usages",

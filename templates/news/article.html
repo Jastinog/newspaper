@@ -31,6 +31,10 @@
             {% if article.published %} &middot; {{ article.published|timesince }} {% trans "ago" %}{% endif %}
             &middot; <a href="{{ article.url }}" target="_blank" rel="noopener">{% trans "Original" %}</a>
         </div>
+        <div class="article-item-actions">
+            <button class="similar-btn" data-article-id="{{ article.pk }}"
+                    title="{% trans 'Similar news' %}" aria-label="{% trans 'Similar news' %}"><i class="fas fa-circle-nodes"></i></button>
+        </div>
     </div>
 
     {% if article.image %}
@@ -58,4 +62,8 @@
         <a href="{{ article.url }}" target="_blank" rel="noopener">{% trans "Read original" %} &rarr;</a>
     </div>
 </article>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'news/js/similar-news.js' %}"></script>
 {% endblock %}

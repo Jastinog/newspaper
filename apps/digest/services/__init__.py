@@ -1,2 +1,2 @@
-from .edition import EditionService  # noqa: F401
-from .embed_edition import EmbeddingEdition  # noqa: F401
+# The daily-digest generation services were retired with the day-less redesign.
+# Section assignment now lives in apps/feed/services/section/.

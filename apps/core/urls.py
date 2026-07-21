@@ -3,7 +3,7 @@ from django.urls import path
 from django.views.decorators.cache import cache_page
 
 from . import views
-from .feeds import DigestFeed
+from .feeds import LatestArticlesFeed
 from .news_sitemap import news_sitemap
 from .sitemaps import sitemaps
 
@@ -26,8 +26,6 @@ urlpatterns = [
     path("articles/", views.article_feed, name="articles_list"),
     # The filterable browse (category/country/date) lives under /browse/.
     path("browse/", views.articles_browse, name="articles_browse"),
-    path("story/<int:item_id>/", views.story_detail, name="story_detail"),
-    path("research/<int:item_id>/", views.research, name="research"),
     path("category/<slug:slug>/", views.category_detail, name="category_detail"),
     path("section/<slug:slug>/", views.section_detail, name="section_detail"),
     path("topic/<slug:slug>/", views.topic_detail, name="topic_detail"),
@@ -39,7 +37,7 @@ seo_urlpatterns = [
     path("lang/<str:lang>/", views.set_language_get, name="set_language_get"),
     path("robots.txt", views.robots_txt, name="robots_txt"),
     path("manifest.json", views.manifest_json, name="manifest_json"),
-    path("feed/rss/", DigestFeed(), name="rss_feed"),
+    path("feed/rss/", LatestArticlesFeed(), name="rss_feed"),
     path("sitemap-news.xml", news_sitemap, name="news_sitemap"),
     path(
         "sitemap.xml",

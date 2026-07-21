@@ -14,13 +14,11 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 from apps.core.models import Language
-from apps.core.services.utils import get_article_image_url
-from apps.digest.models import Digest, DigestItem, DigestSection
+from apps.digest.models import DigestSection
 from apps.feed.models import Article, ArticleSummary, ArticleTopic, Category, Feed, Topic
 from apps.feed.services.classify import DISPLAY_THRESHOLD
 from apps.feed.services.search import SearchService
 from apps.location.models import Country
-from apps.research.models import Research
 
 SITE_NAME = _("Newspaper")
 SITE_DESCRIPTION = _("Daily AI-curated news digest from 100+ RSS sources worldwide")
@@ -78,22 +76,6 @@ def _topic_chips_prefetch():
             .order_by("-score")
         ),
         to_attr="top_topics",
-    )
-
-
-def _digest_article_prefetch(lang_obj):
-    """Prefetch each digest item's backing article(s) with feed + a `has_summary`
-    flag, so a digest card renders the same source / summary affordances as the
-    /articles/ feed without an N+1. `has_summary` mirrors the feed's annotation:
-    true when a stored summary exists in the current language."""
-    if lang_obj:
-        summary_exists = ArticleSummary.objects.filter(article=OuterRef("pk"), language=lang_obj)
-        has_summary = Exists(summary_exists)
-    else:
-        has_summary = Value(False, output_field=BooleanField())
-    return Prefetch(
-        "articles",
-        queryset=Article.objects.select_related("feed").annotate(has_summary=has_summary),
     )
 
 
@@ -227,14 +209,6 @@ def article_feed(request):
         }
 
     return render(request, template, context)
-
-
-def _latest_digest(qs, date=None):
-    """Return the best-matching *completed* digest, optionally filtered by date."""
-    qs = qs.filter(stage=Digest.Stage.DONE)
-    if date:
-        return qs.filter(date=date).first()
-    return qs.first()
 
 
 def _build_digest_context(request, pinned_slugs=None):
@@ -514,133 +488,6 @@ def topic_detail(request, slug):
         ),
     }
     return render(request, "news/home.html", context)
-
-
-def story_detail(request, item_id):
-    current_lang = get_language() or "en"
-
-    item = get_object_or_404(
-        DigestItem.objects.select_related("digest", "section")
-        .prefetch_related(
-            "translations", "translations__language",
-            "section__translations", "section__translations__language",
-            "articles__feed",
-            Prefetch("researches", queryset=Research.objects.only("id"), to_attr="_researches"),
-        ),
-        pk=item_id,
-    )
-
-    topic = item.get_topic(current_lang)
-    summary = item.get_summary(current_lang)
-    section_name = item.section.get_name(current_lang) if item.section else ""
-
-    source_articles = [
-        {
-            "title": article.title,
-            "url": article.url,
-            "feed_title": article.feed.title,
-            "feed_lean": article.feed.lean,
-            "feed_lean_display": article.feed.get_lean_display() if article.feed.lean else "",
-            "image_url": get_article_image_url(article),
-            "published": article.published,
-            "absolute_url": article.get_absolute_url(),
-        }
-        for article in item.articles.all()
-    ]
-
-    # Other items from the same section — rendered with the shared card, so give
-    # them the same article + has_summary prefetch the digest homepage uses.
-    section_items = []
-    if item.section and item.digest:
-        siblings = (
-            DigestItem.objects
-            .filter(digest=item.digest, section=item.section)
-            .exclude(pk=item.pk)
-            .select_related("section")
-            .prefetch_related(
-                "translations", "translations__language",
-                _digest_article_prefetch(Language.get_by_code_safe(current_lang)),
-            )
-        )
-        for si in siblings:
-            si.loc_topic = si.get_topic(current_lang)
-            si.loc_summary = si.get_summary(current_lang)
-        section_items = [si for si in siblings if si.loc_topic and si.loc_summary]
-
-    seo = {
-        "title": f"{topic} — {SITE_NAME}",
-        "description": _og_description(summary) or topic,
-        "canonical": request.build_absolute_uri(reverse("story_detail", args=[item.pk])),
-        "og_type": "article",
-        "og_image": request.build_absolute_uri(item.best_image_url) if item.best_image_url else "",
-        "published_time": item.digest.date.isoformat() if item.digest else "",
-        "section": section_name,
-        "breadcrumbs": _breadcrumbs(
-            request,
-            (_("Digest"), "index"),
-            (topic, reverse("story_detail", args=[item.pk])),
-        ),
-    }
-
-    return render(request, "news/story.html", {
-        "item": item,
-        "topic": topic,
-        "summary": summary,
-        "section_name": section_name,
-        "source_articles": source_articles,
-        "section_items": section_items,
-        "has_research": bool(item._researches),
-        "seo": seo,
-    })
-
-
-def research(request, item_id):
-    lang = get_language() or "en"
-
-    item = get_object_or_404(
-        DigestItem.objects.select_related("digest", "section")
-        .prefetch_related("translations", "translations__language"),
-        pk=item_id,
-    )
-
-    dive = Research.objects.filter(item=item, language=Language.get_by_code(lang)).first()
-    if not dive:
-        return render(request, "news/research_loading.html", {
-            "item": item,
-            "topic": item.get_topic(lang),
-        })
-
-    sources = list(
-        dive.sources.select_related("article__feed")
-        .order_by("order")
-    )
-
-    for s in sources:
-        s.image_url = get_article_image_url(s.article)
-
-    hero_image = next(filter(None, (s.image_url for s in sources)), "")
-
-    seo = {
-        "title": f"{dive.title} — {SITE_NAME}",
-        "description": _og_description(dive.subtitle) or dive.title,
-        "canonical": request.build_absolute_uri(request.get_full_path()),
-        "og_type": "article",
-        "og_image": request.build_absolute_uri(hero_image) if hero_image else "",
-        "breadcrumbs": _breadcrumbs(
-            request,
-            (_("Digest"), "index"),
-            (item.get_topic(lang), reverse("story_detail", args=[item.pk])),
-            (dive.title, request.get_full_path()),
-        ),
-    }
-
-    return render(request, "news/research.html", {
-        "dive": dive,
-        "item": item,
-        "sources": sources,
-        "hero_image": hero_image,
-        "seo": seo,
-    })
 
 
 def search(request):

@@ -1,1 +1,1 @@
-from .service import ResearchService  # noqa: F401
+from .search import SimilaritySearch  # noqa: F401

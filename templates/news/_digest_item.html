@@ -1,3 +1,0 @@
-{% load i18n %}
-{% url 'feed_detail' item.article.feed.pk as feed_url %}
-{% include "news/_news_card.html" with card_pk=item.article.pk card_url=item.article_url card_orig_url=item.article.url card_image=item.best_image_url card_title=item.loc_topic card_desc=item.loc_summary card_feed_title=item.article.feed.title card_feed_url=feed_url card_published=item.article.published|default:item.article.created_at card_has_summary=item.article.has_summary %}

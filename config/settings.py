@@ -172,14 +172,6 @@ CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = "Europe/Kyiv"
 CELERY_BEAT_SCHEDULE = {
-    "generate-digest": {
-        "task": "digest.generate",
-        "schedule": timedelta(hours=1),
-    },
-    "telegram-publish-next": {
-        "task": "telegram.publish_next",
-        "schedule": timedelta(minutes=15),
-    },
     "warm-sitemap-cache": {
         "task": "core.warm_sitemap_cache",
         "schedule": crontab(hour=0, minute=5),
@@ -260,15 +252,10 @@ UNFOLD = {
                 ],
             },
             {
-                "title": _("Digests"),
+                "title": _("Sections"),
                 "separator": True,
                 "collapsible": True,
                 "items": [
-                    {
-                        "title": _("Digests"),
-                        "icon": "auto_stories",
-                        "link": reverse_lazy("admin:digest_digest_changelist"),
-                    },
                     {
                         "title": _("Sections"),
                         "icon": "view_list",
@@ -282,18 +269,6 @@ UNFOLD = {
                 ],
             },
             {
-                "title": _("Research"),
-                "separator": True,
-                "collapsible": True,
-                "items": [
-                    {
-                        "title": _("Researches"),
-                        "icon": "science",
-                        "link": reverse_lazy("admin:research_research_changelist"),
-                    },
-                ],
-            },
-            {
                 "title": _("Telegram"),
                 "separator": True,
                 "collapsible": True,
@@ -302,11 +277,6 @@ UNFOLD = {
                         "title": _("Channels"),
                         "icon": "send",
                         "link": reverse_lazy("admin:telegram_telegramchannel_changelist"),
-                    },
-                    {
-                        "title": _("Post log"),
-                        "icon": "history",
-                        "link": reverse_lazy("admin:telegram_telegrampost_changelist"),
                     },
                 ],
             },
