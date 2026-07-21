@@ -1,7 +1,7 @@
 {
     "slug": "climate-environment",
     "order": 15,
-    "description": "Climate change, emissions, conservation, biodiversity, and environmental policy",
+    "description": "Climate change, emissions, conservation, biodiversity, ecology, and environmental policy. Renewable power generation and energy markets go to Energy.",
     "translations": {
         "en": "Climate & Environment",
         "ru": "Климат • Экология",
@@ -30,13 +30,13 @@
         "Corporate greenwashing accusations over hollow climate commitments",
         "Permafrost thaw releases methane further accelerating global warming",
         "Climate refugees are displaced by rising seas and spreading desertification",
-        "Scientific report warns of an accelerating mass extinction crisis",
+        "Peer-reviewed climate science study projects future warming using new atmospheric models",
         "Sustainable farming practices reduce agriculture's environmental footprint",
         "Investors divest from fossil fuels over long-term climate risk",
         "Clean air legislation targets vehicle and factory pollution emissions",
         "Wetlands and old-growth forests protected under a new conservation law",
         "Climate lawsuit seeks to hold polluters accountable for their emissions",
         "Global warming breaks temperature records for the hottest year measured",
-        "Recycling and circular economy initiatives cut landfill and packaging waste"
+        "Scientific report warns of an accelerating mass extinction and biodiversity crisis"
     ]
 }

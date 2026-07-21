@@ -1,7 +1,7 @@
 {
     "slug": "film-tv",
     "order": 13,
-    "description": "Movies, streaming series, television, box office, and celebrities",
+    "description": "Movies, streaming series, television, box office, and celebrities. Owns streaming-service content and subscriber news and AI in filmmaking.",
     "translations": {
         "en": "Film & TV",
         "ru": "Кино • ТВ",
@@ -16,7 +16,7 @@
         "TV series finale as a popular show concludes its final season",
         "Actor cast in the lead role for a major film franchise reboot",
         "Cannes and Venice film festival premieres an award-winning drama",
-        "Streaming platform renews a hit show for another season",
+        "Netflix Disney+ or streaming service reports subscriber growth and content strategy shifts",
         "Celebrity couple relationship news and a high-profile breakup make headlines",
         "Movie sequel and franchise installment confirmed by the studio",
         "Documentary and true-crime series sparks widespread online discussion",
@@ -24,7 +24,7 @@
         "Emmy Awards celebrate outstanding television drama and comedy series",
         "Actor and director interview reveals behind-the-scenes production details",
         "Reboot and remake of a classic film divides longtime fans",
-        "Streaming war as platforms compete for exclusive content deals",
+        "Streaming war as platforms compete for exclusive movies and original series",
         "Movie release date delayed amid production and scheduling issues",
         "Comedian and late-night host returns with a new comedy special",
         "Animated film from Pixar or Disney charms audiences and critics",
@@ -34,9 +34,9 @@
         "Film adaptation of a bestselling novel goes into production",
         "TV network cancels a series after a decline in ratings",
         "Film earns critical acclaim and generates awards-season buzz",
-        "Streaming subscriber numbers surge after a hit original release",
+        "AI-generated video and synthetic actors in filmmaking spark a Hollywood industry debate",
         "Biopic film portrays the life of a famous historical figure",
         "Horror thriller film scares audiences to box office success",
-        "Talk show host announces a departure from a long-running program"
+        "Film or TV production strike and labor dispute halts Hollywood shoots"
     ]
 }
