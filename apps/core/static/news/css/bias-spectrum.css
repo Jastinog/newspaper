@@ -1,6 +1,6 @@
 /* === SOURCES BUTTON === */
 .sources-wrap {
-    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    font-family: var(--font);
 }
 .sources-btn {
     background: none;
@@ -56,7 +56,7 @@
     flex-shrink: 0;
 }
 .sources-modal-title {
-    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    font-family: var(--font);
     font-size: 0.62rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -126,7 +126,7 @@
     min-width: 0;
 }
 .source-card-title {
-    font-family: "PT Serif", Georgia, serif;
+    font-family: var(--font);
     font-size: 0.82rem;
     font-weight: 600;
     line-height: 1.3;

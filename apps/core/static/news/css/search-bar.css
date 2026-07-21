@@ -17,7 +17,7 @@
     border: none;
     outline: none;
     background: transparent;
-    font-family: "PT Serif", Georgia, serif;
+    font-family: var(--font);
     font-size: 0.9rem;
     color: var(--fg);
     padding: 0.6rem 0.9rem;

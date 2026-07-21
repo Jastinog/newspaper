@@ -55,7 +55,7 @@
 }
 
 .similar-modal-title {
-    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    font-family: var(--font);
     font-size: 0.62rem;
     font-weight: 600;
     text-transform: uppercase;
@@ -103,7 +103,7 @@
     display: flex;
     align-items: center;
     gap: 0.35rem;
-    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    font-family: var(--font);
     font-size: 0.6rem;
     color: var(--fg-muted);
 }
@@ -130,7 +130,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    font-family: var(--font);
     font-size: 0.8rem;
     color: var(--fg-faint);
 }

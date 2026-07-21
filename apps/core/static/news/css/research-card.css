@@ -6,7 +6,7 @@
     margin-top: 0.3rem;
 }
 .research-hint {
-    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    font-family: var(--font);
     font-size: 0.75em;
     color: var(--fg-faint);
     text-decoration: none;
@@ -19,7 +19,7 @@
 
 /* Step label replacing "details ->" */
 .dd-inline-step {
-    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    font-family: var(--font);
     font-size: 0.7rem;
     color: var(--accent);
     white-space: nowrap;
@@ -79,7 +79,7 @@
     margin-bottom: 0.6rem;
 }
 .dd-modal-title {
-    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    font-family: var(--font);
     font-size: 0.65rem;
     text-transform: uppercase;
     letter-spacing: 0.12em;
@@ -87,7 +87,7 @@
     margin-bottom: 0.5rem;
 }
 .dd-modal-topic {
-    font-family: "PT Serif", Georgia, serif;
+    font-family: var(--font);
     font-size: 1.15rem;
     font-weight: 700;
     color: var(--fg);
@@ -95,7 +95,7 @@
     margin-bottom: 0.4rem;
 }
 .dd-modal-summary {
-    font-family: "PT Serif", Georgia, serif;
+    font-family: var(--font);
     font-size: 0.85rem;
     color: var(--fg-muted);
     line-height: 1.4;
@@ -107,7 +107,7 @@
     justify-content: center;
 }
 .dd-modal-btn {
-    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    font-family: var(--font);
     font-size: 0.8rem;
     font-weight: 600;
     padding: 0.5rem 1.4rem;

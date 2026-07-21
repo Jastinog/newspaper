@@ -8,7 +8,7 @@
 .browse-page .back-link {
     display: inline-block;
     margin-bottom: 1.5rem;
-    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    font-family: var(--font);
     font-size: 0.75rem;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -23,19 +23,19 @@
     margin-bottom: 1.5rem;
 }
 .browse-header h1 {
-    font-family: "PT Serif", Georgia, serif;
+    font-family: var(--font);
     font-size: clamp(1.4rem, 3.5vw, 2rem);
     font-weight: 700;
     margin-bottom: 0.3rem;
     text-shadow: var(--emboss-subtle);
 }
 .browse-count {
-    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    font-family: var(--font);
     font-size: 0.72rem;
     color: var(--fg-faint);
 }
 .browse-subtitle {
-    font-family: "PT Serif", Georgia, serif;
+    font-family: var(--font);
     font-size: 0.9rem;
     color: var(--fg-muted);
     max-width: 600px;
@@ -51,7 +51,7 @@
     justify-content: center;
     align-items: center;
     margin-top: 0.5rem;
-    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    font-family: var(--font);
     font-size: 0.72rem;
     color: var(--fg-muted);
 }
@@ -71,7 +71,7 @@
 .browse-search {
     width: 100%;
     padding: 0.5rem 0.7rem;
-    font-family: "PT Serif", Georgia, serif;
+    font-family: var(--font);
     font-size: 0.9rem;
     background: transparent;
     border: 1px solid var(--border);
@@ -96,14 +96,32 @@
 
 .browse-filter-row select,
 .browse-date-range input {
-    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    font-family: var(--font);
     font-size: 0.72rem;
     padding: 0.35rem 0.5rem;
     background: var(--bg);
     border: 1px solid var(--border);
+    border-radius: 0;
     color: var(--fg);
     cursor: pointer;
     min-width: 0;
+    outline: none;
+    transition: border-color 0.2s;
+}
+.browse-filter-row select:focus,
+.browse-date-range input:focus {
+    border-color: var(--accent);
+}
+
+/* Flat, chevron-styled selects to match the broadsheet aesthetic — the
+   native control chrome (arrow, rounded corners) clashes with everything else. */
+.browse-filter-row select {
+    -webkit-appearance: none;
+    appearance: none;
+    padding-right: 1.6rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23888' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.55rem center;
 }
 
 .browse-date-range {
@@ -118,7 +136,7 @@
 }
 
 .browse-filter-btn {
-    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    font-family: var(--font);
     font-size: 0.65rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -133,7 +151,7 @@
 .browse-filter-btn:hover { opacity: 0.85; }
 
 .browse-clear {
-    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    font-family: var(--font);
     font-size: 0.65rem;
     color: var(--fg-muted);
     text-decoration: none;
@@ -187,7 +205,7 @@
     width: 100%;
     height: 100%;
     background: var(--border-faint);
-    font-family: "PT Serif", Georgia, serif;
+    font-family: var(--font);
     font-size: 1.6rem;
     font-weight: 700;
     color: var(--fg-faint);
@@ -206,13 +224,13 @@
     gap: 0.15rem;
 }
 .feed-card-title {
-    font-family: "PT Serif", Georgia, serif;
+    font-family: var(--font);
     font-size: 0.9rem;
     font-weight: 700;
     line-height: 1.3;
 }
 .feed-card-category {
-    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    font-family: var(--font);
     font-size: 0.62rem;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -223,7 +241,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: 0.4rem;
-    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    font-family: var(--font);
     font-size: 0.65rem;
     color: var(--fg-faint);
 }
@@ -238,7 +256,7 @@
 .lean-badge,
 .factuality-badge {
     display: inline-block;
-    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    font-family: var(--font);
     font-size: 0.55rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -313,7 +331,7 @@
 }
 
 .article-row-source {
-    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    font-family: var(--font);
     font-size: 0.65rem;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -333,7 +351,7 @@
 }
 
 .article-row-title {
-    font-family: "PT Serif", Georgia, serif;
+    font-family: var(--font);
     font-size: 1rem;
     font-weight: 700;
     line-height: 1.3;
@@ -343,7 +361,7 @@
 .article-row-title:hover { color: var(--accent); }
 
 .article-row-snippet {
-    font-family: "PT Serif", Georgia, serif;
+    font-family: var(--font);
     font-size: 0.82rem;
     line-height: 1.45;
     color: var(--fg-muted);
@@ -357,7 +375,7 @@
 .article-row-meta {
     display: flex;
     gap: 0.5rem;
-    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    font-family: var(--font);
     font-size: 0.65rem;
     color: var(--fg-faint);
 }
@@ -372,7 +390,7 @@
     justify-content: center;
 }
 .article-row .result-placeholder-letter {
-    font-family: "PT Serif", Georgia, serif;
+    font-family: var(--font);
     font-size: 2.5rem;
     font-weight: 700;
     color: var(--fg-faint);
@@ -388,7 +406,7 @@
     margin-top: 2rem;
     padding-top: 1rem;
     border-top: 1px solid var(--border);
-    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    font-family: var(--font);
     font-size: 0.75rem;
 }
 .pagination-link {
@@ -408,7 +426,7 @@
     text-align: center;
     padding: 3rem 1rem;
     color: var(--fg-muted);
-    font-family: "PT Serif", Georgia, serif;
+    font-family: var(--font);
 }
 
 /* ── Responsive ── */

@@ -54,7 +54,7 @@
    no pill, active shown by accent colour alone. */
 .topic-nav-item {
     flex-shrink: 0;
-    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    font-family: var(--font);
     font-size: 0.68rem;
     text-transform: uppercase;
     letter-spacing: 0.06em;

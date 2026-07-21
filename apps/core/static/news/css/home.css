@@ -42,7 +42,7 @@
     text-align: center;
     color: var(--fg-muted);
     padding: 3rem 0;
-    font-family: "PT Serif", Georgia, serif;
+    font-family: var(--font);
 }
 
 /* Tablet portrait: 2 columns */

@@ -348,6 +348,9 @@
 
 html {
     font-size: 16px;
+    /* Single UI/content typeface, referenced everywhere as var(--font) so the
+       whole site changes from one place. */
+    --font: "Inter", -apple-system, system-ui, "Helvetica Neue", sans-serif;
     /* Always reserve the scrollbar's space so hiding it (modal-open) doesn't
        shift the page sideways. No-ops for overlay scrollbars. */
     scrollbar-gutter: stable;
@@ -360,7 +363,7 @@ html {
 }
 
 body {
-    font-family: "PT Serif", Georgia, "Times New Roman", serif;
+    font-family: var(--font);
     background: var(--bg);
     color: var(--fg);
     line-height: 1.65;

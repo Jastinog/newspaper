@@ -43,7 +43,7 @@
 }
 .section-nav-item {
     flex-shrink: 0;
-    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    font-family: var(--font);
     font-size: 0.68rem;
     font-weight: 600;
     text-transform: uppercase;
@@ -87,7 +87,7 @@
 
 /* === HEADLINE === */
 .digest-headline {
-    font-family: "PT Serif", Georgia, serif;
+    font-family: var(--font);
     font-size: clamp(1.2rem, 3vw, 1.8rem);
     text-align: center;
     margin-bottom: 1.5rem;
@@ -165,10 +165,14 @@
 
 /* === SECTION STYLES === */
 .digest-section h3 {
-    font-family: "PT Serif", Georgia, serif;
-    font-size: 0.72rem;
+    /* A category label, same role as the top section-nav — so it shares the
+       nav's Inter/uppercase treatment. Serif is reserved for content
+       (headlines, body, masthead), not labels. */
+    font-family: var(--font);
+    font-size: 0.68rem;
     font-weight: 700;
-    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
     color: var(--section-heading-fg);
     background: var(--accent);
     padding: 0.2rem 0.5rem;
@@ -191,7 +195,7 @@
     flex: none;
     font-size: 0.55rem;
     font-weight: 600;
-    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    font-family: var(--font);
     background: rgba(255,255,255,0.2);
     padding: 0.05rem 0.35rem;
     border-radius: 2px;
@@ -204,7 +208,7 @@
 }
 
 .digest-section .summary {
-    font-family: "PT Serif", Georgia, serif;
+    font-family: var(--font);
     font-size: 0.9rem;
     line-height: 1.6;
     color: var(--fg-dim);

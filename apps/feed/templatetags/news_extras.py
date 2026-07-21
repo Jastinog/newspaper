@@ -1,9 +1,19 @@
 from django import template
+from django.utils.timesince import timesince as _timesince
 
 from apps.core.services.utils import get_article_image_url
 from apps.feed.services.summary_guard import make_summary_token
 
 register = template.Library()
+
+
+@register.filter
+def short_timesince(value):
+    """Coarse "time ago" — a single unit ("2 hours" not "2 hours, 43 minutes"),
+    so the card's relative time stays quiet next to the absolute date."""
+    if not value:
+        return ""
+    return _timesince(value, depth=1)
 
 
 @register.simple_tag

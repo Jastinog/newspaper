@@ -2,7 +2,7 @@
 /* Extends article.css */
 
 .story-section-badge {
-    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    font-family: var(--font);
     font-size: 0.65rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -19,7 +19,7 @@
     padding: 1rem;
     border: 1px solid var(--border);
     text-align: center;
-    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    font-family: var(--font);
     font-size: 0.85rem;
     font-weight: 600;
 }
@@ -57,7 +57,7 @@
 }
 
 .story-item-actions .research-link {
-    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    font-family: var(--font);
     font-size: 0.75rem;
     font-weight: 600;
     text-transform: uppercase;
@@ -79,7 +79,7 @@
 }
 
 .story-more-section h2 {
-    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    font-family: var(--font);
     font-size: 0.7rem;
     font-weight: 700;
     text-transform: uppercase;

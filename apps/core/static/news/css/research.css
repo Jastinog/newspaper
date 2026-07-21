@@ -2,7 +2,7 @@
 /* Extends article.css — requires article.css to be loaded first */
 
 .research-badge {
-    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    font-family: var(--font);
     font-size: 0.65rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -13,7 +13,7 @@
 }
 
 .article-header .subtitle {
-    font-family: "PT Serif", Georgia, serif;
+    font-family: var(--font);
     font-size: clamp(1rem, 2vw, 1.15rem);
     font-style: italic;
     color: var(--fg-dim);
@@ -22,7 +22,7 @@
 }
 
 .article-content h2 {
-    font-family: "PT Serif", Georgia, serif;
+    font-family: var(--font);
     font-size: clamp(1.15rem, 2.5vw, 1.4rem);
     font-weight: 700;
     margin: 2rem 0 0.8rem;
@@ -31,7 +31,7 @@
 }
 
 .article-content h3 {
-    font-family: "PT Serif", Georgia, serif;
+    font-family: var(--font);
     font-size: clamp(1rem, 2vw, 1.15rem);
     font-weight: 700;
     margin: 1.5rem 0 0.6rem;
@@ -65,7 +65,7 @@
     display: flex;
     align-items: center;
     gap: 0.4rem;
-    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    font-family: var(--font);
     font-size: 0.65rem;
     font-weight: 600;
     font-variant-numeric: tabular-nums;

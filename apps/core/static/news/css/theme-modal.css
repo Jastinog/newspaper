@@ -46,7 +46,7 @@
     padding: 1.1rem 1.4rem 0.9rem;
 }
 .theme-modal-title {
-    font-family: "Libre Baskerville", Georgia, serif;
+    font-family: var(--font);
     font-size: 1.15rem;
     font-weight: 700;
     letter-spacing: 0.01em;
@@ -98,7 +98,7 @@
     background: none;
     border: none;
     padding: 0.42rem 0.75rem;
-    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    font-family: var(--font);
     font-size: 0.72rem;
     font-weight: 700;
     letter-spacing: 0.05em;
@@ -211,7 +211,7 @@
     flex: none;
 }
 .theme-card-name {
-    font-family: "Libre Baskerville", Georgia, serif;
+    font-family: var(--font);
     font-size: 0.82rem;
     font-weight: 700;
     color: var(--fg);

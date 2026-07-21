@@ -44,7 +44,7 @@ variables before including:
         <div class="home-item-meta">
             <span class="home-item-when">
                 <span class="home-item-date">{{ card_published|date:"j M Y, H:i" }}</span>
-                <span class="home-item-ago">{{ card_published|timesince }} {% trans "ago" %}</span>
+                <span class="home-item-ago">{{ card_published|short_timesince }} {% trans "ago" %}</span>
             </span>
         </div>
         {% endif %}
