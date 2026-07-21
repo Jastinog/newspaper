@@ -2,6 +2,7 @@ import logging
 import time
 from datetime import datetime, timezone
 
+from apps.core.services.utils import markdown_to_plain
 from apps.feed.models import Article, ArticleChunk
 from apps.feed.services.embed import LocalEmbedder
 from apps.research.services.search import SimilaritySearch
@@ -50,18 +51,14 @@ class SearchService:
         chunk_map = {c.id: c for c in chunks}
 
         article_scores = {}
-        article_snippets = {}
+        best_chunk_text = {}
         for chunk_id, article_id, _, score in search_results:
             chunk = chunk_map.get(chunk_id)
             if not chunk:
                 continue
             if article_id not in article_scores or score > article_scores[article_id]:
                 article_scores[article_id] = score
-                text = chunk.chunk_text
-                if len(text) > SNIPPET_LENGTH:
-                    article_snippets[article_id] = text[:SNIPPET_LENGTH] + "\u2026"
-                else:
-                    article_snippets[article_id] = text
+                best_chunk_text[article_id] = chunk.chunk_text
 
         articles = Article.objects.filter(
             id__in=list(article_scores.keys()),
@@ -73,10 +70,15 @@ class SearchService:
             article = article_map.get(aid)
             if not article:
                 continue
+            # Clean Markdown/URLs out once per result (only the winning chunk)
+            # before truncating, so raw "[text](url)" link syntax never leaks
+            # into a snippet. Slice first \u2014 only SNIPPET_LENGTH chars survive.
+            text = markdown_to_plain(best_chunk_text.get(aid, "")[:SNIPPET_LENGTH * 3])
+            snippet = text[:SNIPPET_LENGTH] + "\u2026" if len(text) > SNIPPET_LENGTH else text
             results.append({
                 "article": article,
                 "score": round(score * 100, 1),
-                "snippet": article_snippets.get(aid, ""),
+                "snippet": snippet,
             })
 
         if sort == self.SORT_DATE:

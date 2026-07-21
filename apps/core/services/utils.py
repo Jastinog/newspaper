@@ -1,4 +1,10 @@
+import html as _html
 import re
+
+import markdown
+from django.utils.html import strip_tags
+
+_URL_RE = re.compile(r"https?://\S+|www\.\S+")
 
 
 def sanitize_text(s: str) -> str:
@@ -7,6 +13,20 @@ def sanitize_text(s: str) -> str:
     # Remove Unicode surrogates that break JSON serialization
     s = re.sub(r'[\ud800-\udfff]', '', s)
     return s
+
+
+def markdown_to_plain(value):
+    """Render Markdown, drop all tags, and strip bare URLs — leaving clean
+    plain text. A link keeps its anchor text but its href never leaks, and a
+    raw "https://…" never survives. Shared by the teaser template filter and
+    the search service so card and search-result snippets clean text the same
+    way."""
+    if not value:
+        return ""
+    html = markdown.markdown(value, extensions=["nl2br", "sane_lists"])
+    text = _html.unescape(strip_tags(html))
+    text = _URL_RE.sub("", text)
+    return " ".join(text.split())
 
 
 def get_translated_field(translations, field: str, language, fallback=""):
