@@ -222,9 +222,9 @@
     function markCardReady(card) {
         card.classList.add('has-summary');
         var badge = card.querySelector('.home-item-badge-text');
-        if (badge) badge.textContent = I18N.gistReady || 'Суть готова';
+        if (badge) badge.textContent = I18N.summaryReady || 'Суть готова';
         var label = card.querySelector('.home-sum-btn-label');
-        if (label) label.textContent = I18N.readGist || 'Читать суть';
+        if (label) label.textContent = I18N.readSummary || 'Читать суть';
     }
 
     /* ── Click delegation (survives HTMX infinite-scroll swaps) ── */

@@ -3,9 +3,9 @@
 The on-demand "Summary" machinery, shared by the /articles/ feed and the
 homepage digest so a card's ✦ button behaves identically on both.
 {% endcomment %}
-{% trans "Gist" as t_gist %}
-{% trans "Gist ready" as t_gist_ready %}
-{% trans "Read the gist" as t_read_gist %}
+{% trans "Summary" as t_summary %}
+{% trans "Summary ready" as t_summary_ready %}
+{% trans "Read the summary" as t_read_summary %}
 {% trans "Takeaway" as t_takeaway %}
 {% trans "Original" as t_original %}
 {% trans "Close" as t_close %}
@@ -18,9 +18,9 @@ homepage digest so a card's ✦ button behaves identically on both.
 {% trans "Couldn't generate the summary." as t_err_generic %}
 <script>
 window.SUMMARY_I18N = {
-    kicker: "{{ t_gist|escapejs }}",
-    gistReady: "{{ t_gist_ready|escapejs }}",
-    readGist: "{{ t_read_gist|escapejs }}",
+    kicker: "{{ t_summary|escapejs }}",
+    summaryReady: "{{ t_summary_ready|escapejs }}",
+    readSummary: "{{ t_read_summary|escapejs }}",
     takeaway: "{{ t_takeaway|escapejs }}",
     original: "{{ t_original|escapejs }}",
     close: "{{ t_close|escapejs }}",

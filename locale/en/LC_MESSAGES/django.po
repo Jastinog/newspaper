@@ -229,7 +229,7 @@ msgstr ""
 
 #: templates/news/_article_summary.html:6 templates/news/_home_item.html:7
 #: templates/news/_home_item.html:20 templates/news/home.html:15
-msgid "Gist"
+msgid "Summary"
 msgstr "Summary"
 
 #: templates/news/_article_summary.html:11 templates/news/home.html:18
@@ -245,7 +245,7 @@ msgid "Retry"
 msgstr "Retry"
 
 #: templates/news/_article_summary.html:32
-msgid "Get the gist"
+msgid "Get the summary"
 msgstr "Get the summary"
 
 #: templates/news/_article_summary.html:33
@@ -267,11 +267,11 @@ msgid "No news yet."
 msgstr "No articles yet."
 
 #: templates/news/_home_item.html:7 templates/news/home.html:16
-msgid "Gist ready"
+msgid "Summary ready"
 msgstr "Summary ready"
 
 #: templates/news/_home_item.html:20 templates/news/home.html:17
-msgid "Read the gist"
+msgid "Read the summary"
 msgstr "Read the summary"
 
 #: templates/news/_home_item.html:23
@@ -577,9 +577,6 @@ msgstr "sources"
 #: templates/news/story.html:62
 msgid "More from"
 msgstr ""
-
-#~ msgid "Show the gist"
-#~ msgstr "Show the gist"
 
 #~ msgid "Back to digest"
 #~ msgstr "Back to digest"

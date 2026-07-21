@@ -3,7 +3,7 @@
 {% if summary %}
     <div class="ai-summary-head">
         <span class="ai-summary-badge">AI</span>
-        <span class="ai-summary-title">{% trans "Gist" %}</span>
+        <span class="ai-summary-title">{% trans "Summary" %}</span>
     </div>
     <div class="ai-summary-body">{{ summary.summary|linebreaks }}</div>
     {% if summary.conclusion %}
@@ -29,7 +29,7 @@
             hx-trigger="click once" hx-disabled-elt="this"
             hx-indicator="#aiSummarySpin">
         <span class="ai-summary-btn-icon">✦</span>
-        <span>{% trans "Get the gist" %}</span>
+        <span>{% trans "Get the summary" %}</span>
         <span id="aiSummarySpin" class="ai-summary-spin htmx-indicator">{% trans "generating…" %}</span>
     </button>
 {% endif %}

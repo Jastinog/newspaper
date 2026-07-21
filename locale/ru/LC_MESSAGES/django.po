@@ -233,7 +233,7 @@ msgstr ""
 
 #: templates/news/_article_summary.html:6 templates/news/_home_item.html:7
 #: templates/news/_home_item.html:20 templates/news/home.html:15
-msgid "Gist"
+msgid "Summary"
 msgstr "Суть"
 
 #: templates/news/_article_summary.html:11 templates/news/home.html:18
@@ -249,7 +249,7 @@ msgid "Retry"
 msgstr "Повторить"
 
 #: templates/news/_article_summary.html:32
-msgid "Get the gist"
+msgid "Get the summary"
 msgstr "Пересказать"
 
 #: templates/news/_article_summary.html:33
@@ -271,11 +271,11 @@ msgid "No news yet."
 msgstr "Статей пока нет."
 
 #: templates/news/_home_item.html:7 templates/news/home.html:16
-msgid "Gist ready"
+msgid "Summary ready"
 msgstr "Суть готова"
 
 #: templates/news/_home_item.html:20 templates/news/home.html:17
-msgid "Read the gist"
+msgid "Read the summary"
 msgstr "Читать суть"
 
 #: templates/news/_home_item.html:23
@@ -567,9 +567,6 @@ msgstr "источники"
 #: templates/news/story.html:62
 msgid "More from"
 msgstr ""
-
-#~ msgid "Show the gist"
-#~ msgstr "Показать суть"
 
 #~ msgid "Back to digest"
 #~ msgstr "Назад к дайджесту"
