@@ -32,7 +32,6 @@ urlpatterns = [
     path("category/<slug:slug>/", views.category_detail, name="category_detail"),
     path("topic/<slug:slug>/", views.topic_detail, name="topic_detail"),
     path("pin/<slug:slug>/", views.toggle_pin, name="toggle_pin"),
-    path("feed/<int:pk>/hide/", views.hide_feed, name="hide_feed"),
 ]
 
 # These should NOT be language-prefixed

@@ -1,0 +1,68 @@
+{% load i18n news_extras markdown_extras static %}
+{% comment %}
+Shared news card used by both the homepage digest and the /articles/ feed, so
+the two look and behave the same. The caller normalizes its model into these
+variables before including:
+
+  card_pk           article id (drives the "Gist" summary + the summary token)
+  card_url          internal article page URL
+  card_orig_url     original source URL (the "Original ↗" button)
+  card_image        image URL (falls back to the placeholder)
+  card_title        headline
+  card_desc         raw text/markdown for the teaser (run through |teaser here)
+  card_feed_title   source name (shown in the top bar)
+  card_feed_url     source page URL
+  card_published    published/created datetime ("when" + "… ago")
+  card_has_summary  bool — a stored gist exists in the current language
+  card_topics       optional iterable of ArticleTopic (chips over the image);
+                    suppressed when the surrounding context sets `hide_topics`
+{% endcomment %}
+<article class="home-item{% if card_has_summary %} has-summary{% endif %}"
+         data-article-id="{{ card_pk }}"
+         {% if card_pk %}data-summary-token="{% summary_token card_pk %}"{% endif %}>
+    <div class="home-item-bar">
+        <a href="{{ card_feed_url }}" class="home-item-source">{{ card_feed_title }}</a>
+        <button type="button" class="share-btn" data-url="{{ card_url }}" data-title="{{ card_title }}"
+                aria-label="{% trans 'Share' %}" title="{% trans 'Share' %}"><i class="fas fa-share-nodes"></i></button>
+    </div>
+    <a href="{{ card_url }}" class="home-item-thumb">
+        <img src="{% if card_image %}{{ card_image }}{% else %}{% static 'news/img/placeholder.webp' %}{% endif %}" alt="" loading="lazy">
+        <span class="home-item-badge">
+            <span class="home-item-badge-icon">✦</span>
+            <span class="home-item-badge-text">{% if card_has_summary %}{% trans "Gist ready" %}{% else %}{% trans "Gist" %}{% endif %}</span>
+        </span>
+    </a>
+    {% if card_topics and not hide_topics %}
+    <div class="home-item-topics">
+        {% for at in card_topics %}
+        <a href="{{ at.topic.get_absolute_url }}" class="home-item-topic">{{ at.topic.name }}</a>
+        {% endfor %}
+    </div>
+    {% endif %}
+    <div class="home-item-body">
+        <a href="{{ card_url }}" class="home-item-title">{{ card_title }}</a>
+        {% if card_desc %}<p class="home-item-desc">{{ card_desc|teaser|truncatechars_word:220 }}</p>{% endif %}
+        {% if card_published %}
+        <div class="home-item-meta">
+            <span class="home-item-when">
+                <span class="home-item-date">{{ card_published|date:"j M Y, H:i" }}</span>
+                <span class="home-item-ago">{{ card_published|timesince }} {% trans "ago" %}</span>
+            </span>
+        </div>
+        {% endif %}
+        <div class="home-item-actions">
+            {% if card_pk %}
+            <button type="button" class="home-sum-btn" data-summary-trigger>
+                <span class="home-sum-btn-icon">✦</span>
+                <span class="home-sum-btn-label">{% if card_has_summary %}{% trans "Read the gist" %}{% else %}{% trans "Gist" %}{% endif %}</span>
+            </button>
+            {% endif %}
+            {% if card_orig_url %}
+            <a class="home-orig-btn" href="{{ card_orig_url }}" target="_blank" rel="noopener"
+               title="{% trans 'Open the original source' %}">
+                {% trans "Original" %}<span class="home-orig-arrow">↗</span>
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</article>

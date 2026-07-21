@@ -10,14 +10,13 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import get_language, gettext_lazy as _
-from django.contrib.admin.views.decorators import staff_member_required
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 from apps.core.models import Language
 from apps.core.services.utils import get_article_image_url
 from apps.digest.models import Digest, DigestItem
-from apps.feed.models import Article, ArticleSummary, ArticleTopic, Category, Feed, HiddenFeed, Topic
+from apps.feed.models import Article, ArticleSummary, ArticleTopic, Category, Feed, Topic
 from apps.feed.services.classify import DISPLAY_THRESHOLD
 from apps.feed.services.search import SearchService
 from apps.location.models import Country
@@ -75,6 +74,22 @@ def _topic_chips_prefetch():
             .order_by("-score")
         ),
         to_attr="top_topics",
+    )
+
+
+def _digest_article_prefetch(lang_obj):
+    """Prefetch each digest item's backing article(s) with feed + a `has_summary`
+    flag, so a digest card renders the same source / gist affordances as the
+    /articles/ feed without an N+1. `has_summary` mirrors the feed's annotation:
+    true when a stored summary exists in the current language."""
+    if lang_obj:
+        summary_exists = ArticleSummary.objects.filter(article=OuterRef("pk"), language=lang_obj)
+        has_summary = Exists(summary_exists)
+    else:
+        has_summary = Value(False, output_field=BooleanField())
+    return Prefetch(
+        "articles",
+        queryset=Article.objects.select_related("feed").annotate(has_summary=has_summary),
     )
 
 
@@ -154,7 +169,6 @@ def _home_feed_context(request, extra_filter=None):
         Article.objects.select_related("feed")  # cards only render feed.title / feed.pk
         .prefetch_related(_topic_chips_prefetch())
         .exclude(image="")
-        .filter(feed__hidden__isnull=True)  # drop sources a curator marked hidden site-wide
         .annotate(
             sort_date=Coalesce("published", "created_at"),
             has_summary=Exists(summary_exists) if lang_obj else Value(False, output_field=BooleanField()),
@@ -225,6 +239,7 @@ def _build_digest_context(request, date=None, pinned_slugs=None):
     from itertools import groupby
 
     current_lang = get_language() or "en"
+    lang_obj = Language.get_by_code_safe(current_lang)
 
     parsed = None
     if date:
@@ -261,7 +276,7 @@ def _build_digest_context(request, date=None, pinned_slugs=None):
         items = list(digest.items.select_related("section").prefetch_related(
             "translations", "translations__language",
             "section__translations", "section__translations__language",
-            "articles",
+            _digest_article_prefetch(lang_obj),
         ).all())
 
         # Annotate items with localized text, skip empty items
@@ -372,22 +387,6 @@ def toggle_pin(request, slug):
         max_age=_PINNED_MAX_AGE, samesite="Lax", path="/",
     )
     return response
-
-
-@staff_member_required
-@require_POST
-def hide_feed(request, pk):
-    """Hide a whole source from the home feed for every visitor (curator-only).
-
-    Global curation is a destructive action, so it's gated to staff via the same
-    decorator the admin dashboards use; the owner is already signed into /admin
-    and that session applies here too. Unhide via the admin. Real CSRF (no
-    @csrf_exempt) since this is an authenticated, stateful write. Note: this only
-    affects the home feed — the source stays reachable via its own page, search, etc.
-    """
-    feed = get_object_or_404(Feed, pk=pk)
-    HiddenFeed.objects.get_or_create(feed=feed)
-    return JsonResponse({"ok": True, "feed_id": feed.pk})
 
 
 def article_detail(request, pk, slug=""):
@@ -565,7 +564,8 @@ def story_detail(request, item_id):
         for article in item.articles.all()
     ]
 
-    # Other items from the same section
+    # Other items from the same section — rendered with the shared card, so give
+    # them the same article + has_summary prefetch the digest homepage uses.
     section_items = []
     if item.section and item.digest:
         siblings = (
@@ -575,7 +575,7 @@ def story_detail(request, item_id):
             .select_related("section")
             .prefetch_related(
                 "translations", "translations__language",
-                "articles__feed",
+                _digest_article_prefetch(Language.get_by_code_safe(current_lang)),
             )
         )
         for si in siblings:

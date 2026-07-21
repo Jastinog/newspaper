@@ -83,22 +83,6 @@ class Feed(models.Model):
         return self.title
 
 
-class HiddenFeed(models.Model):
-    """A source a curator has hidden from the home feed.
-
-    The site currently has a single curator (the owner), so hiding is global —
-    the presence of a row excludes this feed's articles from the home feed for
-    every visitor. It does not stop harvesting or hide the source from other
-    surfaces (its own page, search, etc.). Delete the row (in the admin) to unhide.
-    """
-
-    feed = models.OneToOneField(Feed, on_delete=models.CASCADE, related_name="hidden")
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"hidden: {self.feed.title}"
-
-
 class Article(models.Model):
     class Status(models.IntegerChoices):
         PENDING = 0, "Pending"

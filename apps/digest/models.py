@@ -1,3 +1,5 @@
+from functools import cached_property
+
 from django.db import models
 from pgvector.django import VectorField
 
@@ -312,12 +314,18 @@ class DigestItem(models.Model):
         arts = list(self.articles.all())
         return arts[0] if arts else None
 
+    @cached_property
+    def article(self):
+        """The backing article, exposed to templates so a digest card can render
+        the same source / published / gist affordances as the /articles/ feed.
+        Cached because a card reads it many times per render."""
+        return self._primary_article()
+
     @property
     def article_url(self):
         """Canonical URL of the backing article, so a digest card can open the
         full article page directly. Empty when no article is linked (legacy)."""
-        art = self._primary_article()
-        return art.get_absolute_url() if art else ""
+        return self.article.get_absolute_url() if self.article else ""
 
     @property
     def best_image_url(self):

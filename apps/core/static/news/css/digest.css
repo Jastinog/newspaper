@@ -78,6 +78,12 @@
     margin-bottom: 0.3rem;
     border-bottom: 1px solid var(--border-faint);
 }
+/* Filtered view uses the same shared card; drop the row divider like the grid. */
+.digest-item-card:has(.home-item) {
+    padding-bottom: 0;
+    margin-bottom: 1.2rem;
+    border-bottom: none;
+}
 
 /* === HEADLINE === */
 .digest-headline {
@@ -224,99 +230,18 @@
     margin-bottom: 0;
 }
 
+/* The digest reuses the shared .home-item card (see home.css). Strip the plain
+   masonry <li> divider so the card's own chrome carries the layout, and let the
+   card size to its content inside the multi-column flow. */
+.digest-section .summary li:has(.home-item) {
+    padding: 0;
+    border-bottom: none;
+    margin-bottom: 1.2rem;
+}
+.digest-section .home-item { height: auto; }
+
 .digest-section .summary p {
     margin-bottom: 0.5rem;
-}
-
-/* Topic name */
-.item-topic {
-    display: block;
-    font-family: "PT Serif", Georgia, serif;
-    font-size: 1rem;
-    font-weight: 700;
-    color: var(--fg);
-    line-height: 1.35;
-    margin-bottom: 0.15rem;
-    text-decoration: none;
-}
-a.item-topic:hover {
-    color: var(--accent);
-}
-
-/* Top bar: sources icon strip above image */
-.item-top-bar {
-    position: relative;
-    z-index: 2;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    height: 24px;
-    padding: 0 0.55rem;
-    background: var(--border-faint);
-    border-bottom: 1px solid var(--border-light);
-}
-.item-top-bar .sources-wrap,
-.item-top-bar .sources-btn {
-    display: flex;
-    align-items: center;
-    line-height: 1;
-}
-
-/* Shared card container layout (hero card + no-image placeholder) */
-.item-hero-card,
-.item-image-wrap {
-    position: relative;
-    overflow: hidden;
-    margin-bottom: 0.4rem;
-}
-.item-image {
-    width: 100%;
-    aspect-ratio: 16 / 9;
-    object-fit: cover;
-    display: block;
-}
-.item-image-placeholder {
-    width: 100%;
-    aspect-ratio: 16 / 9;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--border-faint);
-    position: relative;
-    overflow: hidden;
-    text-decoration: none;
-}
-.item-image-placeholder::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    opacity: 0.08;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Ctext x='50%25' y='55%25' text-anchor='middle' dominant-baseline='middle' font-family='Georgia,serif' font-size='8' fill='%23000' opacity='0.5'%3ENEWS%3C/text%3E%3C/svg%3E");
-    background-size: 60px 60px;
-}
-.item-image-placeholder span {
-    font-family: "Libre Baskerville", Georgia, serif;
-    font-size: 3.5rem;
-    font-weight: 700;
-    color: var(--fg-faint);
-    opacity: 0.5;
-    text-shadow: var(--emboss-subtle);
-    line-height: 1;
-    z-index: 1;
-    text-transform: uppercase;
-}
-
-/* Summary text */
-.item-summary {
-    color: var(--fg-muted);
-    font-size: 0.88rem;
-}
-.item-summary p {
-    margin: 0 0 0.5em;
-    text-indent: 0;
-}
-.item-summary p:last-child {
-    margin-bottom: 0;
 }
 
 .digest-section .summary code {
@@ -324,48 +249,6 @@ a.item-topic:hover {
     padding: 0.1rem 0.3rem;
     border-radius: 3px;
     font-size: 0.9em;
-}
-
-/* === HERO CARD (full-width image with icon strip above) === */
-.item-hero-card .item-top-bar,
-.item-image-wrap .item-top-bar {
-    width: 100%;
-}
-
-/* Top bar button styling (match sources-btn look) */
-.item-top-bar button {
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
-    font-size: 0.7rem;
-    font-weight: 600;
-    color: var(--fg-faint);
-    padding: 0;
-    white-space: nowrap;
-    transition: color 0.15s;
-    display: inline-flex;
-    align-items: center;
-    line-height: 1;
-}
-
-.item-top-bar button:hover {
-    color: var(--accent);
-}
-
-/* Full-width image */
-.item-hero-card__img {
-    position: relative;
-    z-index: 1;
-    width: 100%;
-    aspect-ratio: 16 / 9;
-    object-fit: cover;
-    display: block;
-    opacity: 0;
-    transition: opacity 0.4s ease;
-}
-.item-hero-card__img.loaded {
-    opacity: 1;
 }
 
 .empty {
@@ -440,10 +323,6 @@ a.item-topic:hover {
 
     .digest-section .summary {
         font-size: 0.8rem;
-    }
-
-    .item-topic {
-        font-size: 0.9rem;
     }
 
 }
