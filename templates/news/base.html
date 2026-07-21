@@ -58,9 +58,8 @@
                 <div class="masthead-date" id="mastheadDate">{% block masthead_date %}{% now "l, F j, Y" %}{% endblock %}</div>
                 <div class="site-title"><a href="{% url 'index' %}">{% trans "Newspaper" %}</a></div>
                 <nav class="masthead-nav" hx-boost="true" hx-swap="innerHTML transition:true">
-                    <a href="{% url 'index' %}" class="{% if request.resolver_match.url_name == 'index' %}active{% endif %}">{% trans "Home" %}</a>
-                    <a href="{% url 'digest' %}" class="{% if request.resolver_match.url_name == 'digest' or request.resolver_match.url_name == 'digest_by_date' %}active{% endif %}">{% trans "Digest" %}</a>
-                    <a href="{% url 'articles_list' %}" class="{% if request.resolver_match.url_name == 'articles_list' %}active{% endif %}">{% trans "Articles" %}</a>
+                    <a href="{% url 'index' %}" class="{% if request.resolver_match.url_name == 'index' or request.resolver_match.url_name == 'digest_by_date' %}active{% endif %}">{% trans "Home" %}</a>
+                    <a href="{% url 'articles_list' %}" class="{% if request.resolver_match.url_name == 'articles_list' or request.resolver_match.url_name == 'articles_browse' %}active{% endif %}">{% trans "Articles" %}</a>
                     <a href="{% url 'feeds_list' %}" class="{% if request.resolver_match.url_name == 'feeds_list' or request.resolver_match.url_name == 'feed_detail' %}active{% endif %}">{% trans "Sources" %}</a>
                     <a href="{% url 'search' %}" class="{% if request.resolver_match.url_name == 'search' %}active{% endif %}">{% trans "Search" %}</a>
                 </nav>
@@ -78,7 +77,9 @@
         </div>
         <div class="masthead-rule-bottom"></div>
     </header>
+    {% if request.resolver_match.url_name == 'articles_list' or request.resolver_match.url_name == 'topic_detail' %}
     {% include "news/_topic_nav.html" %}
+    {% endif %}
     <main>
         <div class="container">
             <script src="{% static 'websocket/js/ws.js' %}"></script>

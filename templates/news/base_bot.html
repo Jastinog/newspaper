@@ -18,7 +18,9 @@
             <a href="{% url 'search' %}">{% trans "Search" %}</a>
         </nav>
     </header>
+    {% if request.resolver_match.url_name == 'articles_list' or request.resolver_match.url_name == 'topic_detail' %}
     {% include "news/_topic_nav.html" %}
+    {% endif %}
     <main>
         {% block content %}{% endblock %}
     </main>

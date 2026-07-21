@@ -1,36 +1,35 @@
 /* Site-wide topic navigation bar (below the masthead). Horizontally scrollable
    with arrow buttons at the edges; native scrollbar hidden. */
+/* Heavy bottom rule + spacing mirror the digest's section-nav → digest-headline-rule
+   so the topics bar and the categories bar read identically. The rule lives on the
+   inner .container (not the full-width nav) so it spans the content width, exactly
+   like the digest's rule — not edge to edge. */
 .topic-nav {
-    border-bottom: 1px solid var(--border-faint);
     background: var(--bg);
 }
 .topic-nav-inner {
     display: flex;
     align-items: center;
-    gap: 0.2rem;
-    padding-top: 0.5rem;
-    padding-bottom: 0.5rem;
+    padding-top: clamp(1rem, 2vw, 1.5rem);
+    padding-bottom: 0.8rem;
+    border-bottom: 3px solid var(--border-heavy);
 }
 
-/* ‹ › scroll buttons — hidden when there's nothing to scroll to that side */
+/* ‹ › scroll buttons — hidden when there's nothing to scroll to that side.
+   Matched to the digest section-nav arrows so both navs read identically. */
 .topic-nav-arrow {
-    flex: 0 0 auto;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 1.6rem;
-    height: 1.6rem;
-    padding: 0;
-    border: none;
+    flex-shrink: 0;
     background: none;
-    color: var(--fg-muted);
-    font-size: 1.1rem;
-    line-height: 1;
+    border: none;
     cursor: pointer;
+    font-size: 0.9rem;
+    color: var(--fg-muted);
+    padding: 0.25rem 0.4rem;
+    line-height: 1;
+    transition: color 0.2s;
     user-select: none;
-    transition: color 0.15s;
 }
-.topic-nav-arrow:hover { color: var(--accent); }
+.topic-nav-arrow:hover { color: var(--fg); }
 .topic-nav-arrow.hidden { visibility: hidden; }
 
 /* Overflow wrapper with a soft fade at each edge as a scroll affordance */
@@ -43,30 +42,30 @@
 }
 .topic-nav-list {
     display: flex;
-    gap: 0.3rem;
     overflow-x: auto;
     scroll-behavior: smooth;
     scrollbar-width: none;               /* Firefox */
     -ms-overflow-style: none;            /* IE/Edge */
+    padding: 0.1rem 0;
 }
 .topic-nav-list::-webkit-scrollbar { display: none; }  /* WebKit */
 
+/* Identical to the digest section-nav items: newspaper-style dividers,
+   no pill, active shown by accent colour alone. */
 .topic-nav-item {
-    flex: 0 0 auto;
+    flex-shrink: 0;
     font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
-    font-size: 0.72rem;
+    font-size: 0.68rem;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.06em;
     font-weight: 600;
     color: var(--fg-muted);
     text-decoration: none;
-    padding: 0.28rem 0.7rem;
-    border-radius: 999px;
+    padding: 0.3rem 0.7rem;
     white-space: nowrap;
-    transition: color 0.12s, background 0.12s;
+    transition: color 0.2s;
+    border-right: 1px solid var(--border-faint);
 }
-.topic-nav-item:hover { color: var(--accent); }
-.topic-nav-item.active {
-    color: var(--accent);
-    background: rgba(var(--fg-rgb), 0.06);
-}
+.topic-nav-item:last-child { border-right: none; }
+.topic-nav-item:hover { color: var(--fg); }
+.topic-nav-item.active { color: var(--accent); }

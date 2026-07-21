@@ -189,8 +189,10 @@ def _home_feed_context(request, extra_filter=None):
     }, not parsed
 
 
-def home(request):
-    """Homepage: infinite-scroll feed of the genuinely latest news, newest first."""
+def article_feed(request):
+    """The "Articles" page: infinite-scroll feed of the genuinely latest news,
+    newest first. This is the feed that used to be the homepage; the digest is
+    now the homepage and this moved under /articles/."""
     is_htmx = request.headers.get("HX-Request") == "true" and not request.headers.get("HX-Boosted")
     context, _is_first = _home_feed_context(request)
 
@@ -199,10 +201,11 @@ def home(request):
     else:
         template = "news/home.html"
         context["seo"] = {
-            "title": str(SITE_NAME),
+            "title": f"{_('Articles')} — {SITE_NAME}",
             "description": str(SITE_DESCRIPTION),
-            "canonical": request.build_absolute_uri("/"),
+            "canonical": request.build_absolute_uri(reverse("articles_list")),
             "og_type": "website",
+            "breadcrumbs": _breadcrumbs(request, (_("Articles"), "articles_list")),
         }
 
     return render(request, template, context)
@@ -330,7 +333,9 @@ _HTMX_TEMPLATES = {
 }
 
 
-def digest(request, date=None):
+def index(request, date=None):
+    """Homepage: the daily section-grouped digest. Also serves the dated archive
+    at /digest/<date>/ (name `digest_by_date`)."""
     is_htmx = request.headers.get("HX-Request") == "true" and not request.headers.get("HX-Boosted")
 
     context = _build_digest_context(request, date=date)
@@ -343,6 +348,11 @@ def digest(request, date=None):
         return render(request, template, context)
 
     return render(request, "news/index.html", context)
+
+
+def digest_redirect(request):
+    """Old /digest/ landing → the homepage, permanently."""
+    return redirect("index", permanent=True)
 
 
 @csrf_exempt
@@ -783,8 +793,9 @@ def feed_detail(request, pk):
     return render(request, "news/feed_detail.html", {"feed": feed, "page": page, "seo": seo})
 
 
-def articles_list(request):
-    """All articles with filters: category, feed, country, date range, search."""
+def articles_browse(request):
+    """All articles with filters: category, feed, country, date range, search.
+    Reached from /browse/ (the plain "Articles" nav item shows the feed)."""
     category_slug = request.GET.get("category", "")
     feed_id = request.GET.get("feed", "")
     country_code = request.GET.get("country", "")

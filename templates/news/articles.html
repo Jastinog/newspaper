@@ -35,7 +35,7 @@
 
             <button type="submit" class="browse-filter-btn">{% trans "Filter" %}</button>
             {% if active_filters.category or active_filters.country or active_filters.from or active_filters.to or active_filters.q or active_filters.feed %}
-            <a href="{% url 'articles_list' %}" class="browse-clear">{% trans "Clear" %}</a>
+            <a href="{% url 'articles_browse' %}" class="browse-clear">{% trans "Clear" %}</a>
             {% endif %}
         </div>
     </form>

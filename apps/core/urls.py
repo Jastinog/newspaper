@@ -11,9 +11,11 @@ cached_sitemap_index = cache_page(86400)(sitemap_views.index)
 cached_sitemap_section = cache_page(86400)(sitemap_views.sitemap)
 
 urlpatterns = [
-    path("", views.home, name="index"),
-    path("digest/", views.digest, name="digest"),
-    path("digest/<str:date>/", views.digest, name="digest_by_date"),
+    # Digest is the homepage. The dated archive keeps the /digest/<date>/ path;
+    # the bare /digest/ 301-redirects to / so old links survive.
+    path("", views.index, name="index"),
+    path("digest/", views.digest_redirect, name="digest"),
+    path("digest/<str:date>/", views.index, name="digest_by_date"),
     # Must precede the <slug> route below — otherwise "summarize" matches as a slug.
     path("article/<int:pk>/summarize/", views.article_summarize, name="article_summarize"),
     path("article/<int:pk>/<str:slug>/", views.article_detail, name="article_detail"),
@@ -21,7 +23,10 @@ urlpatterns = [
     path("search/", views.search, name="search"),
     path("feeds/", views.feeds_list, name="feeds_list"),
     path("feed/<int:pk>/", views.feed_detail, name="feed_detail"),
-    path("articles/", views.articles_list, name="articles_list"),
+    # "Articles" now hosts the latest-news feed that used to be the homepage.
+    path("articles/", views.article_feed, name="articles_list"),
+    # The filterable browse (category/country/date) lives under /browse/.
+    path("browse/", views.articles_browse, name="articles_browse"),
     path("story/<int:item_id>/", views.story_detail, name="story_detail"),
     path("research/<int:item_id>/", views.research, name="research"),
     path("category/<slug:slug>/", views.category_detail, name="category_detail"),

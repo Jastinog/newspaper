@@ -313,6 +313,13 @@ class DigestItem(models.Model):
         return arts[0] if arts else None
 
     @property
+    def article_url(self):
+        """Canonical URL of the backing article, so a digest card can open the
+        full article page directly. Empty when no article is linked (legacy)."""
+        art = self._primary_article()
+        return art.get_absolute_url() if art else ""
+
+    @property
     def best_image_url(self):
         for art in self.articles.all():
             if art.image:
