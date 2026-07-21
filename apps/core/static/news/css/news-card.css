@@ -5,17 +5,21 @@
    every page that includes the card is styled, however it's laid out. */
 
 .home-item {
-    --home-bar-h: 24px; /* top-bar plate height; topic chips offset by this */
+    --home-bar-h: 24px; /* top-bar plate height */
     display: flex;
     flex-direction: column;
     min-width: 0;
     height: 100%;
-    position: relative; /* anchors the topic-chip overlay over the thumb */
+    position: relative; /* anchors the "Gist" badge overlay over the thumb */
 }
 
+/* Wraps the thumb, the "Gist" badge and the topic tags so both overlays
+   position against the image rather than the whole card. */
+.home-item-media {
+    position: relative;
+}
 .home-item-thumb {
     display: block;
-    position: relative;
     width: 100%;
     aspect-ratio: 16 / 10;
     overflow: hidden;
@@ -101,32 +105,37 @@
     color: var(--fg-faint);
 }
 
-/* Topic chips overlaid on the top-left of the card image, below the top-bar
-   plate (--home-bar-h) so they never sit on the source / share row */
+/* Topic tags overlaid on the bottom of the card image — small, compact,
+   square-edged, wrapping to a tight row so many fit without crowding. */
 .home-item-topics {
     position: absolute;
-    top: calc(var(--home-bar-h) + 0.5rem);
+    bottom: 0.5rem;
     left: 0.5rem;
     z-index: 2;
     display: flex;
     flex-wrap: wrap;
-    gap: 0.3rem;
+    gap: 0.2rem;
     max-width: calc(100% - 1rem);
-    pointer-events: none; /* only the chips themselves are interactive */
+    max-height: 1.2rem;
+    overflow: hidden;
+    pointer-events: none; /* only the tags themselves are interactive */
 }
 .home-item-topic {
+    display: inline-flex;
+    align-items: center;
     font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
-    font-size: 0.58rem;
+    font-size: 0.52rem;
+    line-height: 1;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.04em;
     font-weight: 700;
     color: #fff;
     text-decoration: none;
-    padding: 0.16rem 0.44rem;
+    padding: 0.22rem 0.32rem;
     background: rgba(0, 0, 0, 0.62);
     backdrop-filter: blur(3px);
     -webkit-backdrop-filter: blur(3px);
-    border-radius: 999px;
+    border-radius: 0;
     white-space: nowrap;
     pointer-events: auto;
     transition: background 0.12s;
@@ -139,7 +148,7 @@
 /* "Суть" badge overlaid on the image — reveals on hover, always shown when ready */
 .home-item-badge {
     position: absolute;
-    left: 0.5rem;
+    right: 0.5rem;
     bottom: 0.5rem;
     display: inline-flex;
     align-items: center;
@@ -158,7 +167,7 @@
     transition: opacity 0.18s ease;
     pointer-events: none;
 }
-.home-item-thumb:hover .home-item-badge { opacity: 1; }
+.home-item-media:hover .home-item-badge { opacity: 1; }
 .home-item.has-summary .home-item-badge {
     opacity: 1;
     background: var(--accent);
