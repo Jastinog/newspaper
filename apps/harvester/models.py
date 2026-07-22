@@ -106,6 +106,12 @@ class PipelineSettings(models.Model):
     enable_topic_classification = models.BooleanField(default=True, verbose_name="Topic classification")
     enable_embedding = models.BooleanField(default=True, verbose_name="Semantic embedding")
     enable_section_assignment = models.BooleanField(default=True, verbose_name="Section assignment")
+    section_score_floor = models.FloatField(
+        default=0.5, verbose_name="Section match floor",
+        validators=[MinValueValidator(0.0), MaxValueValidator(1.0)],
+        help_text="Minimum cosine score between an article and a section's seed "
+                  "phrases for the article to be filed under that section.",
+    )
     enable_image_download = models.BooleanField(default=True, verbose_name="Image download")
     updated_at = models.DateTimeField(auto_now=True)
 

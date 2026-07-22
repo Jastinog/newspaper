@@ -124,6 +124,7 @@ class PipelineSettingsAdmin(ModelAdmin):
         ("Master", {"fields": ["is_active"]}),
         ("Performance", {"fields": ["max_workers", "stage_delay"]}),
         ("Stages", {"fields": [name for name, _ in STAGE_FIELDS]}),
+        ("Section assignment", {"fields": ["section_score_floor"]}),
     ]
 
     def has_add_permission(self, request):
