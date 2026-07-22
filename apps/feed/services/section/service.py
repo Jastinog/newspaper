@@ -14,6 +14,7 @@ import numpy as np
 
 from apps.digest.models import SectionEmbedding
 from apps.feed.models import Article, ArticleChunk
+from apps.harvester.models import PipelineSettings
 
 logger = logging.getLogger(__name__)
 
@@ -83,8 +84,6 @@ def assign_section(article_id: int, title: str = "", content: str = "") -> int:
 
     best = int(per_section.argmax())
     best_score = float(per_section[best])
-
-    from apps.harvester.models import PipelineSettings
     if best_score < PipelineSettings.load().section_score_floor:
         return 0
 
