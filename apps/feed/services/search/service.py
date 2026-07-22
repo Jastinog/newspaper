@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from apps.core.services.utils import markdown_to_plain
 from apps.feed.models import Article, ArticleChunk
 from apps.feed.services.embed import LocalEmbedder
-from apps.research.services.search import SimilaritySearch
+from apps.feed.services.search.similarity import SimilaritySearch
 
 logger = logging.getLogger(__name__)
 

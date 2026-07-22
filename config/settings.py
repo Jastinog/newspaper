@@ -51,7 +51,6 @@ INSTALLED_APPS = [
     "apps.location",
     "apps.feed",
     "apps.digest",
-    "apps.research",
     "apps.billing",
     "apps.harvester",
     "apps.analytics",

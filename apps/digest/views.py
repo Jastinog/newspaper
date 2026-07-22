@@ -6,7 +6,7 @@ from rest_framework.response import Response
 
 from apps.core.services.utils import get_article_image_url
 from apps.feed.models import Article, ArticleChunk
-from apps.research.services.search import SimilaritySearch
+from apps.feed.services.search import SimilaritySearch
 
 
 # ── Similar Articles API ──────────────────────────────────
