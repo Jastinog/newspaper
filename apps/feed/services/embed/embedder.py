@@ -61,6 +61,12 @@ class LocalEmbedder:
         so = ort.SessionOptions()
         so.intra_op_num_threads = ORT_THREADS
         so.inter_op_num_threads = 1
+        # This is a long-lived daemon: the default CPU arena grows to the peak
+        # working set and never returns it to the OS, so an occasional big batch
+        # permanently inflates RSS. Disable the arena (and mem-pattern planning)
+        # to trade a little inference speed for a much lower steady-state RSS.
+        so.enable_cpu_mem_arena = False
+        so.enable_mem_pattern = False
         self.session = ort.InferenceSession(onnx_path, so, providers=["CPUExecutionProvider"])
         self._input_names = {i.name for i in self.session.get_inputs()}
 
