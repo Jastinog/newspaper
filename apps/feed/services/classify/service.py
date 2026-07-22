@@ -5,6 +5,7 @@ import logging
 from django.db import transaction
 
 from apps.feed.models import ArticleTopic, Topic
+from apps.feed.services.inference import client as inference
 
 from .classifier import TopicClassifier
 
@@ -18,7 +19,10 @@ def classify_article(article_id: int, title: str, content: str = "") -> int:
     article, so it is safe to re-run. Raises if the classifier can't run — the
     caller decides how to handle a model failure (the harvester stage swallows
     it so the pipeline never stalls)."""
-    scored = TopicClassifier.instance().classify(title, content)
+    if inference.remote_enabled():
+        scored = inference.classify(title, content)
+    else:
+        scored = TopicClassifier.instance().classify(title, content)
     if not scored:
         return 0
 

@@ -6,6 +6,8 @@ from django.db import transaction
 
 from apps.feed.models import ArticleChunk
 
+from apps.feed.services.inference import client as inference
+
 from .chunker import chunk_article
 from .embedder import MODEL_NAME, LocalEmbedder
 
@@ -24,14 +26,17 @@ def embed_article(article_id: int, title: str, content: str = "") -> int:
     if not chunks:
         return 0
 
-    vectors = LocalEmbedder.instance().embed(chunks, is_query=False)
+    if inference.remote_enabled():
+        vectors = inference.embed(chunks, is_query=False)
+    else:
+        vectors = [v.tolist() for v in LocalEmbedder.instance().embed(chunks, is_query=False)]
 
     rows = [
         ArticleChunk(
             article_id=article_id,
             chunk_index=i,
             chunk_text=text,
-            embedding=vectors[i].tolist(),
+            embedding=vectors[i],
             model=MODEL_NAME,
         )
         for i, text in enumerate(chunks)
