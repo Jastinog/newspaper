@@ -4,11 +4,10 @@ from .models import APIUsage
 
 
 def record_usage(usage: dict, *, service: str, api_type: str, model: str,
-                 step: str = "", **relations):
-    """Create one APIUsage record for any LLM/embedding call.
+                 article=None):
+    """Create one APIUsage record for an LLM call.
 
-    `relations` are the APIUsage foreign keys to attach (digest=, item=,
-    research=, article=). Returns the created row, or None if usage is empty.
+    Returns the created row, or None if usage is empty.
     """
     if not usage or usage.get("total_tokens", 0) == 0:
         return None
@@ -18,17 +17,9 @@ def record_usage(usage: dict, *, service: str, api_type: str, model: str,
         service=service,
         api_type=api_type,
         model=model,
-        step=step,
         prompt_tokens=prompt,
         completion_tokens=completion,
         total_tokens=usage.get("total_tokens", 0),
         cost_usd=calculate_cost(model, prompt, completion),
-        **relations,
+        article=article,
     )
-
-
-def record_digest_usage(usage: dict, *, step: str, api_type: str,
-                        model: str, digest, item=None):
-    """Create one APIUsage record for a digest pipeline LLM/embedding call."""
-    return record_usage(usage, service=APIUsage.Service.DIGEST, api_type=api_type,
-                        model=model, step=step, digest=digest, item=item)

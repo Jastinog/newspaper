@@ -2,58 +2,8 @@ from django.contrib import admin
 from unfold.admin import ModelAdmin, TabularInline
 
 from .models import (
-    DigestConfig, DigestSection, DigestSectionTranslation, SectionEmbedding,
+    DigestSection, DigestSectionTranslation, SectionEmbedding,
 )
-
-
-# ── DigestConfig (singleton) ────────────────────────────────────
-
-
-@admin.register(DigestConfig)
-class DigestConfigAdmin(ModelAdmin):
-    list_display = ("__str__",)
-
-    fieldsets = (
-        ("Embedding sections", {
-            "classes": ["tab"],
-            "description": "Settings for section assignment (embedding match).",
-            "fields": (
-                "embed_score_floor",
-                ("hours_lookback", "edition_items_per_section"),
-            ),
-        }),
-        ("LLM Model (legacy)", {
-            "classes": ["tab"],
-            "description": "Unused — kept for the legacy OpenAI pipeline config",
-            "fields": (
-                ("chat_model", "planner_model"),
-                ("temperature", "max_tokens_generation"),
-            ),
-        }),
-        ("Edition (legacy LLM)", {
-            "classes": ["tab"],
-            "description": "Unused — kept for the legacy OpenAI pipeline config",
-            "fields": (
-                "edition_max_workers",
-                ("edition_article_card_tokens", "edition_article_body_tokens"),
-                ("edition_max_articles_per_story", "edition_writer_budget_tokens"),
-                "edition_planner_budget_tokens",
-            ),
-        }),
-        ("Prompts", {
-            "classes": ["tab"],
-            "fields": (
-                "system_prompt_planner",
-                "system_prompt_writer",
-            ),
-        }),
-    )
-
-    def has_add_permission(self, request):
-        return not DigestConfig.objects.exists()
-
-    def has_delete_permission(self, request, obj=None):
-        return False
 
 
 # ── DigestSection ────────────────────────────────────────────────

@@ -1,4 +1,4 @@
-"""Seed digest sections, translations, and config.
+"""Seed digest sections, translations, and their embedding seeds.
 
 Idempotent: safe to run multiple times. Uses get_or_create on slug.
 Section data is loaded from JSON fixtures in apps/digest/fixtures/sections/.
@@ -11,20 +11,12 @@ from django.core.management.base import BaseCommand
 
 from apps.core.models import Language
 from apps.digest.models import (
-    DEFAULT_PROMPT_PLANNER,
-    DEFAULT_PROMPT_WRITER,
-    DigestConfig,
     DigestSection,
     DigestSectionTranslation,
     SectionEmbedding,
 )
 
 FIXTURES_DIR = Path(__file__).resolve().parent.parent.parent / "fixtures" / "sections"
-
-CONFIG_DEFAULTS = {
-    "system_prompt_planner": DEFAULT_PROMPT_PLANNER,
-    "system_prompt_writer": DEFAULT_PROMPT_WRITER,
-}
 
 
 def _load_languages() -> list[dict]:
@@ -41,47 +33,13 @@ def _load_sections() -> list[dict]:
 
 
 class Command(BaseCommand):
-    help = "Seed digest sections, translations, and config (idempotent)"
-
-    def add_arguments(self, parser):
-        parser.add_argument(
-            "--reset",
-            action="store_true",
-            help="Force-reset all config including operator-customized prompts",
-        )
+    help = "Seed digest sections, translations, and embeddings (idempotent)"
 
     def handle(self, *args, **options):
-        self._sync_config(force=options["reset"])
         languages = self._sync_languages()
         sections = _load_sections()
         self._sync_sections(languages, sections)
         self._sync_embeddings(sections)
-
-    def _sync_config(self, force=False):
-        config = DigestConfig.get()
-        updated = []
-
-        for field in config._meta.get_fields():
-            if field.name in ("id", "pk") or field.name in CONFIG_DEFAULTS:
-                continue
-            if not hasattr(field, "default") or field.default is None:
-                continue
-            default = field.default() if callable(field.default) else field.default
-            if getattr(config, field.name, None) != default:
-                setattr(config, field.name, default)
-                updated.append(field.name)
-
-        for field_name, default in CONFIG_DEFAULTS.items():
-            current = getattr(config, field_name, "")
-            if not current or (force and current != default):
-                setattr(config, field_name, default)
-                updated.append(field_name)
-
-        if updated:
-            config.save()
-            self.stdout.write(f"DigestConfig: reset {len(updated)} fields: {', '.join(updated)}")
-        else:
-            self.stdout.write("DigestConfig: OK (all defaults current)")
 
     def _sync_languages(self):
         languages = {}

@@ -12,8 +12,9 @@ from collections import defaultdict
 
 import numpy as np
 
-from apps.digest.models import DigestConfig, SectionEmbedding
+from apps.digest.models import SectionEmbedding
 from apps.feed.models import Article, ArticleChunk
+from apps.harvester.models import PipelineSettings
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +51,7 @@ def assign_section(article_id: int, title: str = "", content: str = "") -> int:
     """Match one article to its best section (argmax over section seed vectors).
 
     Sets `article.section` + `section_score` when the best cosine score clears
-    `DigestConfig.embed_score_floor`; otherwise leaves them unset. Returns 1 if a
+    `PipelineSettings.section_score_floor`; otherwise leaves them unset. Returns 1 if a
     section was assigned, else 0. `title`/`content` are unused (the enrichment
     stage passes them uniformly) — matching runs off the article's chunk vectors.
     The caller flags the article `sectioned=True` regardless, so a no-match
@@ -83,7 +84,7 @@ def assign_section(article_id: int, title: str = "", content: str = "") -> int:
 
     best = int(per_section.argmax())
     best_score = float(per_section[best])
-    if best_score < DigestConfig.get().embed_score_floor:
+    if best_score < PipelineSettings.load().section_score_floor:
         return 0
 
     Article.objects.filter(id=article_id).update(
