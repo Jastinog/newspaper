@@ -57,7 +57,6 @@ INSTALLED_APPS = [
     "apps.analytics",
     "apps.websocket",
     "apps.account",
-    "apps.telegram",
 ]
 
 AUTH_USER_MODEL = "account.User"
@@ -157,8 +156,6 @@ CACHES = {
 # Analytics — path to MaxMind GeoLite2-City.mmdb (optional)
 GEOIP_DATABASE_PATH = os.environ.get("GEOIP_DATABASE_PATH", str(BASE_DIR / "data" / "GeoLite2-City.mmdb"))
 
-# Telegram
-TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 SITE_URL = os.environ.get("SITE_URL", "").rstrip("/")
 
 # OpenAI — model used for on-demand article summaries
@@ -265,18 +262,6 @@ UNFOLD = {
                         "title": _("Config"),
                         "icon": "tune",
                         "link": reverse_lazy("admin:digest_digestconfig_changelist"),
-                    },
-                ],
-            },
-            {
-                "title": _("Telegram"),
-                "separator": True,
-                "collapsible": True,
-                "items": [
-                    {
-                        "title": _("Channels"),
-                        "icon": "send",
-                        "link": reverse_lazy("admin:telegram_telegramchannel_changelist"),
                     },
                 ],
             },
