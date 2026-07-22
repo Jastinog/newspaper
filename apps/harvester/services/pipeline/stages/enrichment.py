@@ -1,4 +1,5 @@
 import logging
+import time
 
 from django.db.models import F
 
@@ -15,11 +16,14 @@ class EnrichmentStage(PipelineStage):
     a boolean field (`flag_field`) rather than gating their completion — so
     every candidate already cleared the earlier quality gates (image + enough
     text) and disabling the stage never strands an article mid-pipeline. It uses
-    a local model (no HTTP, so no domain locking) and is best-effort: once the
-    model proves unloadable this process stops retrying it for the rest of the
-    run, but leaves those articles *unflagged* so a later healthy process picks
-    them up — the pass never stalls, and a transient model outage self-heals
-    instead of silently marking articles enriched with no output.
+    a local model or a remote inference service, and is best-effort: when the
+    model proves unavailable the stage backs off for `DEGRADED_COOLDOWN_SEC` and
+    leaves those articles *unflagged*, then retries automatically once the
+    cooldown expires. A transient outage (e.g. a cold-start HTTP timeout) thus
+    self-heals within the same process instead of stalling enrichment until the
+    daemon happens to restart, while a genuinely-down model isn't hammered.
+    During the cooldown the stage reports idle (no candidates) so it neither
+    burns CPU nor floods the pipeline-event timeline with phantom no-ops.
 
     Subclasses set `stage`, `enable_field`, `flag_field`, `verb`, and implement
     `enrich(article_id, title, content) -> int` (the returned count is logged).
@@ -28,14 +32,22 @@ class EnrichmentStage(PipelineStage):
     flag_field: str = ""
     verb: str = "Enriched"
     BATCH = 20
+    # How long to back off after the model/service fails before retrying it.
+    DEGRADED_COOLDOWN_SEC = 300
 
     def __init__(self):
-        self._degraded = False
+        # Monotonic instant until which the model is treated as unavailable;
+        # 0 means healthy. Set on failure, expires on its own — no restart needed.
+        self._degraded_until = 0.0
 
     def enrich(self, article_id: int, title: str, content: str) -> int:
         raise NotImplementedError
 
     def candidates(self):
+        # Backing off after a recent failure — report idle so the manager stops
+        # ticking us until the cooldown expires (avoids a tight no-op loop).
+        if time.monotonic() < self._degraded_until:
+            return []
         return list(
             Article.objects
             .filter(status=Article.Status.COMPLETED, **{self.flag_field: False})
@@ -50,19 +62,21 @@ class EnrichmentStage(PipelineStage):
     def handle(self, row, domain):
         aid, title, content = row
 
-        # Model already proved unloadable this run — leave the article unflagged
-        # so a later healthy process retries it, and don't touch the model again.
-        if self._degraded:
+        # Guard against a failure mid-batch: once the model trips the cooldown we
+        # skip the rest of this batch too, leaving those articles unflagged.
+        if time.monotonic() < self._degraded_until:
             return
 
         try:
             n = self.enrich(aid, title or "", content or "")
             logger.info("%s article %s → %d", self.verb, aid, n)
         except Exception:
-            # Transient/unloadable model: keep the article unflagged for retry.
-            self._degraded = True
+            # Transient/unavailable model: back off and keep the article
+            # unflagged for retry once the cooldown expires.
+            self._degraded_until = time.monotonic() + self.DEGRADED_COOLDOWN_SEC
             logger.exception(
-                "%s model unavailable; leaving articles unflagged for retry", self.verb
+                "%s model unavailable; backing off %ds before retry",
+                self.verb, self.DEGRADED_COOLDOWN_SEC,
             )
             return
 
