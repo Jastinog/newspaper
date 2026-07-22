@@ -2426,17 +2426,6 @@
       "reliability": 4
     },
     {
-      "id": "india-today",
-      "name": "India Today",
-      "url": "https://www.indiatoday.in/rss/home",
-      "website": "https://www.indiatoday.in",
-      "description": "India's leading English newsmagazine",
-      "country_id": "IN",
-      "language_id": "en",
-      "category": "world",
-      "reliability": 4
-    },
-    {
       "id": "economic-times-in",
       "name": "Economic Times India",
       "url": "https://economictimes.indiatimes.com/rssfeedsdefault.cms",
