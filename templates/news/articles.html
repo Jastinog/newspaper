@@ -45,8 +45,8 @@
         {% for article in page %}
         <div class="article-row">
             <a href="{{ article.get_absolute_url }}" class="article-row-visual">
-                {% if article.image %}
-                <img src="{{ article.image.url }}" alt="" loading="lazy">
+                {% if article.card_image_url %}
+                <img src="{{ article.card_image_url }}" alt="" loading="lazy">
                 {% else %}
                 <div class="result-placeholder"><span class="result-placeholder-letter">{{ article.title|first }}</span></div>
                 {% endif %}

@@ -61,7 +61,7 @@ _HOME_PER_PAGE = 30
 
 # Max stories shown per section in the homepage digest grid. The digest itself
 # accumulates across the day's hourly runs; this caps only what the grid renders.
-_DIGEST_SECTION_LIMIT = 20
+_DIGEST_SECTION_LIMIT = 10
 
 
 def _topic_chips_prefetch():

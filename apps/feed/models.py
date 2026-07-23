@@ -4,6 +4,8 @@ from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 from pgvector.django import HnswIndex, VectorField
 
+from apps.core.services.utils import get_article_image_url
+
 
 class Category(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -102,6 +104,9 @@ class Article(models.Model):
     )
     image_url = models.URLField(max_length=2000, blank=True, default="")
     image = models.ImageField(upload_to="articles/%Y/%m/", blank=True)
+    # Small WebP preview (512px wide) for the card grid; the full `image` is kept
+    # for the article detail hero. Generated alongside `image` on download.
+    thumbnail = models.ImageField(upload_to="articles/thumbs/%Y/%m/", blank=True)
 
     topics = models.ManyToManyField(
         Topic, through="ArticleTopic", related_name="articles", blank=True,
@@ -145,6 +150,14 @@ class Article(models.Model):
         if self.slug:
             return reverse("article_detail", kwargs={"pk": self.pk, "slug": self.slug})
         return reverse("article_detail_redirect", kwargs={"pk": self.pk})
+
+    @property
+    def card_image_url(self):
+        """Lightweight image URL for card grids: the thumbnail, falling back to
+        the full image for articles downloaded before thumbnails existed."""
+        if self.thumbnail:
+            return self.thumbnail.url
+        return get_article_image_url(self)
 
 
 class ArticleTopic(models.Model):

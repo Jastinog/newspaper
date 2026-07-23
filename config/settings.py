@@ -140,6 +140,9 @@ MEDIA_ROOT = BASE_DIR / "media"
 # Image download settings
 IMAGE_MAX_WIDTH = 800
 IMAGE_QUALITY = 85
+# Card-grid preview: a smaller WebP rendition served on the homepage/feed cards.
+IMAGE_THUMB_WIDTH = 512
+IMAGE_THUMB_QUALITY = 80
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 

@@ -1,3 +1,3 @@
 {% load i18n %}
 {% url 'feed_detail' article.feed.pk as feed_url %}
-{% include "news/_news_card.html" with card_pk=article.pk card_url=article.get_absolute_url card_orig_url=article.url card_image=article.image.url card_title=article.title card_desc=article.content card_feed_title=article.feed.title card_feed_url=feed_url card_published=article.published|default:article.created_at card_has_summary=article.has_summary card_topics=article.top_topics %}
+{% include "news/_news_card.html" with card_pk=article.pk card_url=article.get_absolute_url card_orig_url=article.url card_image=article.card_image_url card_title=article.title card_desc=article.content card_feed_title=article.feed.title card_feed_url=feed_url card_published=article.published|default:article.created_at card_has_summary=article.has_summary card_topics=article.top_topics %}
