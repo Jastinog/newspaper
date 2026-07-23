@@ -35,4 +35,5 @@ dependencies = [
     "sentencepiece>=0.2",
     "protobuf>=4.25",
     "numpy>=1.26",
+    "trafilatura>=1.12",
 ]

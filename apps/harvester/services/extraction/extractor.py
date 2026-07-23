@@ -3,6 +3,7 @@ import re
 from typing import NamedTuple
 
 import requests
+import trafilatura
 from markdownify import markdownify as md
 from readability import Document
 
@@ -11,6 +12,27 @@ from ..http import BrowserHeaders
 from .errors import ErrorClassifier
 
 logger = logging.getLogger(__name__)
+
+# Boilerplate lines that survive content extraction: social/newsletter CTAs,
+# affiliate disclosures, and comment-widget prompts. A line is dropped if any
+# pattern matches anywhere in it (markdown link text is matched as-is). Kept
+# conservative — these target phrasing that never appears in real article prose.
+_BOILERPLATE_LINE_RE = re.compile(
+    r"""
+      \bFTC:                                              # affiliate disclosure
+    | affiliate\s+links?
+    | \bFollow\s+(?:us|[\w.'’\- ]{1,40}?)\s+on\s+
+        (?:Google\s+News|Twitter|Facebook|Instagram|X|LinkedIn|Threads|WhatsApp|YouTube)\b
+    | add\s+us\s+as\s+a\s+preferred\s+source
+    | You\s+must\s+confirm\s+your\s+public\s+display\s+name
+    | Please\s+log\s?out\s+and\s+then\s+log\s?in\s+again
+    | (?:Sign\s+up|Subscribe)\b[^\n]{0,60}?\bnewsletter\b
+    | ^\s*Advertisement\s*$
+    | ^\s*Share\s+(?:this|on|via)\b
+    | ^\s*(?:Read|Related)\s+(?:more|stories|articles)\b[:\s]
+    """,
+    re.IGNORECASE | re.VERBOSE,
+)
 
 
 class ExtractionResult(NamedTuple):
@@ -44,10 +66,17 @@ class ContentExtractor:
 
             og_image = cls._extract_og_image(html)
 
+            # readability scopes the main-content block; we still use it for inline
+            # images and as a fallback body when trafilatura comes back empty.
             doc = Document(html)
             html_content = doc.summary(html_partial=True)
             content_images = cls._extract_content_images(html_content)
-            clean_text = cls._html_to_markdown(html_content)
+
+            clean_text = cls._extract_with_trafilatura(html)
+            if len(clean_text) < cls.MIN_CONTENT_LENGTH:
+                clean_text = cls._html_to_markdown(html_content)
+
+            clean_text = cls._strip_boilerplate(clean_text)
 
             if len(clean_text) < cls.MIN_CONTENT_LENGTH:
                 return ExtractionResult(
@@ -61,6 +90,31 @@ class ContentExtractor:
             return ExtractionResult(article_id, "", "", [], category, message)
 
     @classmethod
+    def _extract_with_trafilatura(cls, html: str) -> str:
+        """Main-content body as Markdown, with boilerplate (nav, share, related,
+        comments) removed. Returns "" if trafilatura finds no usable content."""
+        try:
+            text = trafilatura.extract(
+                html,
+                output_format="markdown",
+                include_comments=False,
+                include_images=False,
+                favor_precision=True,
+            )
+        except Exception:
+            return ""
+        return cls._collapse_blank_lines(text or "")
+
+    @classmethod
+    def _strip_boilerplate(cls, text: str) -> str:
+        """Drop boilerplate lines (social/newsletter CTAs, affiliate disclosures,
+        comment-widget prompts) that both extractors let slip into the body."""
+        if not text:
+            return text
+        lines = [ln for ln in text.split("\n") if not _BOILERPLATE_LINE_RE.search(ln)]
+        return cls._collapse_blank_lines("\n".join(lines))
+
+    @classmethod
     def _html_to_markdown(cls, html: str) -> str:
         text = md(
             html,
@@ -69,8 +123,12 @@ class ContentExtractor:
             escape_misc=True,
             strip=["img", "script", "style", "iframe"],
         )
-        text = re.sub(r"\n{3,}", "\n\n", text)
-        return text.strip()
+        return cls._collapse_blank_lines(text)
+
+    @staticmethod
+    def _collapse_blank_lines(text: str) -> str:
+        """Squash runs of 3+ newlines to a paragraph break and trim the ends."""
+        return re.sub(r"\n{3,}", "\n\n", text).strip()
 
     @staticmethod
     def _extract_og_image(html: str) -> str:
