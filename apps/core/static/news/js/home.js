@@ -70,6 +70,9 @@
         var li = document.createElement('li');
         li.innerHTML = html.trim();
         if (!li.firstElementChild) return;
+        // A cached card image fires no load event once inserted — reveal it so
+        // the fade-in (img-fade.js) doesn't leave it stuck transparent.
+        if (window.ImgFade) window.ImgFade(li);
 
         if (reduceMotion) {
             ul.insertBefore(li, ul.firstElementChild);

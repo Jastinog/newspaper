@@ -43,7 +43,27 @@
     height: 100%;
     object-fit: cover;
     display: block;
-    transition: opacity 0.2s ease;
+}
+
+/* Progressive image reveal: fade in on load instead of a hard pop. Gated on the
+   `img-fade` class (set by img-fade.js) so images stay visible without JS. The
+   thumb reserves its box via aspect-ratio + a fill background, so nothing shifts
+   while the image is still transparent. */
+.img-fade .home-item-thumb img,
+.img-fade .article-row-visual img,
+.img-fade .result-image {
+    opacity: 0;
+    transition: opacity 0.45s ease;
+}
+.img-fade .home-item-thumb img.is-loaded,
+.img-fade .article-row-visual img.is-loaded,
+.img-fade .result-image.is-loaded {
+    opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+    .img-fade .home-item-thumb img,
+    .img-fade .article-row-visual img,
+    .img-fade .result-image { transition: none; }
 }
 
 .home-item-body {
