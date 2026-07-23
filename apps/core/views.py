@@ -79,6 +79,28 @@ def _topic_chips_prefetch():
     )
 
 
+def _has_summary_annotation(lang_obj):
+    """`has_summary` card annotation: whether a stored summary exists in `lang_obj`."""
+    if lang_obj:
+        return Exists(ArticleSummary.objects.filter(article=OuterRef("pk"), language=lang_obj))
+    return Value(False, output_field=BooleanField())
+
+
+def _displayable_card_qs(lang_obj):
+    """Base queryset of homepage-displayable articles, annotated for card rendering.
+
+    The single definition of "shown on the homepage grid" — the digest grid and
+    the single-card live-insert endpoint both build on it so they cannot drift."""
+    return (
+        Article.objects
+        .filter(status=Article.Status.COMPLETED, published__lte=timezone.now())
+        .exclude(image="")
+        .select_related("feed")
+        .prefetch_related(_topic_chips_prefetch())
+        .annotate(has_summary=_has_summary_annotation(lang_obj))
+    )
+
+
 def _build_home_cursor(article):
     """Encode an article's position as `<sort_date_iso>_<pk>` for keyset paging."""
     return f"{article.sort_date.isoformat()}_{article.pk}"
@@ -150,14 +172,13 @@ def _home_feed_context(request, extra_filter=None):
     now = timezone.now()
     # A card is "summary ready" only when a summary exists in the *current* language.
     lang_obj = Language.get_by_code_safe(lang)
-    summary_exists = ArticleSummary.objects.filter(article=OuterRef("pk"), language=lang_obj)
     qs = (
         Article.objects.select_related("feed")  # cards only render feed.title / feed.pk
         .prefetch_related(_topic_chips_prefetch())
         .exclude(image="")
         .annotate(
             sort_date=Coalesce("published", "created_at"),
-            has_summary=Exists(summary_exists) if lang_obj else Value(False, output_field=BooleanField()),
+            has_summary=_has_summary_annotation(lang_obj),
         )
         .filter(sort_date__lte=now)
         .order_by("-sort_date", "-id")
@@ -227,12 +248,7 @@ def _build_digest_context(request, pinned_slugs=None):
     if pinned_slugs is None:
         pinned_slugs = _parse_pinned_cookie(request)
 
-    now = timezone.now()
-    if lang_obj:
-        summary_exists = ArticleSummary.objects.filter(article=OuterRef("pk"), language=lang_obj)
-        has_summary = Exists(summary_exists)
-    else:
-        has_summary = Value(False, output_field=BooleanField())
+    card_qs = _displayable_card_qs(lang_obj)
 
     sections = list(
         DigestSection.objects.filter(enabled=True)
@@ -244,12 +260,7 @@ def _build_digest_context(request, pinned_slugs=None):
     pinned_groups = []
     for section in sections:
         articles = list(
-            Article.objects
-            .filter(section=section, status=Article.Status.COMPLETED, published__lte=now)
-            .exclude(image="")
-            .select_related("feed")
-            .prefetch_related(_topic_chips_prefetch())
-            .annotate(has_summary=has_summary)
+            card_qs.filter(section=section)
             .order_by("-published", "-id")[:_DIGEST_SECTION_LIMIT]
         )
         if not articles:
@@ -306,20 +317,44 @@ def digest_redirect(request):
 @csrf_exempt
 @require_POST
 def toggle_pin(request, slug):
-    """Toggle a section's pinned state (HTMX POST). Updates cookie, returns OOB swaps."""
+    """Toggle a section's pinned state. Updates the cookie and returns the three
+    re-rendered homepage regions as JSON for the client to swap in place."""
+    from django.template.loader import render_to_string
+
     pinned = _parse_pinned_cookie(request)
     pinned.symmetric_difference_update({slug})
 
     context = _build_digest_context(request, pinned_slugs=pinned)
-    if context is None:
-        return redirect("index")
-
-    response = render(request, "news/_pin_response.html", context)
+    response = JsonResponse({
+        # #pinnedArea / #mainGrid receive inner HTML; #sectionNav is replaced whole.
+        "pinnedArea": render_to_string("news/_pinned_area.html", context, request=request),
+        "mainGrid": render_to_string("news/_main_grid.html", context, request=request),
+        "sectionNav": render_to_string("news/_section_nav.html", context, request=request),
+    })
     response.set_cookie(
         _PINNED_COOKIE, ",".join(sorted(pinned)),
         max_age=_PINNED_MAX_AGE, samesite="Lax", path="/",
     )
     return response
+
+
+def card_fragment(request, pk):
+    """Rendered homepage card for a single article — used by the live-update JS to
+    insert a newly-sectioned article without a reload.
+
+    Applies the same display rules as the digest grid; returns 204 when the
+    article doesn't qualify so the client silently skips it."""
+    current_lang = get_language() or "en"
+    lang_obj = Language.get_by_code_safe(current_lang)
+
+    article = (
+        _displayable_card_qs(lang_obj)
+        .filter(pk=pk, section__isnull=False)
+        .first()
+    )
+    if article is None:
+        return HttpResponse(status=204)
+    return render(request, "news/_home_item.html", {"article": article})
 
 
 def article_detail(request, pk, slug=""):

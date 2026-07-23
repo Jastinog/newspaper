@@ -3,6 +3,7 @@ from django.db.models import F
 from apps.feed.models import Article
 from apps.feed.services.section import assign_section
 from apps.harvester.models import STAGE_SECTION
+from apps.websocket.broadcast import broadcast_home_article
 from .enrichment import EnrichmentStage
 
 
@@ -28,4 +29,9 @@ class SectionStage(EnrichmentStage):
         )
 
     def enrich(self, article_id, title, content):
-        return assign_section(article_id, title, content)
+        slug = assign_section(article_id, title, content)
+        if not slug:
+            return 0
+        # Live-notify homepage clients that this section gained an article.
+        broadcast_home_article(slug, article_id)
+        return 1

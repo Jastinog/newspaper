@@ -30,6 +30,7 @@ urlpatterns = [
     path("section/<slug:slug>/", views.section_detail, name="section_detail"),
     path("topic/<slug:slug>/", views.topic_detail, name="topic_detail"),
     path("pin/<slug:slug>/", views.toggle_pin, name="toggle_pin"),
+    path("card/<int:pk>/", views.card_fragment, name="card_fragment"),
 ]
 
 # These should NOT be language-prefixed

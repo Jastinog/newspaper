@@ -30,7 +30,8 @@ class Command(BaseCommand):
         assigned = 0
         self.stdout.write(f"Assigning sections for {total} articles...")
         for i, aid in enumerate(ids, 1):
-            assigned += assign_section(aid)
+            if assign_section(aid):
+                assigned += 1
             Article.objects.filter(id=aid).update(sectioned=True)
             if i % 200 == 0:
                 self.stdout.write(f"  {i}/{total} ({assigned} matched)")

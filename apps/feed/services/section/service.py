@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 # so the matrix is cached for the process lifetime. Call `reload_sections()`
 # after editing seeds — or restart the worker — to pick up changes.
 _lock = threading.Lock()
-_cache: dict = {"section_ids": None, "S": None}
+_cache: dict = {"section_ids": None, "S": None, "slug_by_id": None}
 
 
 def reload_sections() -> None:
@@ -30,43 +30,45 @@ def reload_sections() -> None:
     with _lock:
         _cache["section_ids"] = None
         _cache["S"] = None
+        _cache["slug_by_id"] = None
 
 
 def _load_sections():
-    """Return (list[section_id] per seed row, matrix (n_seeds, dim)), cached."""
+    """Return (list[section_id] per seed row, matrix (n_seeds, dim), {id: slug}), cached."""
     with _lock:
         if _cache["S"] is None:
             rows = list(
                 SectionEmbedding.objects
                 .filter(section__enabled=True)
-                .values_list("section_id", "embedding")
+                .values_list("section_id", "embedding", "section__slug")
             )
             if rows:
                 _cache["section_ids"] = [r[0] for r in rows]
                 _cache["S"] = np.asarray([r[1] for r in rows], dtype=np.float32)
-        return _cache["section_ids"], _cache["S"]
+                _cache["slug_by_id"] = {r[0]: r[2] for r in rows}
+        return _cache["section_ids"], _cache["S"], _cache["slug_by_id"]
 
 
-def assign_section(article_id: int, title: str = "", content: str = "") -> int:
+def assign_section(article_id: int, title: str = "", content: str = "") -> str:
     """Match one article to its best section (argmax over section seed vectors).
 
     Sets `article.section` + `section_score` when the best cosine score clears
-    `PipelineSettings.section_score_floor`; otherwise leaves them unset. Returns 1 if a
-    section was assigned, else 0. `title`/`content` are unused (the enrichment
-    stage passes them uniformly) — matching runs off the article's chunk vectors.
-    The caller flags the article `sectioned=True` regardless, so a no-match
-    article isn't retried forever.
+    `PipelineSettings.section_score_floor`; otherwise leaves them unset. Returns the
+    assigned section's slug, or "" if none cleared the floor. `title`/`content` are
+    unused (the enrichment stage passes them uniformly) — matching runs off the
+    article's chunk vectors. The caller flags the article `sectioned=True`
+    regardless, so a no-match article isn't retried forever.
     """
-    seed_section_ids, S = _load_sections()
+    seed_section_ids, S, slug_by_id = _load_sections()
     if S is None:
         logger.warning("No section embeddings; run initdigest. Skipping %s", article_id)
-        return 0
+        return ""
 
     rows = list(
         ArticleChunk.objects.filter(article_id=article_id).values_list("embedding", flat=True)
     )
     if not rows:
-        return 0
+        return ""
     C = np.asarray(rows, dtype=np.float32)  # (n_chunks, dim)
 
     # Vectors are L2-normalized, so C @ S.T is cosine similarity.
@@ -85,9 +87,10 @@ def assign_section(article_id: int, title: str = "", content: str = "") -> int:
     best = int(per_section.argmax())
     best_score = float(per_section[best])
     if best_score < PipelineSettings.load().section_score_floor:
-        return 0
+        return ""
 
+    best_section_id = section_ids[best]
     Article.objects.filter(id=article_id).update(
-        section_id=section_ids[best], section_score=best_score,
+        section_id=best_section_id, section_score=best_score,
     )
-    return 1
+    return slug_by_id[best_section_id]

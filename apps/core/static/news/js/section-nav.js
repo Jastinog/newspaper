@@ -3,7 +3,7 @@
  *
  * Manages the section nav bar on the digest page:
  * arrow visibility, scroll-by-click, active item scroll-into-view.
- * Re-initialises after HTMX content swaps.
+ * Re-initialises on the `home:swapped` event that home.js fires after a pin swap.
  */
 (function () {
     'use strict';
@@ -48,10 +48,6 @@
 
     initSectionNav();
 
-    document.addEventListener('htmx:afterSwap', function (evt) {
-        var id = evt.detail.target.id;
-        if (id === 'sectionNav' || id === 'contentArea') {
-            initSectionNav();
-        }
-    });
+    // home.js dispatches this after it swaps the pinned/main/nav regions.
+    document.addEventListener('home:swapped', initSectionNav);
 })();

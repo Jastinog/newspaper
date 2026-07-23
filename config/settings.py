@@ -62,6 +62,16 @@ AUTH_USER_MODEL = "account.User"
 
 ASGI_APPLICATION = "config.asgi.application"
 
+# Cross-process WebSocket broadcast (harvester emits → daphne fans out to clients).
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [os.environ.get("CHANNELS_REDIS_URL", "redis://127.0.0.1:6379/3")],
+        },
+    },
+}
+
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",

@@ -7,6 +7,7 @@ from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 
 from apps.analytics.services import SessionService
+from apps.websocket.broadcast import HOME_ARTICLE_EVENT, HOME_GROUP
 
 logger = logging.getLogger(__name__)
 
@@ -41,12 +42,15 @@ class SiteConsumer(AsyncWebsocketConsumer):
         "analytics.ping": "_on_analytics_ping",
         # Article summaries ("суть на русском")
         "summary.generate": "_on_summary_generate",
+        # Homepage live section updates
+        "home.subscribe": "_on_home_subscribe",
     }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.analytics = None
         self._last_session_id = None
+        self._home_subscribed = False
 
     # ── Lifecycle ───────────────────────────────────
 
@@ -81,8 +85,26 @@ class SiteConsumer(AsyncWebsocketConsumer):
     async def disconnect(self, code):
         for gen in _summaries.values():
             gen["waiters"].discard(self)
+        if self._home_subscribed and self.channel_layer:
+            await self.channel_layer.group_discard(HOME_GROUP, self.channel_name)
         if self.analytics and self.analytics.is_active:
             await database_sync_to_async(self.analytics.close)()
+
+    # ── Homepage live updates ───────────────────────
+
+    async def _on_home_subscribe(self, data):
+        """Join the homepage group so newly-sectioned articles are pushed here."""
+        if self.channel_layer and not self._home_subscribed:
+            await self.channel_layer.group_add(HOME_GROUP, self.channel_name)
+            self._home_subscribed = True
+
+    async def home_article(self, event):
+        """channel-layer → client: a new article was assigned to a section."""
+        await self.send(json.dumps({
+            "type": HOME_ARTICLE_EVENT,
+            "section_slug": event["section_slug"],
+            "article_id": event["article_id"],
+        }))
 
     # ── Analytics actions ───────────────────────────
 
